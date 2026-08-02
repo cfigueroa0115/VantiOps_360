@@ -10,9 +10,15 @@ If you discover a security vulnerability, please report it privately via GitHub 
 - **No credentials in Git history**: If a secret is accidentally committed, it must be rotated immediately and removed from history using BFG Repo-Cleaner or git filter-repo.
 - **Rotation policy**: Rotate all credentials at minimum every 90 days, or immediately upon suspected exposure.
 
-## Known Credential Exposure (RESOLVED)
+## Known Credential Exposure (STATUS: HISTORY_CLEANUP_PENDING)
 
-A Neon PostgreSQL connection string was previously committed in commits `db73678` through `12578f5`. The credential has been removed from code and must be rotated by the database owner.
+A Neon PostgreSQL connection string was previously committed in commits `db73678` through `12578f5`. 
+
+**Current status:**
+- ✅ ROTATED: New password active (credential rotated by owner)
+- ✅ REMOVED_FROM_CURRENT_CODE: No secrets in current source files
+- ⚠️ HISTORY_CLEANUP_PENDING: Old credential remains in git history
+- Old credential has been revoked/rotated, reducing risk
 
 ### Rotation Steps
 
