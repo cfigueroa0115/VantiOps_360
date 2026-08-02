@@ -15,7 +15,7 @@ import type {
 } from "@/lib/types";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL ?? "";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [1000, 2000, 4000]; // exponential backoff
@@ -163,20 +163,20 @@ export async function fetchChartData(
 
 /** Fetch available filter options from the dataset */
 export async function fetchFilterOptions(): Promise<FilterOptions> {
-  return fetchWithRetry<FilterOptions>("/api/filters/options");
+  return fetchWithRetry<FilterOptions>("/api/filters");
 }
 
 /** Fetch quality report metrics */
 export async function fetchQualityReport(): Promise<QualityReportResponse> {
-  return fetchWithRetry<QualityReportResponse>("/api/quality/report");
+  return fetchWithRetry<QualityReportResponse>("/api/quality");
 }
 
 /** Fetch risk model results */
 export async function fetchRiskModel(): Promise<RiskModelResponse> {
-  return fetchWithRetry<RiskModelResponse>("/api/risk/model");
+  return fetchWithRetry<RiskModelResponse>("/api/risk");
 }
 
 /** Fetch root cause analysis findings */
 export async function fetchRCAFindings(): Promise<RCAFindingsResponse> {
-  return fetchWithRetry<RCAFindingsResponse>("/api/rca/findings");
+  return fetchWithRetry<RCAFindingsResponse>("/api/rca");
 }
