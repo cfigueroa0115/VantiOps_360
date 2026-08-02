@@ -42,15 +42,15 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Handle multiple sheets with differing structures independently
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7_
 
-  - [ ]* 2.2 Write property test for snake_case standardization
+  - [x]* 2.2 Write property test for snake_case standardization
     - **Property 1: snake_case Standardization**
     - **Validates: Requirements 1.2**
 
-  - [ ]* 2.3 Write property test for record and column count preservation
+  - [x]* 2.3 Write property test for record and column count preservation
     - **Property 2: Record and Column Count Preservation**
     - **Validates: Requirements 1.3**
 
-  - [ ]* 2.4 Write unit tests for ingestion error handling
+  - [x]* 2.4 Write unit tests for ingestion error handling
     - Test missing file raises descriptive error within 5s
     - Test empty sheet logs warning and skips
     - Test multiple sheets with different structures processed independently
@@ -74,7 +74,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Implement `find_semantic_similarities()` using Levenshtein ratio with 0.85 threshold
     - _Requirements: 2.2, 2.6_
 
-  - [ ]* 3.4 Write property tests for data profiler
+  - [x]* 3.4 Write property tests for data profiler
     - **Property 3: Data Type Inference Threshold**
     - **Property 4: IQR Outlier Detection Correctness**
     - **Property 5: Null Statistics Accuracy**
@@ -100,7 +100,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Implement quality rule violation severity: >20% → critical, >10-20% → high, >5-10% → medium, ≤5% → low
     - _Requirements: 3.5, 3.7_
 
-  - [ ]* 5.3 Write property tests for quality report
+  - [x]* 5.3 Write property tests for quality report
     - **Property 8: Quality Report Serialization Round-Trip**
     - **Property 9: Severity Classification Thresholds**
     - **Property 10: Privacy Invariant — No Row-Level Data in Exports**
@@ -118,7 +118,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Produce detail table: rule name, target field, violations count/pct, severity, corrective action
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9_
 
-  - [ ]* 6.2 Write property tests for Data Quality Score
+  - [x]* 6.2 Write property tests for Data Quality Score
     - **Property 12: Data Quality Score Computation**
     - **Property 20: Consistency Contradiction Detection**
     - **Property 21: Timeliness Date Range Validation**
@@ -142,7 +142,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Ensure all finding labels use "association"/"correlation", never "causes"/"leads to"/"results in"
     - _Requirements: 8.5, 8.6, 8.7, 8.8_
 
-  - [ ]* 7.3 Write property tests for statistical engine
+  - [x]* 7.3 Write property tests for statistical engine
     - **Property 14: Conditional Probability with Null Exclusion**
     - **Property 15: Pareto Minimum Set ≥ 80%**
     - **Property 16: Wilson Confidence Interval Correctness**
@@ -160,7 +160,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Document limitation if ROC-AUC < 0.60
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 9.10_
 
-  - [ ]* 8.2 Write property tests for risk model
+  - [x]* 8.2 Write property tests for risk model
     - **Property 18: Stratified Split Reproducibility**
     - **Property 19: Class Imbalance Detection and Handling**
     - **Validates: Requirements 9.2, 9.9**
@@ -168,7 +168,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
 - [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Implement root cause analyzer
+- [x] 10. Implement root cause analyzer
   - [x] 10.1 Implement main cause identification and Pareto analysis
     - Implement `identify_main_cause()`: confirm highest volume cause ≥45% share via Pareto ranking
     - Implement `pareto_chart_data()`: ranked cause table with cumulative percentages
@@ -190,7 +190,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Implement `automation_opportunity()`: % eliminable manual interventions, time reduction, STP volume
     - _Requirements: 11.4, 11.5, 11.6, 11.7_
 
-  - [ ]* 10.4 Write property test for FMEA RPN computation
+  - [x]* 10.4 Write property test for FMEA RPN computation
     - **Property 23: FMEA Risk Priority Number Computation**
     - **Validates: Requirements 11.3**
 
@@ -217,7 +217,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Ensure no real customer information in output
     - _Requirements: 13.3_
 
-  - [ ]* 11.4 Write property tests for PII masking and synthetic data
+  - [x]* 11.4 Write property tests for PII masking and synthetic data
     - **Property 24: PII Masking Transformation**
     - **Property 25: Synthetic Data Distribution Fidelity**
     - **Validates: Requirements 13.3, 13.5, 13.7**
@@ -235,17 +235,17 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Use DuckDB for aggregation queries on curated Parquet files
     - _Requirements: 5.4, 12.1, 13.2, 14.2_
 
-  - [ ]* 12.2 Write unit tests for API endpoints
+  - [x]* 12.2 Write unit tests for API endpoints
     - Test each endpoint returns correct response model structure
     - Test filter parameter application
     - Test privacy invariant (no row-level data in responses)
     - _Requirements: 5.4, 13.2_
 
-- [ ] 13. Checkpoint - Ensure all tests pass
+- [x] 13. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Implement frontend KPI components
-  - [ ] 14.1 Implement KPI cards and grid layout
+- [x] 14. Implement frontend KPI components
+  - [x] 14.1 Implement KPI cards and grid layout
     - Create `KPICard.tsx`: display individual KPI with value, label, and formatting (days with 1 decimal + " días", percentages with 1 decimal + "%")
     - Create `KPIGrid.tsx`: responsive grid layout for all 13 KPI cards
     - Create `KPILoadingSkeleton.tsx`: loading state with skeleton animations
@@ -253,18 +253,18 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Create `useKPIs.ts` hook for data fetching with caching
     - _Requirements: 5.1, 5.2, 5.6, 5.7_
 
-  - [ ]* 14.2 Write property test for KPI value formatting
+  - [x]* 14.2 Write property test for KPI value formatting
     - **Property 11: KPI Value Formatting**
     - **Validates: Requirements 5.1**
 
-  - [ ]* 14.3 Write unit tests for KPI components
+  - [x]* 14.3 Write unit tests for KPI components
     - Test loading, error, and populated states render correctly
     - Test KPI value formatting (days, percentages)
     - Test retry button functionality
     - _Requirements: 5.1, 5.6, 5.7_
 
-- [ ] 15. Implement frontend filter system
-  - [ ] 15.1 Implement filter panel and controls
+- [x] 15. Implement frontend filter system
+  - [x] 15.1 Implement filter panel and controls
     - Create `FilterPanel.tsx`: collapsible sidebar with all filter controls
     - Create `DateRangePicker.tsx`: period filter with date range selection
     - Create `MultiSelect.tsx`: reusable multi-select dropdown for company, cause, channel, status, result, responsible unit
@@ -275,19 +275,19 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Display active filter count and record count matching current filters
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
 
-  - [ ]* 15.2 Write property test for filter AND logic
+  - [x]* 15.2 Write property test for filter AND logic
     - **Property 13: Filter AND Logic**
     - **Validates: Requirements 7.2**
 
-  - [ ]* 15.3 Write unit tests for filter components
+  - [x]* 15.3 Write unit tests for filter components
     - Test multi-select selection/deselection
     - Test date range picker validation
     - Test active filter display and clear functionality
     - Test session persistence of filter state
     - _Requirements: 7.1, 7.3, 7.4, 7.6_
 
-- [ ] 16. Implement frontend chart components
-  - [ ] 16.1 Implement primary chart components
+- [x] 16. Implement frontend chart components
+  - [x] 16.1 Implement primary chart components
     - Create `ParetoChart.tsx`: causes by frequency with cumulative line on secondary y-axis
     - Create `TopCausesBar.tsx`: top 10 horizontal bar ranked by count descending
     - Create `CancellationDonut.tsx`: main cancellation cause vs all others
@@ -296,7 +296,7 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Create `ChartWrapper.tsx`: loading/error/empty state wrapper for all charts
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.15_
 
-  - [ ] 16.2 Implement secondary chart components
+  - [x] 16.2 Implement secondary chart components
     - Create `ManagementTimeBox.tsx`: box plot for top 10 causes (median, Q1, Q3, 1.5×IQR whiskers)
     - Create `OverallBoxPlot.tsx`: overall management time distribution with outlier points
     - Create `P90ByCauseBar.tsx`: P90 by cause bar chart, top 10 descending
@@ -307,22 +307,22 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Create `FindingsTable.tsx`: executive findings table (≤10 rows with description, metric, severity, action)
     - _Requirements: 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.13_
 
-  - [ ] 16.3 Implement chart interactions and accessibility
+  - [x] 16.3 Implement chart interactions and accessibility
     - Add tooltips on hover showing exact value, percentage of total, category label (within 200ms)
     - Add empty state placeholders when filter results in no data
     - Add `aria-label` or descriptive captions for each chart summarizing type, data, and key finding
     - Create `useChartData.ts` hook for chart data fetching with filter params
     - _Requirements: 6.14, 6.15, 6.16_
 
-  - [ ]* 16.4 Write unit tests for chart components
+  - [x]* 16.4 Write unit tests for chart components
     - Test chart rendering with sample data
     - Test empty state display
     - Test tooltip content
     - Test accessibility labels
     - _Requirements: 6.14, 6.15, 6.16_
 
-- [ ] 17. Implement layout, navigation, and data quality dashboard section
-  - [ ] 17.1 Implement layout components and page assembly
+- [x] 17. Implement layout, navigation, and data quality dashboard section
+  - [x] 17.1 Implement layout components and page assembly
     - Create `Sidebar.tsx`: navigation between dashboard sections
     - Create `Header.tsx`: page header with title and active filters summary
     - Create `ErrorBoundary.tsx`: catch chart render failures, show fallback
@@ -331,13 +331,13 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Implement Data Quality Score display as composite percentage from 6 dimensions
     - _Requirements: 5.2, 5.3, 5.5, 14.8_
 
-  - [ ]* 17.2 Write unit tests for layout and error boundary
+  - [x]* 17.2 Write unit tests for layout and error boundary
     - Test ErrorBoundary catches chart failures and shows fallback
     - Test page renders with loading, error, and populated states
     - _Requirements: 5.6, 5.7_
 
-- [ ] 18. Implement validation reference points
-  - [ ] 18.1 Implement reference point verification logic
+- [x] 18. Implement validation reference points
+  - [x] 18.1 Implement reference point verification logic
     - Verify total record count ≈51,008 (±1% tolerance)
     - Verify total column count ≈29 (±2 columns tolerance)
     - Verify duplication rate <1%, flag if exceeded
@@ -347,13 +347,13 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Define and report quality issues per field (null closure reason, invalid marking, inconsistent company names, duplicated categories)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
-  - [ ]* 18.2 Write unit tests for validation reference points
+  - [x]* 18.2 Write unit tests for validation reference points
     - Test tolerance checks with known values
     - Test deviation reporting when values fall outside tolerance
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 19. Integration wiring and end-to-end validation
-  - [ ] 19.1 Wire full pipeline and integrate frontend with backend API
+- [x] 19. Integration wiring and end-to-end validation
+  - [x] 19.1 Wire full pipeline and integrate frontend with backend API
     - Connect pipeline orchestrator to run full flow: Excel → Raw → Staging → Validated → Curated → Serving
     - Verify DuckDB queries on curated Parquet produce correct aggregated API responses
     - Connect frontend API client to backend endpoints
@@ -361,13 +361,13 @@ This plan implements a multi-stage data analytics pipeline for PQR (Peticiones, 
     - Ensure performance targets: page load <3s, filter refresh <2s
     - _Requirements: 5.2, 5.3, 7.2, 12.1, 12.2_
 
-  - [ ]* 19.2 Write integration tests
+  - [x]* 19.2 Write integration tests
     - Test full pipeline execution from Excel to curated layer
     - Test API endpoints with real aggregated data
     - Test filter pipeline end-to-end
     - _Requirements: 5.2, 7.2, 12.1_
 
-- [ ] 20. Final checkpoint - Ensure all tests pass
+- [x] 20. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
