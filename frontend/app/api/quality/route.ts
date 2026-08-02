@@ -7,7 +7,7 @@ import {
   queryNeon,
 } from "@/lib/server/query-filters";
 
-export const runtime = "edge";
+// Using Node.js runtime for Pool support
 
 export async function GET(request: Request) {
   try {

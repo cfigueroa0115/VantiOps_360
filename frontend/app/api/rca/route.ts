@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 
-export const runtime = "edge";
+// Using Node.js runtime for Pool support
 
 export async function GET() {
   try {

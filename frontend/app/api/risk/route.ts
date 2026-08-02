@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
+// Using Node.js runtime for Pool support
 
 export async function GET() {
   return NextResponse.json({

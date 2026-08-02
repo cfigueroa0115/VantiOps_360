@@ -92,13 +92,18 @@ export function hasActiveFilters(filters: AnalyticsFilters): boolean {
 
 /**
  * Execute a dynamic SQL query against Neon.
- * Uses the neon() function with type assertion to pass raw SQL strings.
- * This is needed because tagged templates don't support dynamic SQL fragments.
+ * Uses neon's Pool class which supports parameterized queries with strings.
  */
 export async function queryNeon(sql: any, query: string): Promise<Record<string, any>[]> {
-  // The neon() function at runtime accepts a plain string argument.
-  // TypeScript types only expose the tagged template signature, so we assert.
-  return await (sql as unknown as (query: string) => Promise<Record<string, any>[]>)(query);
+  // Import Pool for dynamic queries
+  const { Pool } = await import("@neondatabase/serverless");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL || process.env.NEON_DATABASE_URL });
+  try {
+    const { rows } = await pool.query(query);
+    return rows;
+  } finally {
+    await pool.end();
+  }
 }
 
 // --- Helpers ---
