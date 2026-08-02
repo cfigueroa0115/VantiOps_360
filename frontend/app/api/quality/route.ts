@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     const uniqResult = await query(
       `SELECT
         COUNT(*)::int AS total,
-        COUNT(DISTINCT (causa, empresa, canal_atencion, fecha_creacion, tiempo_gestion_dias))::int AS distinct_combos
+        COUNT(DISTINCT ROW(causa, empresa, canal_atencion, fecha_creacion, tiempo_gestion_dias))::int AS distinct_combos
       FROM pqr_records ${clause}`, values);
     const uniq = uniqResult[0] as Record<string, any>;
     const uniqTotal = Number(uniq.total) || 1;
