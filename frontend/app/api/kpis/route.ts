@@ -3,19 +3,11 @@ import { neon } from "@neondatabase/serverless";
 
 export const runtime = "edge";
 
-function getDb() {
-  const url = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
-  return neon(url);
-}
-
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const sql = getDb();
-    const { searchParams } = new URL(request.url);
-    const where = buildWhereClause(searchParams);
-    const whereSQL = where ? `WHERE ${where}` : "";
+    const sql = neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
 
-    const result = await sql(`
+    const result = await sql`
       SELECT
         COUNT(*)::int AS total_pqr,
         COUNT(*) FILTER (WHERE estado = 'cerrado')::int AS closed_pqr,
@@ -27,30 +19,29 @@ export async function GET(request: Request) {
         ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY tiempo_gestion_dias)::numeric, 1) AS p95_management_time,
         ROUND(MAX(tiempo_gestion_dias)::numeric, 1) AS max_management_time,
         COUNT(DISTINCT causa)::int AS distinct_causes_count
-      FROM pqr_records ${whereSQL}
-    `);
+      FROM pqr_records
+    `;
 
     const row = result[0];
 
-    const causeResult = await sql(`
+    const causeResult = await sql`
       SELECT causa, COUNT(*)::int AS cnt
-      FROM pqr_records ${whereSQL}
-      WHERE causa IS NOT NULL
+      FROM pqr_records WHERE causa IS NOT NULL
       GROUP BY causa ORDER BY cnt DESC LIMIT 1
-    `);
+    `;
 
     const total = Number(row.total_pqr) || 1;
     const mainCauseShare = causeResult.length > 0
       ? Math.round((Number(causeResult[0].cnt) / total) * 1000) / 10
       : 0;
 
-    const qualityResult = await sql(`
+    const qualityResult = await sql`
       SELECT ROUND(
         COUNT(*) FILTER (WHERE motivo_cierre IS NULL OR marcacion IS NULL OR empresa IS NULL)
         * 100.0 / NULLIF(COUNT(*), 0), 1
       ) AS quality_issues_pct
-      FROM pqr_records ${whereSQL}
-    `);
+      FROM pqr_records
+    `;
 
     return NextResponse.json({
       totalPqr: Number(row.total_pqr) || 0,
@@ -71,34 +62,4 @@ export async function GET(request: Request) {
     console.error("KPIs API error:", error);
     return NextResponse.json({ error: "Failed to fetch KPIs" }, { status: 500 });
   }
-}
-
-function buildWhereClause(params: URLSearchParams): string {
-  const conditions: string[] = [];
-  const dateStart = params.get("date_start");
-  const dateEnd = params.get("date_end");
-  const companies = params.get("companies");
-  const causes = params.get("causes");
-  const channels = params.get("channels");
-  const statuses = params.get("statuses");
-
-  if (dateStart) conditions.push(`fecha_creacion >= '${dateStart}'`);
-  if (dateEnd) conditions.push(`fecha_creacion <= '${dateEnd}'`);
-  if (companies) {
-    const list = companies.split(",").map(c => `'${c.trim().replace(/'/g, "''")}'`).join(",");
-    conditions.push(`empresa IN (${list})`);
-  }
-  if (causes) {
-    const list = causes.split(",").map(c => `'${c.trim().replace(/'/g, "''")}'`).join(",");
-    conditions.push(`causa IN (${list})`);
-  }
-  if (channels) {
-    const list = channels.split(",").map(c => `'${c.trim().replace(/'/g, "''")}'`).join(",");
-    conditions.push(`canal_atencion IN (${list})`);
-  }
-  if (statuses) {
-    const list = statuses.split(",").map(c => `'${c.trim().replace(/'/g, "''")}'`).join(",");
-    conditions.push(`estado IN (${list})`);
-  }
-  return conditions.join(" AND ");
 }

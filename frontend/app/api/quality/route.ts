@@ -3,14 +3,11 @@ import { neon } from "@neondatabase/serverless";
 
 export const runtime = "edge";
 
-function getDb() {
-  return neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
-}
-
 export async function GET() {
   try {
-    const sql = getDb();
-    const result = await sql(`
+    const sql = neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
+
+    const result = await sql`
       SELECT COUNT(*)::int AS total_records,
         ROUND((1.0 - COUNT(*) FILTER (WHERE causa IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS causa_pct,
         ROUND((1.0 - COUNT(*) FILTER (WHERE empresa IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS empresa_pct,
@@ -18,7 +15,7 @@ export async function GET() {
         ROUND((1.0 - COUNT(*) FILTER (WHERE marcacion IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS marcacion_pct,
         ROUND((1.0 - COUNT(*) FILTER (WHERE canal_atencion IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS canal_pct
       FROM pqr_records
-    `);
+    `;
 
     const row = result[0];
     const completeness = Math.round(

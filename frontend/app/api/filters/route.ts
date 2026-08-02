@@ -3,14 +3,11 @@ import { neon } from "@neondatabase/serverless";
 
 export const runtime = "edge";
 
-function getDb() {
-  return neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
-}
-
 export async function GET() {
   try {
-    const sql = getDb();
-    const result = await sql(`
+    const sql = neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
+
+    const result = await sql`
       SELECT
         ARRAY_AGG(DISTINCT empresa ORDER BY empresa) FILTER (WHERE empresa IS NOT NULL) AS companies,
         ARRAY_AGG(DISTINCT causa ORDER BY causa) FILTER (WHERE causa IS NOT NULL) AS causes,
@@ -20,7 +17,7 @@ export async function GET() {
         ARRAY_AGG(DISTINCT unidad_responsable ORDER BY unidad_responsable) FILTER (WHERE unidad_responsable IS NOT NULL) AS responsible_units,
         COALESCE(MAX(tiempo_gestion_dias), 0) AS management_time_max
       FROM pqr_records
-    `);
+    `;
 
     const row = result[0];
     return NextResponse.json({
