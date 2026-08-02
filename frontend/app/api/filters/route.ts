@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
-
-// Using Node.js runtime for Pool support
+import { query } from "@/lib/server/database";
 
 export async function GET() {
   try {
-    const sql = neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
-
-    const result = await sql`
+    const result = await query(`
       SELECT
         ARRAY_AGG(DISTINCT empresa ORDER BY empresa) FILTER (WHERE empresa IS NOT NULL) AS companies,
         ARRAY_AGG(DISTINCT causa ORDER BY causa) FILTER (WHERE causa IS NOT NULL) AS causes,
@@ -17,9 +13,9 @@ export async function GET() {
         ARRAY_AGG(DISTINCT unidad_responsable ORDER BY unidad_responsable) FILTER (WHERE unidad_responsable IS NOT NULL) AS responsible_units,
         COALESCE(MAX(tiempo_gestion_dias), 0) AS management_time_max
       FROM pqr_records
-    `;
+    `);
 
-    const row = result[0];
+    const row = result[0] as Record<string, any>;
     return NextResponse.json({
       companies: row.companies || [],
       causes: row.causes || [],
@@ -31,6 +27,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Filters API error:", error);
-    return NextResponse.json({ error: "Failed to fetch filter options" }, { status: 500 });
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "Failed to fetch filter options" } },
+      { status: 500 }
+    );
   }
 }

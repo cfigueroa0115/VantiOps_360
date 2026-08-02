@@ -1,6 +1,6 @@
 /**
- * Server-side filter parsing and SQL generation for Neon queries.
- * Uses value escaping to prevent SQL injection.
+ * Server-side filter parsing and parameterized SQL generation.
+ * ALL user values are passed as parameters ($1, $2, etc.) — NEVER concatenated.
  */
 
 export interface AnalyticsFilters {
@@ -16,68 +16,150 @@ export interface AnalyticsFilters {
   timeMax?: number;
 }
 
+export interface ParameterizedWhere {
+  clause: string;       // e.g. "WHERE empresa = ANY($1::text[]) AND ..."
+  values: unknown[];    // parameter values in order
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
 /**
- * Parse filter query params from a Request URL.
- * Validates inputs and rejects invalid values.
+ * Parse and validate filter query params from a Request URL.
+ * Returns filters or throws with validation errors.
  */
 export function parseFiltersFromRequest(request: Request): AnalyticsFilters {
   const { searchParams } = new URL(request.url);
+  const errors: ValidationError[] = [];
+
+  const dateStart = searchParams.get("date_start") || undefined;
+  const dateEnd = searchParams.get("date_end") || undefined;
+  const timeMinStr = searchParams.get("time_min");
+  const timeMaxStr = searchParams.get("time_max");
+
+  // Validate dates
+  if (dateStart && !/^\d{4}-\d{2}-\d{2}$/.test(dateStart)) {
+    errors.push({ field: "date_start", message: "Invalid date format. Use YYYY-MM-DD." });
+  }
+  if (dateEnd && !/^\d{4}-\d{2}-\d{2}$/.test(dateEnd)) {
+    errors.push({ field: "date_end", message: "Invalid date format. Use YYYY-MM-DD." });
+  }
+  if (dateStart && dateEnd && dateStart > dateEnd) {
+    errors.push({ field: "date_start", message: "date_start must be <= date_end." });
+  }
+
+  // Validate numbers
+  let timeMin: number | undefined;
+  let timeMax: number | undefined;
+  if (timeMinStr) {
+    timeMin = Number(timeMinStr);
+    if (isNaN(timeMin) || timeMin < 0) {
+      errors.push({ field: "time_min", message: "Must be a non-negative number." });
+    }
+  }
+  if (timeMaxStr) {
+    timeMax = Number(timeMaxStr);
+    if (isNaN(timeMax) || timeMax < 0) {
+      errors.push({ field: "time_max", message: "Must be a non-negative number." });
+    }
+  }
+  if (timeMin !== undefined && timeMax !== undefined && timeMin > timeMax) {
+    errors.push({ field: "time_min", message: "time_min must be <= time_max." });
+  }
+
+  // Parse arrays (pipe-separated to avoid comma ambiguity in values)
+  // Support both comma and pipe as separators
+  const companies = parseArray(searchParams.get("companies"));
+  const causes = parseArray(searchParams.get("causes"));
+  const channels = parseArray(searchParams.get("channels"));
+  const statuses = parseArray(searchParams.get("statuses"));
+  const results = parseArray(searchParams.get("results"));
+  const responsibleUnits = parseArray(searchParams.get("responsible_units"));
+
+  // Validate array sizes
+  for (const [name, arr] of Object.entries({ companies, causes, channels, statuses, results, responsibleUnits })) {
+    if (arr && arr.length > 100) {
+      errors.push({ field: name, message: "Maximum 100 values allowed per filter." });
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new FilterValidationError(errors);
+  }
 
   return {
-    dateStart: validateDate(searchParams.get("date_start")),
-    dateEnd: validateDate(searchParams.get("date_end")),
-    companies: parseCSV(searchParams.get("companies")),
-    causes: parseCSV(searchParams.get("causes")),
-    channels: parseCSV(searchParams.get("channels")),
-    statuses: parseCSV(searchParams.get("statuses")),
-    results: parseCSV(searchParams.get("results")),
-    responsibleUnits: parseCSV(searchParams.get("responsible_units")),
-    timeMin: parseNumber(searchParams.get("time_min")),
-    timeMax: parseNumber(searchParams.get("time_max")),
+    dateStart,
+    dateEnd,
+    companies: companies || undefined,
+    causes: causes || undefined,
+    channels: channels || undefined,
+    statuses: statuses || undefined,
+    results: results || undefined,
+    responsibleUnits: responsibleUnits || undefined,
+    timeMin,
+    timeMax,
   };
 }
 
 /**
- * Build a SQL WHERE clause string from parsed filters.
- * Values are escaped to prevent injection. Arrays use IN(...) syntax.
- * Returns empty string if no filters active.
+ * Build a parameterized WHERE clause from filters.
+ * Returns { clause, values } where clause uses $N placeholders.
  */
-export function buildWhereClause(filters: AnalyticsFilters): string {
+export function buildParameterizedWhere(filters: AnalyticsFilters): ParameterizedWhere {
   const conditions: string[] = [];
+  const values: unknown[] = [];
 
   if (filters.dateStart) {
-    conditions.push(`fecha_creacion >= '${escapeValue(filters.dateStart)}'`);
+    values.push(filters.dateStart);
+    conditions.push(`fecha_creacion >= $${values.length}::date`);
   }
   if (filters.dateEnd) {
-    conditions.push(`fecha_creacion <= '${escapeValue(filters.dateEnd)}'`);
+    values.push(filters.dateEnd);
+    conditions.push(`fecha_creacion <= $${values.length}::date`);
   }
   if (filters.companies?.length) {
-    conditions.push(`empresa IN (${filters.companies.map(v => `'${escapeValue(v)}'`).join(",")})`);
+    values.push(filters.companies);
+    conditions.push(`empresa = ANY($${values.length}::text[])`);
   }
   if (filters.causes?.length) {
-    conditions.push(`causa IN (${filters.causes.map(v => `'${escapeValue(v)}'`).join(",")})`);
+    values.push(filters.causes);
+    conditions.push(`causa = ANY($${values.length}::text[])`);
   }
   if (filters.channels?.length) {
-    conditions.push(`canal_atencion IN (${filters.channels.map(v => `'${escapeValue(v)}'`).join(",")})`);
+    values.push(filters.channels);
+    conditions.push(`canal_atencion = ANY($${values.length}::text[])`);
   }
   if (filters.statuses?.length) {
-    conditions.push(`estado IN (${filters.statuses.map(v => `'${escapeValue(v)}'`).join(",")})`);
+    values.push(filters.statuses);
+    conditions.push(`estado = ANY($${values.length}::text[])`);
   }
   if (filters.results?.length) {
-    conditions.push(`resultado IN (${filters.results.map(v => `'${escapeValue(v)}'`).join(",")})`);
+    values.push(filters.results);
+    conditions.push(`resultado = ANY($${values.length}::text[])`);
   }
   if (filters.responsibleUnits?.length) {
-    conditions.push(`unidad_responsable IN (${filters.responsibleUnits.map(v => `'${escapeValue(v)}'`).join(",")})`);
+    values.push(filters.responsibleUnits);
+    conditions.push(`unidad_responsable = ANY($${values.length}::text[])`);
   }
   if (filters.timeMin !== undefined) {
-    conditions.push(`tiempo_gestion_dias >= ${filters.timeMin}`);
+    values.push(filters.timeMin);
+    conditions.push(`tiempo_gestion_dias >= $${values.length}`);
   }
   if (filters.timeMax !== undefined) {
-    conditions.push(`tiempo_gestion_dias <= ${filters.timeMax}`);
+    values.push(filters.timeMax);
+    conditions.push(`tiempo_gestion_dias <= $${values.length}`);
   }
 
-  if (conditions.length === 0) return "";
-  return "WHERE " + conditions.join(" AND ");
+  if (conditions.length === 0) {
+    return { clause: "", values: [] };
+  }
+
+  return {
+    clause: "WHERE " + conditions.join(" AND "),
+    values,
+  };
 }
 
 /** Check if any filters are active */
@@ -90,45 +172,22 @@ export function hasActiveFilters(filters: AnalyticsFilters): boolean {
   );
 }
 
-/**
- * Execute a dynamic SQL query against Neon.
- * Uses neon's Pool class which supports parameterized queries with strings.
- */
-export async function queryNeon(sql: any, query: string): Promise<Record<string, any>[]> {
-  // Import Pool for dynamic queries
-  const { Pool } = await import("@neondatabase/serverless");
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL || process.env.NEON_DATABASE_URL });
-  try {
-    const { rows } = await pool.query(query);
-    return rows;
-  } finally {
-    await pool.end();
+/** Validation error class for filter parsing */
+export class FilterValidationError extends Error {
+  public readonly errors: ValidationError[];
+  constructor(errors: ValidationError[]) {
+    super(`Filter validation failed: ${errors.map(e => `${e.field}: ${e.message}`).join("; ")}`);
+    this.errors = errors;
+    this.name = "FilterValidationError";
   }
 }
 
 // --- Helpers ---
 
-function parseCSV(value: string | null): string[] | undefined {
-  if (!value) return undefined;
-  const items = value.split(",").map(v => v.trim()).filter(Boolean);
-  if (items.length === 0) return undefined;
-  if (items.length > 100) return items.slice(0, 100);
+function parseArray(value: string | null): string[] | null {
+  if (!value) return null;
+  // Support both comma and pipe separation
+  const items = value.split(/[,|]/).map(v => v.trim()).filter(Boolean);
+  if (items.length === 0) return null;
   return items;
-}
-
-function validateDate(value: string | null): string | undefined {
-  if (!value) return undefined;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
-  return value;
-}
-
-function parseNumber(value: string | null): number | undefined {
-  if (!value) return undefined;
-  const num = Number(value);
-  if (isNaN(num) || num < 0) return undefined;
-  return num;
-}
-
-function escapeValue(value: string): string {
-  return value.replace(/'/g, "''");
 }

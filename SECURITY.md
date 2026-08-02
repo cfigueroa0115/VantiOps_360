@@ -10,15 +10,40 @@ If you discover a security vulnerability, please report it privately via GitHub 
 - **No credentials in Git history**: If a secret is accidentally committed, it must be rotated immediately and removed from history using BFG Repo-Cleaner or git filter-repo.
 - **Rotation policy**: Rotate all credentials at minimum every 90 days, or immediately upon suspected exposure.
 
-## Known Credential Exposure (STATUS: HISTORY_CLEANUP_PENDING)
+## Known Credential Exposure
 
-A Neon PostgreSQL connection string was previously committed in commits `db73678` through `12578f5`. 
+**Status: ROTATED + REMOVED_FROM_CURRENT_CODE + HISTORY_CLEANUP_PENDING**
 
-**Current status:**
-- ✅ ROTATED: New password active (credential rotated by owner)
-- ✅ REMOVED_FROM_CURRENT_CODE: No secrets in current source files
-- ⚠️ HISTORY_CLEANUP_PENDING: Old credential remains in git history
-- Old credential has been revoked/rotated, reducing risk
+| Step | Status |
+|------|--------|
+| Password rotated in Neon | ✅ Done |
+| Removed from current source code | ✅ Done |
+| DATABASE_URL updated in Vercel | ✅ Done |
+| Production verified working | ✅ Done |
+| Git history cleaned (BFG/filter-repo) | ⚠️ PENDING |
+| Previous credential revoked | ✅ Done (rotated = old invalid) |
+
+**Note:** The git history still contains old credentials in commits `db73678`–`12578f5`. Since the password has been rotated, the exposed value is no longer valid. Full history cleanup requires running BFG Repo-Cleaner or git filter-repo, which will invalidate all existing clones.
+
+### History Cleanup Procedure (for repository owner)
+
+```bash
+# 1. Ensure old credential is already rotated (confirmed)
+# 2. Clone a fresh copy
+git clone --mirror https://github.com/cfigueroa0115/VantiOps_360.git
+
+# 3. Run BFG to remove the pattern
+java -jar bfg.jar --replace-text patterns.txt VantiOps_360.git
+# patterns.txt should contain the old password pattern
+
+# 4. Clean and push
+cd VantiOps_360.git
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+git push --force
+
+# 5. All collaborators must re-clone
+```
 
 ### Rotation Steps
 

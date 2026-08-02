@@ -13,7 +13,7 @@
 ### Database (Neon)
 - **Tables: 1** (only `pqr_records`)
 - Records: 51,008
-- Credential: Rotated (npg_1gjE9aMVPBRm)
+- Credential: Rotated (password not shown — managed via Vercel env vars)
 - No Phase 2 tables exist
 
 ### Routes (Production - verified HTTP 200)

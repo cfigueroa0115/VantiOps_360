@@ -1,23 +1,32 @@
 import { NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { query } from "@/lib/server/database";
 import {
   parseFiltersFromRequest,
-  buildWhereClause,
+  buildParameterizedWhere,
   hasActiveFilters,
-  queryNeon,
+  FilterValidationError,
 } from "@/lib/server/query-filters";
-
-// Using Node.js runtime for Pool support
 
 export async function GET(request: Request) {
   try {
-    const sql = neon(process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "");
-    const filters = parseFiltersFromRequest(request);
-    const where = buildWhereClause(filters);
+    let filters;
+    try {
+      filters = parseFiltersFromRequest(request);
+    } catch (e) {
+      if (e instanceof FilterValidationError) {
+        return NextResponse.json(
+          { error: { code: "VALIDATION_ERROR", message: e.message, details: e.errors } },
+          { status: 422 }
+        );
+      }
+      throw e;
+    }
+
+    const { clause, values } = buildParameterizedWhere(filters);
 
     // Main stats query
-    const mainQuery = `
-      SELECT
+    const mainResult = await query(
+      `SELECT
         COUNT(*)::int AS total_pqr,
         COUNT(*) FILTER (WHERE estado = 'cerrado')::int AS closed_pqr,
         COUNT(*) FILTER (WHERE estado IN ('en_tramite', 'en_proceso'))::int AS in_process_pqr,
@@ -28,43 +37,46 @@ export async function GET(request: Request) {
         ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY tiempo_gestion_dias)::numeric, 1) AS p95_management_time,
         ROUND(MAX(tiempo_gestion_dias)::numeric, 1) AS max_management_time,
         COUNT(DISTINCT causa)::int AS distinct_causes_count
-      FROM pqr_records
-      ${where}
-    `;
-    const result = await queryNeon(sql, mainQuery);
-    const row = result[0];
+      FROM pqr_records ${clause}`,
+      values
+    );
+    const row = mainResult[0] as Record<string, any>;
 
-    // Top cause query
-    const causeQuery = `
-      SELECT causa, COUNT(*)::int AS cnt
-      FROM pqr_records
-      ${where ? where + " AND causa IS NOT NULL" : "WHERE causa IS NOT NULL"}
-      GROUP BY causa ORDER BY cnt DESC LIMIT 1
-    `;
-    const causeResult = await queryNeon(sql, causeQuery);
+    // Top cause — append condition for non-null causa
+    const causeClause = clause
+      ? `${clause} AND causa IS NOT NULL`
+      : "WHERE causa IS NOT NULL";
+    const causeResult = await query(
+      `SELECT causa, COUNT(*)::int AS cnt FROM pqr_records ${causeClause} GROUP BY causa ORDER BY cnt DESC LIMIT 1`,
+      values
+    );
 
     const total = Number(row.total_pqr) || 1;
     const mainCauseShare = causeResult.length > 0
-      ? Math.round((Number(causeResult[0].cnt) / total) * 1000) / 10
+      ? Math.round((Number((causeResult[0] as any).cnt) / total) * 1000) / 10
       : 0;
 
-    // Quality issues query - records missing critical fields
-    const qualityQuery = `
-      SELECT
-        COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE motivo_cierre IS NULL OR marcacion IS NULL OR empresa IS NULL)::int AS with_issues
-      FROM pqr_records
-      ${where}
-    `;
-    const qualityResult = await queryNeon(sql, qualityQuery);
-    const qualityRow = qualityResult[0];
-    const qualityTotal = Number(qualityRow.total) || 1;
-    const qualityIssuesPct = Math.round(
-      (Number(qualityRow.with_issues) / qualityTotal) * 1000
-    ) / 10;
+    // Quality score — fetch from /api/quality logic (completeness-based)
+    const qualityResult = await query(
+      `SELECT
+        ROUND((1.0 - COUNT(*) FILTER (WHERE causa IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS causa_pct,
+        ROUND((1.0 - COUNT(*) FILTER (WHERE empresa IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS empresa_pct,
+        ROUND((1.0 - COUNT(*) FILTER (WHERE canal_atencion IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS canal_pct,
+        ROUND((1.0 - COUNT(*) FILTER (WHERE estado IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS estado_pct,
+        ROUND((1.0 - COUNT(*) FILTER (WHERE resultado IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS resultado_pct,
+        ROUND((1.0 - COUNT(*) FILTER (WHERE motivo_cierre IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS motivo_pct
+      FROM pqr_records ${clause}`,
+      values
+    );
+    const qRow = qualityResult[0] as Record<string, any>;
+    const completeness = Math.round(
+      ((Number(qRow.causa_pct) + Number(qRow.empresa_pct) + Number(qRow.canal_pct) +
+        Number(qRow.estado_pct) + Number(qRow.resultado_pct) + Number(qRow.motivo_pct)) / 6) * 100
+    ) / 100;
 
-    // Calculate data quality score dynamically (100 - issues percentage)
-    const dataQualityScore = Math.round((100 - qualityIssuesPct) * 10) / 10;
+    // Approximate overall quality score (completeness-weighted for now)
+    // This matches the overallScore from /api/quality
+    const dataQualityScore = Math.round(completeness * 10) / 10;
 
     return NextResponse.json({
       totalPqr: Number(row.total_pqr) || 0,
@@ -78,17 +90,20 @@ export async function GET(request: Request) {
       maxManagementTime: Number(row.max_management_time) || 0,
       distinctCausesCount: Number(row.distinct_causes_count) || 0,
       mainCauseSharePct: mainCauseShare,
-      qualityIssuesPct,
       dataQualityScore,
       metadata: {
         filtered: hasActiveFilters(filters),
         appliedFilters: filters,
         recordCount: Number(row.total_pqr) || 0,
         generatedAt: new Date().toISOString(),
+        datasetVersion: "pqr_records_v1",
       },
     });
   } catch (error) {
     console.error("KPIs API error:", error);
-    return NextResponse.json({ error: "Failed to fetch KPIs" }, { status: 500 });
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "Failed to fetch KPIs" } },
+      { status: 500 }
+    );
   }
 }
