@@ -4,11 +4,11 @@ Creates the pqr_records table and loads all records from the curated Parquet.
 
 Usage:
     cd backend
-    pip install psycopg2-binary polars
+    export DATABASE_URL="postgresql://..."
     python seed_neon.py
 
 Environment:
-    DATABASE_URL — Neon PostgreSQL connection string
+    DATABASE_URL — Neon PostgreSQL connection string (required)
 """
 
 import os
@@ -17,11 +17,12 @@ from pathlib import Path
 
 import polars as pl
 
-# Connection string
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://neondb_owner:npg_yR1hHav0ePkw@ep-twilight-hill-ay1t3h87-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    print("ERROR: DATABASE_URL environment variable is required.")
+    print("Set it with: export DATABASE_URL='postgresql://...'")
+    print("Or on Windows: set DATABASE_URL=postgresql://...")
+    sys.exit(1)
 
 # Path to curated Parquet
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -35,7 +36,6 @@ def create_table(conn):
         DROP TABLE IF EXISTS pqr_records;
         CREATE TABLE pqr_records (
             id SERIAL PRIMARY KEY,
-            id_pqr INTEGER,
             fecha_creacion DATE,
             fecha_cierre DATE,
             estado VARCHAR(50),
@@ -57,44 +57,43 @@ def create_table(conn):
 
 def load_data(conn, df: pl.DataFrame):
     """Insert DataFrame rows into pqr_records using batch inserts."""
-    cur = conn.cursor()
+    from psycopg2.extras import execute_values
 
-    # Build column list matching what we have in the DataFrame
+    cur = conn.cursor()
     columns = [
-        "id_pqr", "fecha_creacion", "fecha_cierre", "estado", "causa",
+        "fecha_creacion", "fecha_cierre", "estado", "causa",
         "canal_atencion", "empresa", "resultado", "unidad_responsable",
         "marcacion", "motivo_cierre", "tiempo_gestion_dias", "tipo_pqr"
     ]
-
-    # Filter to only columns that exist in the DataFrame
     available_cols = [c for c in columns if c in df.columns]
     col_list = ", ".join(available_cols)
-    placeholders = ", ".join(["%s"] * len(available_cols))
+    sub_df = df.select(available_cols)
 
-    insert_sql = f"INSERT INTO pqr_records ({col_list}) VALUES ({placeholders})"
+    if "tiempo_gestion_dias" in sub_df.columns:
+        sub_df = sub_df.with_columns(
+            pl.col("tiempo_gestion_dias").cast(pl.Float64, strict=False)
+        )
+    if "estado" in sub_df.columns:
+        sub_df = sub_df.with_columns(
+            pl.col("estado").cast(pl.Utf8).str.to_lowercase().str.replace_all(r"\s+", "_")
+        )
 
-    # Convert to list of tuples for batch insert
-    batch_size = 1000
-    rows = df.select(available_cols).rows()
+    rows = sub_df.rows()
+    batch_size = 5000
     total = len(rows)
 
     for i in range(0, total, batch_size):
         batch = rows[i:i + batch_size]
-        # Convert Python date objects and handle None
-        clean_batch = []
-        for row in batch:
-            clean_row = []
-            for val in row:
-                if val is None:
-                    clean_row.append(None)
-                else:
-                    clean_row.append(val)
-            clean_batch.append(tuple(clean_row))
-
-        cur.executemany(insert_sql, clean_batch)
+        template = "(" + ",".join(["%s"] * len(available_cols)) + ")"
+        execute_values(
+            cur,
+            f"INSERT INTO pqr_records ({col_list}) VALUES %s",
+            batch,
+            template=template,
+            page_size=5000,
+        )
         conn.commit()
-        pct = min(100, int((i + batch_size) / total * 100))
-        print(f"\r  Loading... {pct}% ({min(i + batch_size, total)}/{total} records)", end="", flush=True)
+        print(f"\r  Loading... {min(i + batch_size, total)}/{total}", end="", flush=True)
 
     print(f"\n✓ Loaded {total} records into pqr_records")
     cur.close()
@@ -104,12 +103,12 @@ def create_indexes(conn):
     """Create indexes for common query patterns."""
     cur = conn.cursor()
     cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_pqr_causa ON pqr_records(causa);
-        CREATE INDEX IF NOT EXISTS idx_pqr_estado ON pqr_records(estado);
-        CREATE INDEX IF NOT EXISTS idx_pqr_empresa ON pqr_records(empresa);
-        CREATE INDEX IF NOT EXISTS idx_pqr_canal ON pqr_records(canal_atencion);
-        CREATE INDEX IF NOT EXISTS idx_pqr_fecha ON pqr_records(fecha_creacion);
-        CREATE INDEX IF NOT EXISTS idx_pqr_tiempo ON pqr_records(tiempo_gestion_dias);
+        CREATE INDEX IF NOT EXISTS idx_causa ON pqr_records(causa);
+        CREATE INDEX IF NOT EXISTS idx_estado ON pqr_records(estado);
+        CREATE INDEX IF NOT EXISTS idx_empresa ON pqr_records(empresa);
+        CREATE INDEX IF NOT EXISTS idx_canal ON pqr_records(canal_atencion);
+        CREATE INDEX IF NOT EXISTS idx_fecha ON pqr_records(fecha_creacion);
+        CREATE INDEX IF NOT EXISTS idx_tiempo ON pqr_records(tiempo_gestion_dias);
     """)
     conn.commit()
     cur.close()
@@ -131,7 +130,6 @@ def main():
     print(f"Loading data from: {CURATED_FILE}")
     df = pl.read_parquet(CURATED_FILE)
     print(f"  Records: {df.height}, Columns: {df.width}")
-    print(f"  Columns: {df.columns}")
 
     print(f"\nConnecting to Neon PostgreSQL...")
     conn = psycopg2.connect(DATABASE_URL)
@@ -141,16 +139,13 @@ def main():
     load_data(conn, df)
     create_indexes(conn)
 
-    # Verify
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM pqr_records")
     count = cur.fetchone()[0]
     print(f"\n✓ Verification: {count} records in database")
     cur.close()
-
     conn.close()
     print("\n✅ Neon database seeded successfully!")
-    print("   The Vercel API routes can now query pqr_records table.")
 
 
 if __name__ == "__main__":
