@@ -1,0 +1,255 @@
+"use client";
+
+import React from "react";
+import { useChartData } from "@/hooks/useChartData";
+import { SearchCode, Target, ListOrdered, Table2, GitBranch } from "lucide-react";
+
+const PARETO_DATA = [
+  { cause: "Cancela Servihogar a solicitud cliente", pct: 49.2, cumulative: 49.2 },
+  { cause: "Reclamo comercial gas", pct: 15.1, cumulative: 64.3 },
+  { cause: "Solicitud de revisión", pct: 9.8, cumulative: 74.1 },
+  { cause: "Factura elevada", pct: 7.4, cumulative: 81.5 },
+  { cause: "Cambio de nombre", pct: 5.2, cumulative: 86.7 },
+  { cause: "Otros", pct: 13.3, cumulative: 100.0 },
+];
+
+const FIVE_WHYS = [
+  "¿Por qué se cancelan masivamente los servicios Servihogar? → Porque los clientes no perciben valor en el servicio.",
+  "¿Por qué no perciben valor? → Porque el servicio no se utiliza o no se comunica adecuadamente.",
+  "¿Por qué no se utiliza? → Porque no hay recordatorio ni activación proactiva del beneficio.",
+  "¿Por qué no hay activación proactiva? → Porque el proceso de retención carece de trigger automático.",
+  "¿Por qué no existe un trigger automático? → Porque el sistema de gestión no tiene integración con el ciclo de vida del cliente.",
+];
+
+const ISHIKAWA = [
+  { category: "Personas", factors: ["Falta de capacitación en retención", "Alta rotación de agentes", "Sin incentivos por retención"] },
+  { category: "Procesos", factors: ["Ausencia de protocolo de retención", "Cancelación sin validación de causa raíz", "Sin escalamiento a especialista"] },
+  { category: "Tecnología", factors: ["Sin alertas de churn prediction", "CRM sin scoring de cliente", "Canales digitales limitados"] },
+  { category: "Datos", factors: ["Motivo de cierre incompleto", "Sin histórico de interacciones", "Marcación no obligatoria"] },
+  { category: "Medición", factors: ["KPI de retención no medido", "Sin seguimiento post-cancelación", "ANS no incluye retención"] },
+  { category: "Políticas", factors: ["Cancelación inmediata sin periodo de gracia", "Sin oferta de valor alternativa", "Política de reembolso rígida"] },
+];
+
+const SIPOC = [
+  { supplier: "Cliente", input: "Solicitud de cancelación", process: "Gestión PQR", output: "Cancelación ejecutada", customer: "Cliente / Vanti" },
+  { supplier: "Agente de servicio", input: "Registro en sistema", process: "Validación de datos", output: "PQR clasificada", customer: "Área de operaciones" },
+  { supplier: "Sistema CRM", input: "Datos del cliente", process: "Análisis de causa", output: "Informe de causa raíz", customer: "Gestión de calidad" },
+  { supplier: "Área de retención", input: "Propuesta de valor", process: "Oferta de retención", output: "Aceptación/Rechazo", customer: "Cliente" },
+];
+
+const FMEA_DATA = [
+  { mode: "Cancelación sin intento de retención", effect: "Pérdida de cliente", severity: 9, occurrence: 8, detection: 3, rpn: 216, action: "Implementar flujo obligatorio de retención" },
+  { mode: "Datos incompletos en cierre", effect: "Imposibilidad de análisis causal", severity: 7, occurrence: 7, detection: 4, rpn: 196, action: "Campos obligatorios en formulario" },
+  { mode: "Sin alerta de riesgo de churn", effect: "Acción reactiva vs proactiva", severity: 8, occurrence: 6, detection: 2, rpn: 96, action: "Modelo predictivo de abandono" },
+  { mode: "Canal único (telefónico)", effect: "Fricción en experiencia del cliente", severity: 6, occurrence: 9, detection: 5, rpn: 270, action: "Habilitar canales digitales autoservicio" },
+];
+
+export default function RCAPage() {
+  const { data, loading } = useChartData("pareto");
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+          <SearchCode size={20} className="text-purple-600" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Análisis de Causa Raíz</h1>
+          <p className="text-sm text-gray-500">Metodologías: Pareto, SIPOC, 5 Por qués, Ishikawa, FMEA, BPMN</p>
+        </div>
+      </div>
+
+      {/* Main Cause */}
+      <div className="rounded-xl border-2 border-purple-200 bg-purple-50 p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Target size={18} className="text-purple-600" />
+          <h2 className="text-lg font-semibold text-purple-900">Causa Principal Identificada</h2>
+        </div>
+        <p className="text-2xl font-bold text-purple-800">&ldquo;Cancela Servihogar a solicitud cliente&rdquo;</p>
+        <p className="text-sm text-purple-600 mt-2">Concentra ~49.2% del volumen total de PQR — 80/20 de Pareto confirmado</p>
+      </div>
+
+      {/* Pareto Chart */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Análisis de Pareto</h2>
+        <div className="space-y-2">
+          {PARETO_DATA.map((item, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="w-64 text-sm text-gray-700 truncate">{item.cause}</span>
+              <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
+                  style={{ width: `${item.pct * 2}%` }}
+                />
+                <span className="absolute right-2 top-1 text-xs font-medium text-gray-600">
+                  {item.pct}% (acum: {item.cumulative}%)
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SIPOC */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Diagrama SIPOC</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-purple-700">Supplier</th>
+                <th className="px-3 py-2 text-left font-semibold text-purple-700">Input</th>
+                <th className="px-3 py-2 text-left font-semibold text-purple-700">Process</th>
+                <th className="px-3 py-2 text-left font-semibold text-purple-700">Output</th>
+                <th className="px-3 py-2 text-left font-semibold text-purple-700">Customer</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {SIPOC.map((row, i) => (
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-3 py-2">{row.supplier}</td>
+                  <td className="px-3 py-2">{row.input}</td>
+                  <td className="px-3 py-2 font-medium">{row.process}</td>
+                  <td className="px-3 py-2">{row.output}</td>
+                  <td className="px-3 py-2">{row.customer}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 5 Whys */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ListOrdered size={18} className="text-purple-600" />
+          <h2 className="text-lg font-semibold text-gray-800">5 Por Qués</h2>
+        </div>
+        <ol className="space-y-3">
+          {FIVE_WHYS.map((why, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-bold text-purple-700">
+                {i + 1}
+              </span>
+              <p className="text-sm text-gray-700 leading-relaxed pt-1">{why}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Ishikawa */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Diagrama de Ishikawa (Causa-Efecto)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ISHIKAWA.map((cat) => (
+            <div key={cat.category} className="rounded-lg border border-gray-100 p-4 bg-gray-50">
+              <h3 className="font-semibold text-purple-700 text-sm mb-2">{cat.category}</h3>
+              <ul className="space-y-1">
+                {cat.factors.map((f, i) => (
+                  <li key={i} className="text-xs text-gray-600 flex items-start gap-1">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FMEA Table */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Table2 size={18} className="text-purple-600" />
+          <h2 className="text-lg font-semibold text-gray-800">Análisis FMEA</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Modo de Falla</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Efecto</th>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">S</th>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">O</th>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">D</th>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">RPN</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Acción Recomendada</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {FMEA_DATA.map((row, i) => (
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 font-medium">{row.mode}</td>
+                  <td className="px-3 py-2 text-gray-600">{row.effect}</td>
+                  <td className="px-3 py-2 text-center">{row.severity}</td>
+                  <td className="px-3 py-2 text-center">{row.occurrence}</td>
+                  <td className="px-3 py-2 text-center">{row.detection}</td>
+                  <td className="px-3 py-2 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${
+                      row.rpn >= 200 ? "bg-red-100 text-red-700" : row.rpn >= 100 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                    }`}>
+                      {row.rpn}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-gray-600">{row.action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* BPMN Process Flows */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <GitBranch size={18} className="text-purple-600" />
+          <h2 className="text-lg font-semibold text-gray-800">Flujos BPMN</h2>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* AS-IS */}
+          <div className="rounded-lg border border-red-100 bg-red-50/30 p-4">
+            <h3 className="font-semibold text-red-700 text-sm mb-3">AS-IS (Estado Actual)</h3>
+            <div className="bg-white rounded border border-gray-200 p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+{`[Inicio] → [Cliente llama]
+  → [Agente recibe solicitud]
+  → [Registra cancelación]
+  → [Ejecuta cancelación inmediata]
+  → [Cierra caso]
+  → [Fin]
+
+⚠ Sin intento de retención
+⚠ Sin análisis de causa
+⚠ Sin validación de datos completos`}
+            </div>
+          </div>
+
+          {/* TO-BE */}
+          <div className="rounded-lg border border-green-100 bg-green-50/30 p-4">
+            <h3 className="font-semibold text-green-700 text-sm mb-3">TO-BE (Estado Deseado)</h3>
+            <div className="bg-white rounded border border-gray-200 p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+{`[Inicio] → [Cliente solicita cancelación]
+  → [Sistema valida datos completos]
+  → [Scoring de riesgo de abandono]
+  → <¿Alto riesgo?>
+    SÍ → [Escalamiento a Retención]
+       → [Oferta de valor personalizada]
+       → <¿Acepta?>
+         SÍ → [Actualiza servicio] → [Fin]
+         NO → [Registra causa real]
+    NO → [Registra causa real]
+  → [Ejecuta cancelación controlada]
+  → [Encuesta post-cancelación]
+  → [Fin]
+
+✓ Intento de retención obligatorio
+✓ Causa raíz documentada
+✓ Datos completos validados`}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
