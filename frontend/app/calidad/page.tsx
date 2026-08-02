@@ -1,17 +1,33 @@
 "use client";
 
 import React from "react";
-import { useChartData } from "@/hooks/useChartData";
-import { Database, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Database, AlertTriangle, CheckCircle2, RefreshCw, Loader2 } from "lucide-react";
+import { useQualityReport } from "@/hooks/useQualityReport";
 
-const DIMENSIONS = [
-  { key: "completeness", label: "Completitud", description: "Campos sin valores nulos" },
-  { key: "validity", label: "Validez", description: "Valores dentro de dominios esperados" },
-  { key: "consistency", label: "Consistencia", description: "Coherencia entre campos relacionados" },
-  { key: "uniqueness", label: "Unicidad", description: "Registros sin duplicados" },
-  { key: "timeliness", label: "Oportunidad", description: "Datos actualizados dentro del SLA" },
-  { key: "referential_integrity", label: "Integridad Referencial", description: "Relaciones FK válidas" },
+const DIMENSIONS: { key: keyof typeof DIMENSION_LABELS; label: string; description: string }[] = [
+  { key: "completeness", label: "Completitud", description: "Campos sin valores nulos en campos obligatorios" },
+  { key: "validity", label: "Validez", description: "Valores dentro de dominios y rangos esperados" },
+  { key: "consistency", label: "Consistencia", description: "Coherencia lógica entre campos relacionados" },
+  { key: "uniqueness", label: "Unicidad", description: "Registros sin duplicados exactos" },
+  { key: "timeliness", label: "Oportunidad", description: "Datos dentro de ventana temporal de 365 días" },
+  { key: "domainConformity", label: "Conformidad de Dominio", description: "Valores conformes al catálogo de dominio" },
 ];
+
+const DIMENSION_LABELS = {
+  completeness: "Completitud",
+  validity: "Validez",
+  consistency: "Consistencia",
+  uniqueness: "Unicidad",
+  timeliness: "Oportunidad",
+  domainConformity: "Conformidad de Dominio",
+};
+
+const SEVERITY_MAP: Record<string, { label: string; className: string }> = {
+  LOW: { label: "Baja", className: "bg-green-100 text-green-700" },
+  MEDIUM: { label: "Media", className: "bg-amber-100 text-amber-700" },
+  HIGH: { label: "Alta", className: "bg-red-100 text-red-700" },
+  CRITICAL: { label: "Crítica", className: "bg-purple-100 text-purple-700" },
+};
 
 function ScoreGauge({ score, label }: { score: number; label: string }) {
   const color = score >= 90 ? "text-green-600" : score >= 70 ? "text-amber-600" : "text-red-600";
@@ -26,56 +42,39 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
 }
 
 export default function CalidadPage() {
-  const { data, loading, error, retry } = useChartData("quality_by_field");
+  const { data, loading, error, retry } = useQualityReport();
 
-  // Extract dimension scores from data if available
-  const qualityData = data?.data || [];
-  const overallScore = qualityData.length > 0
-    ? qualityData.reduce((sum, item) => sum + (Number(item.score) || 0), 0) / qualityData.length
-    : 87.3;
-
-  // Build dimension scores from real data or defaults
-  const dimensionScores: Record<string, number> = {
-    completeness: 92.1,
-    validity: 88.5,
-    consistency: 85.2,
-    uniqueness: 97.8,
-    timeliness: 79.4,
-    referential_integrity: 81.0,
-  };
-
-  if (qualityData.length > 0) {
-    qualityData.forEach((item) => {
-      const field = String(item.field || item.dimension || "");
-      const score = Number(item.score || item.value || 0);
-      if (field && score) {
-        const key = field.toLowerCase().replace(/\s+/g, "_");
-        if (key in dimensionScores) {
-          dimensionScores[key] = score;
-        }
-      }
-    });
+  // ─── LOADING STATE ───
+  if (loading && !data) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 size={40} className="text-blue-500 animate-spin" />
+        <p className="text-gray-500 text-sm">Calculando métricas de calidad...</p>
+      </div>
+    );
   }
 
-  // Violations table data from real data or defaults
-  const violations = qualityData.length > 0
-    ? qualityData
-        .filter((item) => Number(item.violations_count || item.violationsCount || 0) > 0)
-        .map((item) => ({
-          field: String(item.field || item.targetField || ""),
-          rule: String(item.rule || item.ruleName || "Validación"),
-          count: Number(item.violations_count || item.violationsCount || 0),
-          pct: Number(item.violations_pct || item.violationsPct || 0),
-          severity: String(item.severity || "medium"),
-          action: String(item.action || item.correctiveAction || "Revisar"),
-        }))
-    : [
-        { field: "motivo_cierre", rule: "NOT_NULL", count: 3420, pct: 6.7, severity: "high", action: "Implementar validación obligatoria en formulario de cierre" },
-        { field: "marcacion", rule: "NOT_NULL", count: 2180, pct: 4.3, severity: "high", action: "Agregar campo obligatorio en sistema de gestión" },
-        { field: "fecha_gestion", rule: "RANGE_CHECK", count: 890, pct: 1.7, severity: "medium", action: "Validar rango de fechas al momento del registro" },
-        { field: "canal", rule: "DOMAIN_CHECK", count: 156, pct: 0.3, severity: "low", action: "Actualizar catálogo de canales válidos" },
-        { field: "empresa_responsable", rule: "FK_REFERENCE", count: 78, pct: 0.15, severity: "medium", action: "Sincronizar catálogo de empresas con sistema maestro" },
-      ];
+  // ─── ERROR STATE ───
+  if (error && !data) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertTriangle size={40} className="text-red-500" />
+        <p className="text-gray-700 font-medium">Error al cargar el reporte de calidad</p>
+        <p className="text-gray-500 text-sm">{error}</p>
+        <button
+          onClick={retry}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <RefreshCw size={16} />
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const { overallScore, dimensions, violations, metadata } = data;
 
   return (
     <div className="p-6 space-y-6">
@@ -86,7 +85,7 @@ export default function CalidadPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Calidad de Datos</h1>
-          <p className="text-sm text-gray-500">6 dimensiones de calidad según ISO 25012 / DAMA DMBOK</p>
+          <p className="text-sm text-gray-500">6 dimensiones de calidad — puntaje compuesto ponderado</p>
         </div>
       </div>
 
@@ -94,7 +93,7 @@ export default function CalidadPage() {
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-800">Puntaje General de Calidad</h2>
-          {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando datos...</span>}
+          {loading && <span className="text-xs text-gray-400 animate-pulse">Actualizando...</span>}
           {error && (
             <button onClick={retry} className="text-xs text-red-500 hover:underline">
               Error — Reintentar
@@ -106,7 +105,7 @@ export default function CalidadPage() {
             <p className={`text-5xl font-bold ${overallScore >= 85 ? "text-green-600" : overallScore >= 70 ? "text-amber-600" : "text-red-600"}`}>
               {overallScore.toFixed(1)}%
             </p>
-            <p className="text-xs text-gray-500 mt-1">Score Promedio</p>
+            <p className="text-xs text-gray-500 mt-1">Score Compuesto</p>
           </div>
           <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
             <div
@@ -124,7 +123,7 @@ export default function CalidadPage() {
           {DIMENSIONS.map((dim) => (
             <ScoreGauge
               key={dim.key}
-              score={dimensionScores[dim.key] || 0}
+              score={dimensions[dim.key] || 0}
               label={dim.label}
             />
           ))}
@@ -139,54 +138,60 @@ export default function CalidadPage() {
       </div>
 
       {/* Violations Table */}
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-          <AlertTriangle size={16} className="text-amber-500" />
-          <h2 className="text-lg font-semibold text-gray-800">Violaciones Detectadas</h2>
-          <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-            {violations.length} reglas
-          </span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Campo</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Regla</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500">Violaciones</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500">%</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500">Severidad</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Acción Correctiva</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {violations.map((v, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs">{v.field}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{v.rule}</td>
-                  <td className="px-4 py-3 text-right font-medium">{v.count.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">{v.pct.toFixed(2)}%</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                      v.severity === "high" ? "bg-red-100 text-red-700" :
-                      v.severity === "medium" ? "bg-amber-100 text-amber-700" :
-                      "bg-green-100 text-green-700"
-                    }`}>
-                      {v.severity === "high" ? "Alta" : v.severity === "medium" ? "Media" : "Baja"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{v.action}</td>
+      {violations.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-500" />
+            <h2 className="text-lg font-semibold text-gray-800">Violaciones Detectadas</h2>
+            <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+              {violations.length} reglas
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500">Dimensión</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500">Campo</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500">Descripción</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-500">Violaciones</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-500">%</th>
+                  <th className="px-4 py-3 text-center font-medium text-gray-500">Severidad</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500">Acción Recomendada</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {violations.map((v, i) => {
+                  const sev = SEVERITY_MAP[v.severity] || SEVERITY_MAP.LOW;
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-xs capitalize">{v.dimension}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{v.field}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{v.description}</td>
+                      <td className="px-4 py-3 text-right font-medium">{v.count.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right">{v.percentage.toFixed(2)}%</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${sev.className}`}>
+                          {sev.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{v.recommendedAction}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Summary */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 bg-white rounded-lg border border-gray-200 px-4 py-3">
-        <CheckCircle2 size={16} className="text-green-500" />
-        <span>Análisis basado en datos reales del pipeline de calidad — {qualityData.length || 51008} registros evaluados.</span>
+      {/* Metadata */}
+      <div className="flex flex-col gap-2 text-sm text-gray-500 bg-white rounded-lg border border-gray-200 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-green-500" />
+          <span>{metadata.recordCount.toLocaleString()} registros evaluados — generado {new Date(metadata.generatedAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}</span>
+        </div>
+        <p className="text-xs text-gray-400">{metadata.methodology}</p>
       </div>
     </div>
   );

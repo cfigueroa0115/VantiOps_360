@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { calculateQualityReport } from "@/lib/server/quality-service";
 import {
   parseFiltersFromRequest,
   buildParameterizedWhere,
   hasActiveFilters,
   FilterValidationError,
 } from "@/lib/server/query-filters";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
@@ -56,27 +59,9 @@ export async function GET(request: Request) {
       ? Math.round((Number((causeResult[0] as any).cnt) / total) * 1000) / 10
       : 0;
 
-    // Quality score — fetch from /api/quality logic (completeness-based)
-    const qualityResult = await query(
-      `SELECT
-        ROUND((1.0 - COUNT(*) FILTER (WHERE causa IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS causa_pct,
-        ROUND((1.0 - COUNT(*) FILTER (WHERE empresa IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS empresa_pct,
-        ROUND((1.0 - COUNT(*) FILTER (WHERE canal_atencion IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS canal_pct,
-        ROUND((1.0 - COUNT(*) FILTER (WHERE estado IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS estado_pct,
-        ROUND((1.0 - COUNT(*) FILTER (WHERE resultado IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS resultado_pct,
-        ROUND((1.0 - COUNT(*) FILTER (WHERE motivo_cierre IS NULL)::numeric / NULLIF(COUNT(*), 0)) * 100, 2) AS motivo_pct
-      FROM pqr_records ${clause}`,
-      values
-    );
-    const qRow = qualityResult[0] as Record<string, any>;
-    const completeness = Math.round(
-      ((Number(qRow.causa_pct) + Number(qRow.empresa_pct) + Number(qRow.canal_pct) +
-        Number(qRow.estado_pct) + Number(qRow.resultado_pct) + Number(qRow.motivo_pct)) / 6) * 100
-    ) / 100;
-
-    // Approximate overall quality score (completeness-weighted for now)
-    // This matches the overallScore from /api/quality
-    const dataQualityScore = Math.round(completeness * 10) / 10;
+    // Quality score — from calculateQualityReport (SINGLE SOURCE OF TRUTH)
+    const qualityReport = await calculateQualityReport(filters);
+    const dataQualityScore = qualityReport.overallScore;
 
     return NextResponse.json({
       totalPqr: Number(row.total_pqr) || 0,

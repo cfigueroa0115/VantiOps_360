@@ -1,24 +1,14 @@
 /**
  * Shared database client for Neon PostgreSQL.
- * Uses Pool with WebSocket for parameterized queries in Node.js runtime.
+ * Uses Pool with WebSocket for parameterized queries.
+ * No eval(), no silent catches — explicit error handling.
  */
 
 import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 
-// Lazy-load ws to avoid build-time issues with static generation
-let wsLoaded = false;
-function ensureWs() {
-  if (!wsLoaded) {
-    try {
-      // Dynamic require to avoid static analysis during build
-      const ws = eval('require')('ws');
-      neonConfig.webSocketConstructor = ws;
-    } catch {
-      // Fallback: works without ws in some environments
-    }
-    wsLoaded = true;
-  }
-}
+// Configure WebSocket for Node.js runtime (required by Neon Pool)
+neonConfig.webSocketConstructor = ws;
 
 let pool: Pool | null = null;
 
@@ -27,11 +17,16 @@ function getPool(): Pool {
     const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
     if (!connectionString) {
       throw new Error(
-        "DATABASE_URL environment variable is required."
+        "DATABASE_URL environment variable is required. " +
+        "Configure it in Vercel Project Settings or in a local .env file."
       );
     }
-    ensureWs();
-    pool = new Pool({ connectionString });
+    pool = new Pool({
+      connectionString,
+      max: 2,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 10_000,
+    });
   }
   return pool;
 }

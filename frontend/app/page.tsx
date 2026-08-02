@@ -10,6 +10,7 @@ import { useFilters } from "@/hooks/useFilters";
 import { useKPIs } from "@/hooks/useKPIs";
 import { useFilterOptions } from "@/hooks/useFilterOptions";
 import { useChartData } from "@/hooks/useChartData";
+import { useQualityReport } from "@/hooks/useQualityReport";
 import { ParetoChart } from "@/components/charts/ParetoChart";
 import { TopCausesBar } from "@/components/charts/TopCausesBar";
 import { CancellationDonut } from "@/components/charts/CancellationDonut";
@@ -17,8 +18,64 @@ import { DistributionBar } from "@/components/charts/DistributionBar";
 import { TemporalTrend } from "@/components/charts/TemporalTrend";
 import { P90ByCauseBar } from "@/components/charts/P90ByCauseBar";
 import { OpenCasesHistogram } from "@/components/charts/OpenCasesHistogram";
-import { QualityByFieldBar } from "@/components/charts/QualityByFieldBar";
 import { FindingsTable } from "@/components/charts/FindingsTable";
+import { Database } from "lucide-react";
+
+function QualityScoreCard({
+  overallScore,
+  dimensions,
+  loading,
+  error,
+  onRetry,
+}: {
+  overallScore: number | null;
+  dimensions: Record<string, number> | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}) {
+  const score = overallScore ?? 0;
+  const color = score >= 90 ? "text-green-600" : score >= 70 ? "text-amber-600" : "text-red-600";
+  const barColor = score >= 90 ? "bg-green-500" : score >= 70 ? "bg-amber-500" : "bg-red-500";
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Database size={16} className="text-blue-500" />
+        <h3 className="text-sm font-semibold text-gray-700">Calidad de Datos</h3>
+        {loading && <span className="text-xs text-gray-400 animate-pulse ml-auto">…</span>}
+        {error && (
+          <button onClick={onRetry} className="text-xs text-red-500 hover:underline ml-auto">
+            Reintentar
+          </button>
+        )}
+      </div>
+      {overallScore !== null ? (
+        <>
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className={`text-3xl font-bold ${color}`}>{score.toFixed(1)}%</span>
+            <span className="text-xs text-gray-400">score compuesto</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(score, 100)}%` }} />
+          </div>
+          {dimensions && (
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div><span className="text-gray-500">Completitud:</span> <span className="font-medium">{dimensions.completeness?.toFixed(1)}%</span></div>
+              <div><span className="text-gray-500">Validez:</span> <span className="font-medium">{dimensions.validity?.toFixed(1)}%</span></div>
+              <div><span className="text-gray-500">Consistencia:</span> <span className="font-medium">{dimensions.consistency?.toFixed(1)}%</span></div>
+              <div><span className="text-gray-500">Unicidad:</span> <span className="font-medium">{dimensions.uniqueness?.toFixed(1)}%</span></div>
+              <div><span className="text-gray-500">Oportunidad:</span> <span className="font-medium">{dimensions.timeliness?.toFixed(1)}%</span></div>
+              <div><span className="text-gray-500">Dominio:</span> <span className="font-medium">{dimensions.domainConformity?.toFixed(1)}%</span></div>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-gray-400">Sin datos</p>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { filters, activeCount, setFilter, clearFilter, clearAll } = useFilters();
@@ -34,7 +91,7 @@ export default function DashboardPage() {
   const distResult = useChartData("distribution_result", filters);
   const p90 = useChartData("p90_by_cause", filters);
   const histogram = useChartData("open_cases_histogram", filters);
-  const quality = useChartData("quality_by_field", filters);
+  const quality = useQualityReport(filters);
 
   const lastUpdated = kpiData
     ? new Date().toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
@@ -159,8 +216,9 @@ export default function DashboardPage() {
                 />
               </ErrorBoundary>
               <ErrorBoundary>
-                <QualityByFieldBar
-                  data={(quality.data?.data || []) as any[]}
+                <QualityScoreCard
+                  overallScore={quality.data?.overallScore ?? null}
+                  dimensions={quality.data?.dimensions ? (quality.data.dimensions as unknown as Record<string, number>) : null}
                   loading={quality.loading}
                   error={quality.error}
                   onRetry={quality.retry}

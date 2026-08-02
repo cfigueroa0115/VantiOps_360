@@ -7,6 +7,8 @@ import {
   FilterValidationError,
 } from "@/lib/server/query-filters";
 
+export const dynamic = "force-dynamic";
+
 const VALID_CHART_TYPES = [
   "pareto", "top_causes", "cancellation_donut",
   "distribution_company", "distribution_channel", "distribution_result",
