@@ -1,0 +1,26 @@
+[
+  {
+    "batch_id": "a5e017a6-90e7-47e2-9476-17ba5d2a7aec",
+    "ingestion_timestamp": "2026-08-02T20:02:48.683850",
+    "source_file_path": "C:\\DesarrollosCF\\VantiOps 360\\data\\raw\\Entrada_PQRs.xlsx",
+    "source_file_hash": "061fe938e2cd3a26f7a26ed1c3088261cb63a12d1fa961a5de542f1be39923c5",
+    "records_ingested": 51008,
+    "records_validated": 51008,
+    "records_quarantined": 0,
+    "records_rejected": 0,
+    "processing_duration_seconds": 30.32,
+    "status": "completed"
+  },
+  {
+    "batch_id": "f3d17daa-d945-478e-824f-79a0ad065ea9",
+    "ingestion_timestamp": "2026-08-02T20:05:01.216108",
+    "source_file_path": "C:\\DesarrollosCF\\VantiOps 360\\data\\raw\\Entrada_PQRs.xlsx",
+    "source_file_hash": "061fe938e2cd3a26f7a26ed1c3088261cb63a12d1fa961a5de542f1be39923c5",
+    "records_ingested": 51008,
+    "records_validated": 51008,
+    "records_quarantined": 0,
+    "records_rejected": 0,
+    "processing_duration_seconds": 18.18,
+    "status": "completed"
+  }
+]

@@ -1,0 +1,35 @@
+# === Data Protection ===
+# Raw data folder contains PII-bearing source files (Req 13.1)
+data/raw/
+
+# Intermediate pipeline artefacts (can be regenerated)
+data/staging/
+data/validated/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.eggs/
+
+# === Environment & Secrets (Req 13.4) ===
+.env
+.env.*
+*.pem
+*.key
+
+# === IDE / OS ===
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# === Node / Frontend ===
+node_modules/
+.next/
+out/

@@ -1,0 +1,80 @@
+{
+  "model_type": "logistic_regression",
+  "metrics": {
+    "precision": 0.1134,
+    "recall": 0.5888,
+    "f1_score": 0.1901,
+    "roc_auc": 0.7958
+  },
+  "feature_importance": [
+    {
+      "feature": "causa_SVH Cita de asistencia incumplida",
+      "importance": 4.164136
+    },
+    {
+      "feature": "causa_SVH Garantía de asistencia",
+      "importance": 3.66563
+    },
+    {
+      "feature": "causa_Sol Garantia o interventoría Gasodomésti",
+      "importance": 3.505468
+    },
+    {
+      "feature": "causa_Sol tramite prod. Asistencia Gas-Hogar",
+      "importance": -3.462307
+    },
+    {
+      "feature": "causa_Retención Vanti Max",
+      "importance": 3.193093
+    },
+    {
+      "feature": "causa_Conexión/Desconex.Gasod.Comodato.Const",
+      "importance": 2.978946
+    },
+    {
+      "feature": "causa_Peticiones o trámites Vanti Max",
+      "importance": -2.952198
+    },
+    {
+      "feature": "causa_Cancela X mala venta Prest Ser Asist G/H",
+      "importance": -2.943945
+    },
+    {
+      "feature": "unidad_responsable_Puerto Wilches",
+      "importance": -2.634796
+    },
+    {
+      "feature": "causa_SVH Asistencias no finalizadas",
+      "importance": 2.536119
+    },
+    {
+      "feature": "causa_Gestion interna paquete asistencia",
+      "importance": 2.482624
+    },
+    {
+      "feature": "causa_Info general prod Asistencia  Gas- Hogar",
+      "importance": 2.474667
+    },
+    {
+      "feature": "causa_Cancelación Paquete Asistencia Gas/Hogar",
+      "importance": -2.471268
+    },
+    {
+      "feature": "causa_Reapertura casos",
+      "importance": 2.428959
+    },
+    {
+      "feature": "causa_Disponibilidad de servicio",
+      "importance": 2.42458
+    }
+  ],
+  "p90_threshold": 10.0,
+  "training_size": 38256,
+  "test_size": 12752,
+  "class_balance": {
+    "0": 0.9594,
+    "1": 0.0406
+  },
+  "limitations": [],
+  "disclaimer": "Analytical demonstration — not a production-grade model"
+}
