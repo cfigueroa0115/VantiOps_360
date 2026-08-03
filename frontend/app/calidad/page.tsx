@@ -31,12 +31,24 @@ const SEVERITY_MAP: Record<string, { label: string; className: string }> = {
 
 function ScoreGauge({ score, label }: { score: number; label: string }) {
   const color = score >= 90 ? "text-green-600" : score >= 70 ? "text-amber-600" : "text-red-600";
+  const borderHover = score >= 90 ? "hover:border-green-400" : score >= 70 ? "hover:border-amber-400" : "hover:border-red-400";
+  const shadowHover = score >= 90 ? "hover:shadow-green-500/15" : score >= 70 ? "hover:shadow-amber-500/15" : "hover:shadow-red-500/15";
   const bgColor = score >= 90 ? "bg-green-50 border-green-200" : score >= 70 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
+  const accentColor = score >= 90 ? "from-green-400 to-emerald-500" : score >= 70 ? "from-amber-400 to-orange-500" : "from-red-400 to-rose-500";
 
   return (
-    <div className={`rounded-xl border p-4 ${bgColor} text-center`}>
-      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${color}`}>{score.toFixed(1)}%</p>
+    <div className={`group relative rounded-xl border p-4 ${bgColor} text-center overflow-hidden transition-all duration-300 ease-out hover:scale-[1.04] hover:-translate-y-1 hover:shadow-lg ${borderHover} ${shadowHover}`}>
+      {/* Shimmer */}
+      <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:animate-shimmer overflow-hidden rounded-xl">
+        <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg]" />
+      </div>
+      {/* Content */}
+      <div className="relative z-10">
+        <p className="text-xs font-medium text-gray-500 mb-1 transition-colors duration-300 group-hover:text-gray-700">{label}</p>
+        <p className={`text-2xl font-bold ${color} transition-transform duration-300 group-hover:scale-110`}>{score.toFixed(1)}%</p>
+      </div>
+      {/* Bottom accent */}
+      <div className={`absolute bottom-0 left-0 h-[2px] w-0 bg-gradient-to-r ${accentColor} transition-all duration-500 ease-out group-hover:w-full`} />
     </div>
   );
 }
