@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Header } from "@/components/layout/Header";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { KPIGrid } from "@/components/kpi/KPIGrid";
@@ -38,6 +38,11 @@ function QualityScoreCard({
   const score = overallScore ?? 0;
   const color = score >= 90 ? "text-green-600" : score >= 70 ? "text-amber-600" : "text-red-600";
   const barColor = score >= 90 ? "bg-green-500" : score >= 70 ? "bg-amber-500" : "bg-red-500";
+  
+  const fmt = (v: unknown) => {
+    const n = typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" ? Number(v) : 0;
+    return Number.isFinite(n) ? n.toFixed(1) + "%" : "—";
+  };
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -54,7 +59,7 @@ function QualityScoreCard({
       {overallScore !== null ? (
         <>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className={`text-3xl font-bold ${color}`}>{score.toFixed(1)}%</span>
+            <span className={`text-3xl font-bold ${color}`}>{fmt(score)}</span>
             <span className="text-xs text-gray-400">score compuesto</span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
@@ -62,12 +67,12 @@ function QualityScoreCard({
           </div>
           {dimensions && (
             <div className="grid grid-cols-3 gap-2 text-xs">
-              <div><span className="text-gray-500">Completitud:</span> <span className="font-medium">{dimensions.completeness?.toFixed(1)}%</span></div>
-              <div><span className="text-gray-500">Validez:</span> <span className="font-medium">{dimensions.validity?.toFixed(1)}%</span></div>
-              <div><span className="text-gray-500">Consistencia:</span> <span className="font-medium">{dimensions.consistency?.toFixed(1)}%</span></div>
-              <div><span className="text-gray-500">Unicidad:</span> <span className="font-medium">{dimensions.uniqueness?.toFixed(1)}%</span></div>
-              <div><span className="text-gray-500">Oportunidad:</span> <span className="font-medium">{dimensions.timeliness?.toFixed(1)}%</span></div>
-              <div><span className="text-gray-500">Dominio:</span> <span className="font-medium">{dimensions.domainConformity?.toFixed(1)}%</span></div>
+              <div><span className="text-gray-500">Completitud:</span> <span className="font-medium">{fmt(dimensions.completeness)}</span></div>
+              <div><span className="text-gray-500">Validez:</span> <span className="font-medium">{fmt(dimensions.validity)}</span></div>
+              <div><span className="text-gray-500">Consistencia:</span> <span className="font-medium">{fmt(dimensions.consistency)}</span></div>
+              <div><span className="text-gray-500">Unicidad:</span> <span className="font-medium">{fmt(dimensions.uniqueness)}</span></div>
+              <div><span className="text-gray-500">Oportunidad:</span> <span className="font-medium">{fmt(dimensions.timeliness)}</span></div>
+              <div><span className="text-gray-500">Dominio:</span> <span className="font-medium">{fmt(dimensions.domainConformity)}</span></div>
             </div>
           )}
         </>
