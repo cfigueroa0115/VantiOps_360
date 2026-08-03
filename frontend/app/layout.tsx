@@ -18,13 +18,19 @@ export default function RootLayout({
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-1 text-center text-xs text-amber-800">
           Prototipo conceptual para validación de experiencia y arquitectura. No conectado con sistemas productivos de Vanti.
         </div>
-        <div className="flex h-[calc(100vh-28px)] overflow-hidden">
+        <div className="flex h-[calc(100vh-52px)] overflow-hidden">
           {/* Sidebar navigation */}
           <Sidebar activePath="/" />
 
           {/* Main content area */}
-          <main className="flex-1 overflow-y-auto bg-gray-50">
-            {children}
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto bg-gray-50">
+              {children}
+            </div>
+            {/* Global authorship footer */}
+            <footer className="border-t border-gray-200 bg-white px-4 py-2 text-center text-[11px] text-gray-500 shrink-0">
+              Desarrollado por el Ing. Carlos Alberto Figueroa Martínez
+            </footer>
           </main>
         </div>
       </body>

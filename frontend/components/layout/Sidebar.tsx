@@ -3,6 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { VantiLogo } from "@/components/brand/VantiLogo";
 import {
   LayoutDashboard,
   Database,
@@ -83,11 +84,9 @@ export function Sidebar({ className }: SidebarProps) {
       )}
     >
       {/* Brand */}
-      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-          <LayoutDashboard size={16} className="text-white" />
-        </div>
-        <span className="text-sm font-bold text-gray-900">VantiOps 360</span>
+      <div className="border-b border-gray-100 px-3 py-4">
+        <VantiLogo size="sm" className="mx-auto" />
+        <p className="text-[10px] text-center text-gray-500 mt-1">VantiOps 360</p>
       </div>
 
       {/* Navigation links */}
