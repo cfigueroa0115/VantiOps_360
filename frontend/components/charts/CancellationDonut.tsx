@@ -3,6 +3,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChartWrapper } from "./ChartWrapper";
+import { formatPercent } from "@/lib/charts/number-format";
 
 interface CancellationDataPoint {
   category: string;
@@ -19,6 +20,17 @@ interface CancellationDonutProps {
 
 const COLORS = ["#3b82f6", "#e5e7eb"];
 
+function isValidData(data: CancellationDataPoint[]): boolean {
+  if (!data || data.length === 0) return false;
+  return data.every(
+    (d) =>
+      typeof d.count === "number" &&
+      Number.isFinite(d.count) &&
+      typeof d.percentage === "number" &&
+      Number.isFinite(d.percentage)
+  );
+}
+
 /**
  * Donut chart showing main cancellation cause vs all other causes combined.
  * Validates: Requirements 6.3
@@ -29,12 +41,15 @@ export function CancellationDonut({
   error,
   onRetry,
 }: CancellationDonutProps) {
+  // Validate data before rendering
+  const validData = isValidData(data);
+
   return (
     <ChartWrapper
       loading={loading}
       error={error}
       onRetry={onRetry}
-      data={data}
+      data={validData ? data : []}
       title="Participación de Causa Principal de Cancelación"
     >
       <div
@@ -53,7 +68,7 @@ export function CancellationDonut({
               nameKey="category"
               paddingAngle={2}
               label={({ category, percentage }: CancellationDataPoint) =>
-                `${category}: ${Number(percentage).toFixed(1)}%`
+                `${category}: ${formatPercent(percentage)}`
               }
               labelLine={{ stroke: "#9ca3af" }}
             >

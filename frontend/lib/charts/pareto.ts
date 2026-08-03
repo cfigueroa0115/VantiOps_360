@@ -13,9 +13,12 @@ export interface ParetoDataPoint {
 export interface ExecutiveParetoResult {
   data: ParetoDataPoint[];
   coreCauseCount: number;
-  displayedCauseCount: number;
+  coreCumulativePct: number;
+  contextCauseCount: number;
+  displayedIndividualCount: number;
+  displayedCumulativePct: number;
   hiddenCauseCount: number;
-  cutoffCumulativePct: number;
+  aggregatedCount: number;
   threshold: number;
 }
 
@@ -26,12 +29,36 @@ export function buildExecutivePareto(
   maxVisibleItems = 10
 ): ExecutiveParetoResult {
   if (!input.length) {
-    return { data: [], coreCauseCount: 0, displayedCauseCount: 0, hiddenCauseCount: 0, cutoffCumulativePct: 0, threshold };
+    return {
+      data: [],
+      coreCauseCount: 0,
+      coreCumulativePct: 0,
+      contextCauseCount: 0,
+      displayedIndividualCount: 0,
+      displayedCumulativePct: 0,
+      hiddenCauseCount: 0,
+      aggregatedCount: 0,
+      threshold,
+    };
   }
 
   // Already sorted descending by count
   const sorted = [...input].sort((a, b) => b.count - a.count);
   const totalCount = sorted.reduce((sum, item) => sum + item.count, 0);
+
+  if (totalCount === 0) {
+    return {
+      data: [],
+      coreCauseCount: 0,
+      coreCumulativePct: 0,
+      contextCauseCount: 0,
+      displayedIndividualCount: 0,
+      displayedCumulativePct: 0,
+      hiddenCauseCount: 0,
+      aggregatedCount: 0,
+      threshold,
+    };
+  }
 
   // Find core causes (until cumulative >= threshold)
   let cumulativeCount = 0;
@@ -42,9 +69,12 @@ export function buildExecutivePareto(
     if ((cumulativeCount / totalCount) * 100 >= threshold) break;
   }
   const coreCauseCount = coreIndex + 1;
+  const coreCumulativePct = Math.round((cumulativeCount / totalCount) * 10000) / 100;
 
-  // Add context items
-  const displayEnd = Math.min(coreCauseCount + contextItems, maxVisibleItems, sorted.length);
+  // Add context items (capped by maxVisibleItems)
+  const contextEnd = Math.min(coreCauseCount + contextItems, maxVisibleItems, sorted.length);
+  const contextCauseCount = contextEnd - coreCauseCount;
+  const displayEnd = contextEnd;
   const displayed = sorted.slice(0, displayEnd);
   const hidden = sorted.slice(displayEnd);
 
@@ -61,9 +91,15 @@ export function buildExecutivePareto(
     };
   });
 
+  const displayedCumulativePct = displayed.length > 0
+    ? Math.round((displayed.reduce((s, i) => s + i.count, 0) / totalCount) * 10000) / 100
+    : 0;
+
   // Add "Otras causas" if there are hidden items
+  let aggregatedCount = 0;
   if (hidden.length > 0) {
     const hiddenCount = hidden.reduce((sum, item) => sum + item.count, 0);
+    aggregatedCount = hiddenCount;
     runningCount += hiddenCount;
     result.push({
       causa: "Otras causas",
@@ -74,16 +110,15 @@ export function buildExecutivePareto(
     });
   }
 
-  const cutoffCumulativePct = displayed.length > 0
-    ? Math.round((displayed.reduce((s, i) => s + i.count, 0) / totalCount) * 10000) / 100
-    : 0;
-
   return {
     data: result,
     coreCauseCount,
-    displayedCauseCount: displayed.length,
+    coreCumulativePct,
+    contextCauseCount,
+    displayedIndividualCount: displayed.length,
+    displayedCumulativePct,
     hiddenCauseCount: hidden.length,
-    cutoffCumulativePct,
+    aggregatedCount,
     threshold,
   };
 }

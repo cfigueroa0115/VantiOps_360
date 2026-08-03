@@ -20,6 +20,15 @@ import { P90ByCauseBar } from "@/components/charts/P90ByCauseBar";
 import { OpenCasesHistogram } from "@/components/charts/OpenCasesHistogram";
 import { FindingsTable } from "@/components/charts/FindingsTable";
 import { Database } from "lucide-react";
+import type {
+  ParetoDataPoint,
+  TopCauseDataPoint,
+  CancellationDataPoint,
+  DistributionDataPoint,
+  TemporalDataPoint,
+  P90DataPoint,
+  HistogramDataPoint,
+} from "@/lib/charts/types";
 
 function QualityScoreCard({
   overallScore,
@@ -127,9 +136,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6 lg:col-span-3">
-            <ErrorBoundary>
+            <ErrorBoundary componentName="ParetoChart" onReset={pareto.retry} resetKeys={[pareto.data, filters]}>
               <ParetoChart
-                data={(pareto.data?.data || []) as any[]}
+                data={(pareto.data?.data ?? []) as unknown as ParetoDataPoint[]}
                 loading={pareto.loading}
                 error={pareto.error}
                 onRetry={pareto.retry}
@@ -137,18 +146,18 @@ export default function DashboardPage() {
             </ErrorBoundary>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <ErrorBoundary>
+              <ErrorBoundary componentName="TopCausesBar" onReset={topCauses.retry} resetKeys={[topCauses.data, filters]}>
                 <TopCausesBar
-                  data={(topCauses.data?.data || []) as any[]}
+                  data={(topCauses.data?.data ?? []) as unknown as TopCauseDataPoint[]}
                   loading={topCauses.loading}
                   error={topCauses.error}
                   onRetry={topCauses.retry}
                 />
               </ErrorBoundary>
 
-              <ErrorBoundary>
+              <ErrorBoundary componentName="CancellationDonut" onReset={donut.retry} resetKeys={[donut.data, filters]}>
                 <CancellationDonut
-                  data={(donut.data?.data || []) as any[]}
+                  data={(donut.data?.data ?? []) as unknown as CancellationDataPoint[]}
                   loading={donut.loading}
                   error={donut.error}
                   onRetry={donut.retry}
@@ -156,9 +165,9 @@ export default function DashboardPage() {
               </ErrorBoundary>
             </div>
 
-            <ErrorBoundary>
+            <ErrorBoundary componentName="TemporalTrend" onReset={trend.retry} resetKeys={[trend.data, filters]}>
               <TemporalTrend
-                data={(trend.data?.data || []) as any[]}
+                data={(trend.data?.data ?? []) as unknown as TemporalDataPoint[]}
                 loading={trend.loading}
                 error={trend.error}
                 onRetry={trend.retry}
@@ -166,18 +175,18 @@ export default function DashboardPage() {
             </ErrorBoundary>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              <ErrorBoundary>
+              <ErrorBoundary componentName="DistributionBar-Company" onReset={distCompany.retry} resetKeys={[distCompany.data, filters]}>
                 <DistributionBar
-                  data={(distCompany.data?.data || []) as any[]}
+                  data={(distCompany.data?.data ?? []) as unknown as DistributionDataPoint[]}
                   title="Distribución por Empresa"
                   loading={distCompany.loading}
                   error={distCompany.error}
                   onRetry={distCompany.retry}
                 />
               </ErrorBoundary>
-              <ErrorBoundary>
+              <ErrorBoundary componentName="DistributionBar-Channel" onReset={distChannel.retry} resetKeys={[distChannel.data, filters]}>
                 <DistributionBar
-                  data={(distChannel.data?.data || []) as any[]}
+                  data={(distChannel.data?.data ?? []) as unknown as DistributionDataPoint[]}
                   title="Distribución por Canal"
                   color="#8b5cf6"
                   loading={distChannel.loading}
@@ -185,9 +194,9 @@ export default function DashboardPage() {
                   onRetry={distChannel.retry}
                 />
               </ErrorBoundary>
-              <ErrorBoundary>
+              <ErrorBoundary componentName="DistributionBar-Result" onReset={distResult.retry} resetKeys={[distResult.data, filters]}>
                 <DistributionBar
-                  data={(distResult.data?.data || []) as any[]}
+                  data={(distResult.data?.data ?? []) as unknown as DistributionDataPoint[]}
                   title="Distribución por Resultado"
                   color="#06b6d4"
                   loading={distResult.loading}
@@ -197,9 +206,9 @@ export default function DashboardPage() {
               </ErrorBoundary>
             </div>
 
-            <ErrorBoundary>
+            <ErrorBoundary componentName="P90ByCauseBar" onReset={p90.retry} resetKeys={[p90.data, filters]}>
               <P90ByCauseBar
-                data={(p90.data?.data || []) as any[]}
+                data={(p90.data?.data ?? []) as unknown as P90DataPoint[]}
                 loading={p90.loading}
                 error={p90.error}
                 onRetry={p90.retry}
@@ -207,15 +216,15 @@ export default function DashboardPage() {
             </ErrorBoundary>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <ErrorBoundary>
+              <ErrorBoundary componentName="OpenCasesHistogram" onReset={histogram.retry} resetKeys={[histogram.data, filters]}>
                 <OpenCasesHistogram
-                  data={(histogram.data?.data || []) as any[]}
+                  data={(histogram.data?.data ?? []) as unknown as HistogramDataPoint[]}
                   loading={histogram.loading}
                   error={histogram.error}
                   onRetry={histogram.retry}
                 />
               </ErrorBoundary>
-              <ErrorBoundary>
+              <ErrorBoundary componentName="QualityScoreCard" onReset={quality.retry} resetKeys={[quality.data, filters]}>
                 <QualityScoreCard
                   overallScore={quality.data?.overallScore ?? null}
                   dimensions={quality.data?.dimensions ? (quality.data.dimensions as unknown as Record<string, number>) : null}
@@ -226,7 +235,7 @@ export default function DashboardPage() {
               </ErrorBoundary>
             </div>
 
-            <ErrorBoundary>
+            <ErrorBoundary componentName="FindingsTable">
               <FindingsTable
                 data={[
                   { description: "Cancela Servihogar a solicitud cliente concentra ~50% del volumen total", affected_metric: "main_cause_share", severity: "high" as const, recommended_action: "Implementar proceso de retención y análisis de causa raíz" },

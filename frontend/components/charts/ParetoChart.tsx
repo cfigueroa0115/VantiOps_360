@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { ChartWrapper } from "./ChartWrapper";
 import { buildExecutivePareto, type ParetoDataPoint } from "@/lib/charts/pareto";
+import { formatPercent } from "@/lib/charts/number-format";
 
 interface ParetoChartProps {
   data: ParetoDataPoint[];
@@ -26,10 +27,21 @@ export function ParetoChart({ data, loading, error, onRetry }: ParetoChartProps)
     <ChartWrapper loading={loading} error={error} onRetry={onRetry} data={data} title="Diagrama de Pareto — Causas Principales">
       <div aria-label="Diagrama de Pareto ejecutivo mostrando las causas principales hasta el umbral 80%" role="img">
         {pareto.data.length > 0 && (
-          <p className="text-sm text-gray-600 mb-3">
-            Las <strong>{pareto.coreCauseCount}</strong> causas principales explican el <strong>{pareto.cutoffCumulativePct.toFixed(1)}%</strong> del volumen.
-            {pareto.hiddenCauseCount > 0 && ` Se agruparon ${pareto.hiddenCauseCount} causas en "Otras causas".`}
-          </p>
+          <div className="text-sm text-gray-600 mb-3 space-y-1">
+            <p>
+              Las <strong>{pareto.coreCauseCount}</strong> causas principales explican el <strong>{formatPercent(pareto.coreCumulativePct)}</strong> del volumen.
+            </p>
+            {pareto.contextCauseCount > 0 && (
+              <p>
+                Se muestran <strong>{pareto.contextCauseCount}</strong> causas adicionales como contexto.
+              </p>
+            )}
+            {pareto.hiddenCauseCount > 0 && (
+              <p className="text-gray-500">
+                Se agruparon {pareto.hiddenCauseCount} causas en &quot;Otras causas&quot;.
+              </p>
+            )}
+          </div>
         )}
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={pareto.data} margin={{ top: 10, right: 50, left: 10, bottom: 80 }}>
@@ -47,7 +59,7 @@ export function ParetoChart({ data, loading, error, onRetry }: ParetoChartProps)
             <Tooltip
               formatter={(value: number, name: string) => {
                 if (name === "Frecuencia") return [value.toLocaleString("es-CO"), "Frecuencia"];
-                return [`${Number(value).toFixed(1)}%`, "% Acumulado"];
+                return [formatPercent(value), "% Acumulado"];
               }}
               labelFormatter={(label) => label}
             />
