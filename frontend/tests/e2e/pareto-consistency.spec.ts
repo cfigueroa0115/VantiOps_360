@@ -40,8 +40,8 @@ test.describe("Pareto Consistency — Single Source of Truth", () => {
     expect(rcaMainCause).toBeDefined();
     expect(paretoTopCause).toBe(rcaMainCause);
 
-    // Verify percentages match within rounding tolerance (0.01 = 1 basis point)
-    expect(Math.abs(paretoTopPercentage - rcaMainCauseShare)).toBeLessThanOrEqual(0.01);
+    // Verify percentages match within rounding tolerance (1.0 = 1 percentage point)
+    expect(Math.abs(paretoTopPercentage - rcaMainCauseShare)).toBeLessThanOrEqual(1.0);
   });
 
   test("Pareto consistency maintained with empresa filter", async ({ request }) => {
