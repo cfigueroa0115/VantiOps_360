@@ -154,7 +154,8 @@ class RiskModel:
         if total == 0:
             return False
 
-        # "count" column is always integer; cast for pyright since .min() returns PythonLiteral | None
+        # "count" column is always integer; cast for pyright since
+        # .min() returns PythonLiteral | None
         min_count_raw = cast("int | None", counts["count"].min())
         minority_ratio = int(min_count_raw) / total if min_count_raw is not None else 0.0
         return minority_ratio < 0.20

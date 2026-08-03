@@ -361,7 +361,8 @@ def _chart_pareto(base: str, params: list) -> list[dict]:
             row["high_concentration"] = is_high_concentration
             row["concentration_pct"] = row["percentage"]
             # analysis_level: statistical_concentration by default
-            # (causal_hypothesis requires triangulation; validated_root_cause requires expert validation)
+            # (causal_hypothesis requires triangulation;
+            # validated_root_cause requires expert validation)
             row["analysis_level"] = "statistical_concentration"
 
     return rows

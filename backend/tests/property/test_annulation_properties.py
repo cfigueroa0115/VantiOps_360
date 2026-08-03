@@ -6,7 +6,8 @@ Property-based tests for Annulation state machine (Properties 2 and 3).
 Uses Hypothesis to verify:
 
 Property 2 — Annulation state machine transition validity:
-- P2a: For any (state, target) pair NOT in VALID_TRANSITIONS, transition() returns error with code 422
+- P2a: For any (state, target) pair NOT in VALID_TRANSITIONS,
+       transition() returns error with code 422
 - P2b: For any (state, target) pair IN VALID_TRANSITIONS with authorized role, transition() succeeds
 - P2c: Terminal states (Cerrada, Rechazada) always return 422 regardless of target
 - P2d: get_valid_transitions returns empty list for terminal states
@@ -97,7 +98,10 @@ _invalid_transition_pairs = st.sampled_from(_INVALID_PAIRS)
 
 
 class TestP2aInvalidTransitionReturns422:
-    """P2a: For any (state, target) pair NOT in VALID_TRANSITIONS, transition() returns error with code 422."""
+    """P2a: For any (state, target) pair NOT in VALID_TRANSITIONS.
+
+    transition() returns error with code 422.
+    """
 
     @given(
         pair=_invalid_transition_pairs,
@@ -131,7 +135,10 @@ class TestP2aInvalidTransitionReturns422:
 
 
 class TestP2bValidTransitionSucceeds:
-    """P2b: For any (state, target) pair IN VALID_TRANSITIONS with authorized role, transition() succeeds."""
+    """P2b: For any (state, target) pair IN VALID_TRANSITIONS.
+
+    With authorized role, transition() succeeds.
+    """
 
     @given(
         pair=_valid_transition_pairs,

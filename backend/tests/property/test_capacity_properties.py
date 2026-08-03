@@ -140,7 +140,10 @@ class TestAlertLevelMonotonicity:
 
         assert (
             ALERT_LEVEL_ORDER[level_a] <= ALERT_LEVEL_ORDER[level_b]
-        ), f"Monotonicity violated: utilization {u1} → '{level_a}' but utilization {u2} → '{level_b}'"
+        ), (
+            f"Monotonicity violated: utilization {u1} → '{level_a}' "
+            f"but utilization {u2} → '{level_b}'"
+        )
 
     @given(utilization=utilization_strategy)
     @settings(max_examples=100)
@@ -174,7 +177,10 @@ class TestAlertThresholdBoundaries:
 
         assert (
             level == "green"
-        ), f"Utilization {utilization}% (≤ {ALERT_THRESHOLD_GREEN_MAX}%) should be 'green', got '{level}'"
+        ), (
+            f"Utilization {utilization}% "
+            f"(≤ {ALERT_THRESHOLD_GREEN_MAX}%) should be 'green', got '{level}'"
+        )
 
     @given(
         utilization=st.floats(
@@ -192,7 +198,9 @@ class TestAlertThresholdBoundaries:
         level = get_alert_level(utilization)
 
         assert level == "yellow", (
-            f"Utilization {utilization}% (>{ALERT_THRESHOLD_GREEN_MAX}% and ≤{ALERT_THRESHOLD_YELLOW_MAX}%) "
+            f"Utilization {utilization}% "
+            f"(>{ALERT_THRESHOLD_GREEN_MAX}% "
+            f"and ≤{ALERT_THRESHOLD_YELLOW_MAX}%) "
             f"should be 'yellow', got '{level}'"
         )
 
@@ -212,7 +220,9 @@ class TestAlertThresholdBoundaries:
         level = get_alert_level(utilization)
 
         assert level == "orange", (
-            f"Utilization {utilization}% (>{ALERT_THRESHOLD_YELLOW_MAX}% and ≤{ALERT_THRESHOLD_ORANGE_MAX}%) "
+            f"Utilization {utilization}% "
+            f"(>{ALERT_THRESHOLD_YELLOW_MAX}% "
+            f"and ≤{ALERT_THRESHOLD_ORANGE_MAX}%) "
             f"should be 'orange', got '{level}'"
         )
 
@@ -250,7 +260,10 @@ class TestAlertThresholdBoundaries:
 
 
 class TestCapacitySummaryConsistency:
-    """P13e: get_capacity_summary always produces consistent results (utilization matches formula)."""
+    """P13e: get_capacity_summary always produces consistent results.
+
+    Utilization matches formula.
+    """
 
     @given(
         analysts=analysts_strategy,

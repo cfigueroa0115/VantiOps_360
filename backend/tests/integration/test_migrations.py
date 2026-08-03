@@ -157,7 +157,10 @@ class TestMigrationStructure:
         ), f"{migration_file.name} DOWN section has DROP RULE without IF EXISTS"
 
     def test_no_destructive_operations_in_up(self, migration_file: Path, up_section: str):
-        """UP section does not contain destructive operations (DROP TABLE, TRUNCATE, DELETE without WHERE)."""
+        """UP section does not contain destructive operations.
+
+        (DROP TABLE, TRUNCATE, DELETE without WHERE).
+        """
         # No DROP TABLE in UP section
         drop_tables = re.findall(r"\bDROP\s+TABLE\b", up_section, re.IGNORECASE)
         assert (

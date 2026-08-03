@@ -171,7 +171,11 @@ class ReferencePointValidator:
 
         return ReferenceCheck(
             name="record_count",
-            expected_description=f"≈{self.EXPECTED_RECORD_COUNT} (±{self.RECORD_COUNT_TOLERANCE_PCT}%, range [{lower}, {upper}])",
+            expected_description=(
+                f"≈{self.EXPECTED_RECORD_COUNT}"
+                f" (±{self.RECORD_COUNT_TOLERANCE_PCT}%,"
+                f" range [{lower}, {upper}])"
+            ),
             actual_value=actual,
             is_within_tolerance=within,
             deviation_message=deviation,
@@ -198,7 +202,11 @@ class ReferencePointValidator:
 
         return ReferenceCheck(
             name="column_count",
-            expected_description=f"≈{self.EXPECTED_COLUMN_COUNT} (±{self.COLUMN_COUNT_TOLERANCE}, range [{lower}, {upper}])",
+            expected_description=(
+                f"≈{self.EXPECTED_COLUMN_COUNT}"
+                f" (±{self.COLUMN_COUNT_TOLERANCE},"
+                f" range [{lower}, {upper}])"
+            ),
             actual_value=actual,
             is_within_tolerance=within,
             deviation_message=deviation,
@@ -256,7 +264,11 @@ class ReferencePointValidator:
         if total == 0:
             return ReferenceCheck(
                 name="main_cause_share",
-                expected_description=f"≈{self.EXPECTED_MAIN_CAUSE_SHARE}% (±{self.MAIN_CAUSE_SHARE_TOLERANCE_PP}pp, range [45%, 55%])",
+                expected_description=(
+                    f"≈{self.EXPECTED_MAIN_CAUSE_SHARE}%"
+                    f" (±{self.MAIN_CAUSE_SHARE_TOLERANCE_PP}pp,"
+                    f" range [45%, 55%])"
+                ),
                 actual_value={"cause": None, "share_pct": 0.0},
                 is_within_tolerance=False,
                 deviation_message="No records to analyze.",
@@ -267,7 +279,11 @@ class ReferencePointValidator:
         if non_null.height == 0:
             return ReferenceCheck(
                 name="main_cause_share",
-                expected_description=f"≈{self.EXPECTED_MAIN_CAUSE_SHARE}% (±{self.MAIN_CAUSE_SHARE_TOLERANCE_PP}pp, range [45%, 55%])",
+                expected_description=(
+                    f"≈{self.EXPECTED_MAIN_CAUSE_SHARE}%"
+                    f" (±{self.MAIN_CAUSE_SHARE_TOLERANCE_PP}pp,"
+                    f" range [45%, 55%])"
+                ),
                 actual_value={"cause": None, "share_pct": 0.0},
                 is_within_tolerance=False,
                 deviation_message="All cause values are null.",
@@ -292,7 +308,11 @@ class ReferencePointValidator:
 
         return ReferenceCheck(
             name="main_cause_share",
-            expected_description=f"≈{self.EXPECTED_MAIN_CAUSE_SHARE}% (±{self.MAIN_CAUSE_SHARE_TOLERANCE_PP}pp, range [{lower}%, {upper}%])",
+            expected_description=(
+                f"≈{self.EXPECTED_MAIN_CAUSE_SHARE}%"
+                f" (±{self.MAIN_CAUSE_SHARE_TOLERANCE_PP}pp,"
+                f" range [{lower}%, {upper}%])"
+            ),
             actual_value={"cause": top_cause, "share_pct": share_pct},
             is_within_tolerance=within,
             deviation_message=deviation,
@@ -344,7 +364,11 @@ class ReferencePointValidator:
         checks.append(
             ReferenceCheck(
                 name="management_time_mean",
-                expected_description=f"≈{self.EXPECTED_MEAN_MGMT_TIME}d (±{self.MEAN_MGMT_TIME_TOLERANCE}d, range [{mean_lower}, {mean_upper}])",
+                expected_description=(
+                    f"≈{self.EXPECTED_MEAN_MGMT_TIME}d"
+                    f" (±{self.MEAN_MGMT_TIME_TOLERANCE}d,"
+                    f" range [{mean_lower}, {mean_upper}])"
+                ),
                 actual_value=actual_mean,
                 is_within_tolerance=mean_within,
                 deviation_message=mean_deviation,
@@ -368,7 +392,11 @@ class ReferencePointValidator:
         checks.append(
             ReferenceCheck(
                 name="management_time_median",
-                expected_description=f"≈{self.EXPECTED_MEDIAN_MGMT_TIME}d (±{self.MEDIAN_MGMT_TIME_TOLERANCE}d, range [{median_lower}, {median_upper}])",
+                expected_description=(
+                    f"≈{self.EXPECTED_MEDIAN_MGMT_TIME}d"
+                    f" (±{self.MEDIAN_MGMT_TIME_TOLERANCE}d,"
+                    f" range [{median_lower}, {median_upper}])"
+                ),
                 actual_value=actual_median,
                 is_within_tolerance=median_within,
                 deviation_message=median_deviation,
@@ -393,7 +421,11 @@ class ReferencePointValidator:
         checks.append(
             ReferenceCheck(
                 name="management_time_p90",
-                expected_description=f"≈{self.EXPECTED_P90_MGMT_TIME}d (±{self.P90_MGMT_TIME_TOLERANCE}d, range [{p90_lower}, {p90_upper}])",
+                expected_description=(
+                    f"≈{self.EXPECTED_P90_MGMT_TIME}d"
+                    f" (±{self.P90_MGMT_TIME_TOLERANCE}d,"
+                    f" range [{p90_lower}, {p90_upper}])"
+                ),
                 actual_value=actual_p90,
                 is_within_tolerance=p90_within,
                 deviation_message=p90_deviation,
@@ -515,7 +547,10 @@ class ReferencePointValidator:
                 expected_description="Report % of records with null/blank closure reason",
                 actual_value=null_reason_pct,
                 is_within_tolerance=True,
-                deviation_message=f"{null_reason_pct}% of records have null or blank closure reason."
+                deviation_message=(
+                    f"{null_reason_pct}% of records have"
+                    " null or blank closure reason."
+                )
                 if null_reason_pct > 0
                 else "",
             )
@@ -538,7 +573,10 @@ class ReferencePointValidator:
                 expected_description="Report % of records with invalid marking",
                 actual_value=invalid_marking_pct,
                 is_within_tolerance=True,
-                deviation_message=f"{invalid_marking_pct}% of records have invalid or missing marking."
+                deviation_message=(
+                    f"{invalid_marking_pct}% of records have"
+                    " invalid or missing marking."
+                )
                 if invalid_marking_pct > 0
                 else "",
             )
@@ -569,7 +607,10 @@ class ReferencePointValidator:
                 expected_description="Report % of records with inconsistent or null company names",
                 actual_value=inconsistent_pct,
                 is_within_tolerance=True,
-                deviation_message=f"{inconsistent_pct}% of records have inconsistent or null company names."
+                deviation_message=(
+                    f"{inconsistent_pct}% of records have"
+                    " inconsistent or null company names."
+                )
                 if inconsistent_pct > 0
                 else "",
             )
@@ -587,7 +628,8 @@ class ReferencePointValidator:
                 duplicated_categories = distinct_raw - distinct_normalized
                 # Percentage of records affected by duplicated categories
                 if duplicated_categories > 0:
-                    # Count records that belong to categories that are "duplicates" after normalization
+                    # Count records that belong to categories
+                    # that are "duplicates" after normalization
                     raw_values = cat_series.unique().to_list()
                     norm_map: dict[str, list[str]] = {}
                     for val in raw_values:
@@ -615,7 +657,10 @@ class ReferencePointValidator:
                 expected_description="Report % of records with semantically duplicated categories",
                 actual_value=dup_cat_pct,
                 is_within_tolerance=True,
-                deviation_message=f"{dup_cat_pct}% of records have semantically duplicated category entries."
+                deviation_message=(
+                    f"{dup_cat_pct}% of records have"
+                    " semantically duplicated category entries."
+                )
                 if dup_cat_pct > 0
                 else "",
             )

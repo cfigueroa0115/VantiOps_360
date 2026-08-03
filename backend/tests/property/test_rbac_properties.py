@@ -82,7 +82,10 @@ class TestP4aUnauthorizedAccessDenied:
     @given(role=valid_roles, permission=valid_permissions)
     @settings(max_examples=500)
     def test_random_role_permission_denial(self, role: str, permission: str):
-        """For a random role/permission pair where the role lacks the permission, access is denied."""
+        """For a random role/permission pair where the role lacks the permission.
+
+        Access is denied.
+        """
         perm_enum = Permission(permission)
         allowed_roles = _get_allowed_roles_for_permission(perm_enum)
 
@@ -119,7 +122,10 @@ class TestP4bAuthorizedAccessGranted:
     @given(role=valid_roles, permission=valid_permissions)
     @settings(max_examples=500)
     def test_random_role_permission_grant(self, role: str, permission: str):
-        """For a random role/permission pair where the role has the permission, access is granted."""
+        """For a random role/permission pair where the role has the permission.
+
+        Access is granted.
+        """
         perm_enum = Permission(permission)
         allowed_roles = _get_allowed_roles_for_permission(perm_enum)
 

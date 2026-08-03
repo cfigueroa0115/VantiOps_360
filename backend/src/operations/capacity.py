@@ -323,7 +323,8 @@ def get_capacity_report(users: list[dict]) -> dict:
 
     Examples:
         >>> users = [
-        ...     {"name": "Alice", "hours": 32.0, "productivity_factor": 0.85, "assigned_work": 20.0},
+        ...     {"name": "Alice", "hours": 32.0,
+        ...      "productivity_factor": 0.85, "assigned_work": 20.0},
         ...     {"name": "Bob", "hours": 32.0, "productivity_factor": 0.85, "assigned_work": 10.0},
         ... ]
         >>> report = get_capacity_report(users)

@@ -64,7 +64,10 @@ transient_errors = st.one_of(
 
 
 class TestRetryDelayBounds:
-    """P7a: For any attempt, base_delay, max_delay, jitter: compute_delay() returns a value in [0, max_delay + jitter]."""
+    """P7a: For any attempt, base_delay, max_delay, jitter.
+
+    compute_delay() returns a value in [0, max_delay + jitter].
+    """
 
     @given(attempt=attempts, base_delay=base_delays, max_delay=max_delays, jitter=jitters)
     @settings(max_examples=200)
@@ -79,7 +82,10 @@ class TestRetryDelayBounds:
         assert delay >= 0.0, f"Delay {delay} is negative"
         assert (
             delay <= max_delay + jitter
-        ), f"Delay {delay} exceeds max_delay ({max_delay}) + jitter ({jitter}) = {max_delay + jitter}"
+        ), (
+            f"Delay {delay} exceeds max_delay ({max_delay}) + "
+            f"jitter ({jitter}) = {max_delay + jitter}"
+        )
 
 
 class TestNonTransientErrorClassification:
@@ -93,7 +99,10 @@ class TestNonTransientErrorClassification:
 
         assert (
             result is False
-        ), f"Error {type(error).__name__}('{error}') was classified as transient but should NOT be retried"
+        ), (
+            f"Error {type(error).__name__}('{error}') was classified "
+            f"as transient but should NOT be retried"
+        )
 
 
 class TestTransientErrorClassification:
@@ -107,7 +116,10 @@ class TestTransientErrorClassification:
 
         assert (
             result is True
-        ), f"Error {type(error).__name__}('{error}') was NOT classified as transient but SHOULD be retried"
+        ), (
+            f"Error {type(error).__name__}('{error}') was NOT classified "
+            f"as transient but SHOULD be retried"
+        )
 
 
 class TestExponentialGrowthWithCap:

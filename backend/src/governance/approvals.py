@@ -141,7 +141,8 @@ class ApprovalRequest:
             raise ValueError("approver_role is required")
         if self.approver_role not in ("LEGAL_APPROVER", "VP_APPROVER"):
             raise ValueError(
-                f"approver_role must be 'LEGAL_APPROVER' or 'VP_APPROVER', got '{self.approver_role}'"
+                f"approver_role must be 'LEGAL_APPROVER' or "
+                f"'VP_APPROVER', got '{self.approver_role}'"
             )
         if not self.justification or len(self.justification) < MIN_JUSTIFICATION_LENGTH:
             raise ValueError(
