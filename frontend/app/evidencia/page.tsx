@@ -46,9 +46,12 @@ interface ValidationData {
   generatedAt?: string | null;
   source?: string;
   workflowStatus?: string;
+  verificationStatus?: string;
+  e2eStatus?: string;
+  visualRegressionStatus?: string;
   backendTests?: { total?: number; passed?: number; status?: string } | null;
   frontendTests?: { total?: number; passed?: number; status?: string } | null;
-  coverage?: number | null;
+  coverage?: { statements?: number; branches?: number; functions?: number; lines?: number } | number | null;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────
@@ -94,11 +97,18 @@ export default function EvidenciaPage() {
       .then((data) => {
         if (data) {
           setValidation(data);
-          // Determine status based on content
-          if (data.workflowStatus === "unavailable" && !data.commitHash) {
+          // Map verificationStatus from CI evidence
+          const vs = data.verificationStatus || data.workflowStatus;
+          if (vs === "success") {
+            setValidationStatus("success");
+          } else if (vs === "partial" || vs === "pending") {
+            setValidationStatus("unavailable");
+          } else if (vs === "failure") {
+            setValidationStatus("failure");
+          } else if (!data.commitHash && data.workflowStatus === "unavailable") {
             setValidationStatus("unavailable");
           } else {
-            setValidationStatus("success");
+            setValidationStatus("unavailable");
           }
         }
       })
@@ -305,11 +315,17 @@ export default function EvidenciaPage() {
           <StatusCard
             label="Coverage"
             status={validation?.coverage != null ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
-            value={validation?.coverage != null ? `${validation.coverage}%` : validationStatus === "pending" ? "Verificando..." : "No disponible"}
+            value={
+              validation?.coverage != null
+                ? typeof validation.coverage === "object"
+                  ? `Stmts ${validation.coverage.statements ?? "?"}%`
+                  : `${validation.coverage}%`
+                : validationStatus === "pending" ? "Verificando..." : "No disponible"
+            }
           />
         </div>
-        <p className="text-[10px] text-gray-400 mt-3 italic">
-          Datos obtenidos en tiempo real de /api/health y /evidence/latest-validation.json. Los valores dependen del estado actual del despliegue.
+        <p className="text-[10px] text-gray-400 mt-3 italic" data-testid="evidence-source-note">
+          Evidencia de CI disponible en GitHub Actions; no publicada dentro del despliegue actual. Los valores de /api/health se obtienen en tiempo real.
         </p>
       </div>
 
