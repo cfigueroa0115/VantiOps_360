@@ -69,14 +69,13 @@ export function parseFiltersFromRequest(request: Request): AnalyticsFilters {
     errors.push({ field: "time_min", message: "time_min must be <= time_max." });
   }
 
-  // Parse arrays (pipe-separated to avoid comma ambiguity in values)
-  // Support both comma and pipe as separators
-  const companies = parseArray(searchParams.get("companies"));
-  const causes = parseArray(searchParams.get("causes"));
-  const channels = parseArray(searchParams.get("channels"));
-  const statuses = parseArray(searchParams.get("statuses"));
-  const results = parseArray(searchParams.get("results"));
-  const responsibleUnits = parseArray(searchParams.get("responsible_units"));
+  // Parse arrays using repeated params (getAll)
+  const companies = getArrayParam(searchParams, "companies");
+  const causes = getArrayParam(searchParams, "causes");
+  const channels = getArrayParam(searchParams, "channels");
+  const statuses = getArrayParam(searchParams, "statuses");
+  const results = getArrayParam(searchParams, "results");
+  const responsibleUnits = getArrayParam(searchParams, "responsible_units");
 
   // Validate array sizes
   for (const [name, arr] of Object.entries({ companies, causes, channels, statuses, results, responsibleUnits })) {
@@ -184,10 +183,28 @@ export class FilterValidationError extends Error {
 
 // --- Helpers ---
 
-function parseArray(value: string | null): string[] | null {
-  if (!value) return null;
-  // Support both comma and pipe separation
-  const items = value.split(/[,|]/).map(v => v.trim()).filter(Boolean);
-  if (items.length === 0) return null;
-  return items;
+function getArrayParam(params: URLSearchParams, key: string): string[] | null {
+  const values = params.getAll(key).map(v => v.trim()).filter(Boolean);
+  // Also support comma-separated for backward compatibility
+  const csvValue = params.get(key);
+  if (values.length === 0 && csvValue) {
+    const items = csvValue.split(",").map(v => v.trim()).filter(Boolean);
+    return items.length > 0 ? items : null;
+  }
+  return values.length > 0 ? values : null;
+}
+
+function validateDate(value: string | null): string | undefined {
+  if (!value) return undefined;
+  // Check format
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  // Check it's a real calendar date
+  const d = new Date(value + "T00:00:00Z");
+  if (isNaN(d.getTime())) return undefined;
+  // Verify the date components match (catches Feb 30, etc.)
+  const [y, m, day] = value.split("-").map(Number);
+  if (d.getUTCFullYear() !== y || d.getUTCMonth() + 1 !== m || d.getUTCDate() !== day) {
+    return undefined;
+  }
+  return value;
 }

@@ -59,7 +59,8 @@ export function useQualityReport(filters?: FilterParams): UseQualityReportResult
       const qs = serializeFilters(filters);
       const response = await fetch(`/api/quality${qs}`);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error?.message || `HTTP ${response.status}`);
       }
       const result = await response.json();
       if (id === requestIdRef.current) {
