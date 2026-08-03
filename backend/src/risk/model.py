@@ -10,7 +10,7 @@ Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 9.10
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -25,7 +25,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
-
 
 # --- Disclaimer constant (Req 9.6) ---
 DISCLAIMER = "Analytical demonstration — not a production-grade model"

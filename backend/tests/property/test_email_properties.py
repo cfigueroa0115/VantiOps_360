@@ -18,17 +18,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 
 from auth.email_validator import (
     CORPORATE_DOMAIN,
-    WhitelistCache,
     get_denial_reason,
     is_email_authorized,
     reload_whitelist,
     validate_email_format,
 )
-
 
 # ---------------------------------------------------------------------------
 # Constants

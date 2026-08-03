@@ -12,7 +12,6 @@ import pytest
 from quality.models import SeverityLevel
 from quality.severity import classify_violation_severity, flag_column_severity
 
-
 # ---------- flag_column_severity tests (Requirements 3.5, 3.7) ----------
 
 

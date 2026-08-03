@@ -13,7 +13,6 @@ Requirements: 14.1, 14.2, 14.3, 14.4, 14.5
 
 import json
 import os
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -23,9 +22,6 @@ from audit.logger import (
     AuditEvent,
     log_audit_event,
     query_audit_events,
-    AUDIT_LOG_FILE,
-    _write_to_file,
-    _query_from_file,
 )
 
 

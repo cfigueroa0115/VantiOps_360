@@ -10,13 +10,11 @@ Tests cover:
 import hashlib
 
 import polars as pl
-import pytest
 
 from pipeline.pii_masking import (
     DEFAULT_PII_PATTERNS,
     MaskingResult,
     PIIMasker,
-    QuarantinedRecord,
 )
 
 

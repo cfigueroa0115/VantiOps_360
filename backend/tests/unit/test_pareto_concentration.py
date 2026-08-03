@@ -10,8 +10,6 @@ Validates:
 import os
 from unittest.mock import patch
 
-import pytest
-
 
 class TestParetoHighConcentrationThreshold:
     """Tests for the PARETO_HIGH_CONCENTRATION_THRESHOLD configuration."""
@@ -23,6 +21,7 @@ class TestParetoHighConcentrationThreshold:
             os.environ.pop("PARETO_HIGH_CONCENTRATION_THRESHOLD", None)
             # Re-import to pick up default
             import importlib
+
             import api.routes as routes_module
             importlib.reload(routes_module)
             assert routes_module.PARETO_HIGH_CONCENTRATION_THRESHOLD == 0.40
@@ -31,6 +30,7 @@ class TestParetoHighConcentrationThreshold:
         """Threshold should be configurable via environment variable."""
         with patch.dict(os.environ, {"PARETO_HIGH_CONCENTRATION_THRESHOLD": "0.50"}):
             import importlib
+
             import api.routes as routes_module
             importlib.reload(routes_module)
             assert routes_module.PARETO_HIGH_CONCENTRATION_THRESHOLD == 0.50
@@ -39,6 +39,7 @@ class TestParetoHighConcentrationThreshold:
         """Threshold should accept various decimal values."""
         with patch.dict(os.environ, {"PARETO_HIGH_CONCENTRATION_THRESHOLD": "0.25"}):
             import importlib
+
             import api.routes as routes_module
             importlib.reload(routes_module)
             assert routes_module.PARETO_HIGH_CONCENTRATION_THRESHOLD == 0.25

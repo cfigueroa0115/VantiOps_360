@@ -11,7 +11,7 @@ from __future__ import annotations
 import polars as pl
 import pytest
 
-from profiling.reference_points import ReferenceCheck, ReferencePointReport, ReferencePointValidator
+from profiling.reference_points import ReferencePointReport, ReferencePointValidator
 
 
 @pytest.fixture

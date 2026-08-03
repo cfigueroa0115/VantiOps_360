@@ -13,11 +13,9 @@ Requirements: 11.4, 11.5, 11.6, 11.7
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 import polars as pl
-
 
 # ---------------------------------------------------------------------------
 # Data classes

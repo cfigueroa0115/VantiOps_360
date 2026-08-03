@@ -14,9 +14,8 @@ Requirements: 10.3, 10.4, 10.5
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
@@ -302,7 +301,6 @@ class TestCuratedOutput:
 
     def test_curated_filename_pattern(self, tmp_output_dir: Path):
         """Curated output uses {source_stem}_curated.parquet naming."""
-        from datetime import date
 
         orch = PipelineOrchestrator(output_dir=tmp_output_dir)
         curated_dir = tmp_output_dir / "curated"

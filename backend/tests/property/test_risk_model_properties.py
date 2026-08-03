@@ -11,9 +11,8 @@ Tests the validation logic that ensures:
 - P14d: The response always includes provenance = "DERIVED_DATA"
 """
 
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
-
 
 # ---------------------------------------------------------------------------
 # Validation functions mirroring the TypeScript route logic

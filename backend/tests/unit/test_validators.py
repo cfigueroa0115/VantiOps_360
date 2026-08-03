@@ -12,11 +12,8 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import polars as pl
-import pytest
 
 from profiling.validators import (
-    DateValidationReport,
-    SimilarityGroup,
     _levenshtein_distance,
     find_semantic_similarities,
     levenshtein_ratio,

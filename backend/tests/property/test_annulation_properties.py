@@ -22,23 +22,21 @@ Property 3 — Annulation transition requires valid justification and produces a
 
 from __future__ import annotations
 
-import string
 from datetime import datetime
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 
 from annulations.state_machine import (
-    AnnulationState,
-    AuditEntry,
     MIN_JUSTIFICATION_LENGTH,
     TERMINAL_STATES,
     VALID_TRANSITIONS,
+    AnnulationState,
+    AuditEntry,
     get_valid_transitions,
     transition,
 )
 from auth.rbac import Role
-
 
 # ===========================================================================
 # Shared Strategies

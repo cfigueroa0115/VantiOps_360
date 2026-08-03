@@ -20,16 +20,16 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 import threading
-from dataclasses import dataclass, field, asdict
+import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from auth.rbac import Role, is_authorized
 from audit.logger import log_audit_event
+from auth.rbac import is_authorized
 
 logger = logging.getLogger(__name__)
 

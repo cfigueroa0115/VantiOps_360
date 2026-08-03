@@ -16,31 +16,23 @@ Requirements: 15.1, 15.2, 15.3, 15.4
 """
 
 import json
-import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from governance.approvals import (
+    OPERATION_REQUIRED_APPROVERS,
     ApprovalRequest,
-    ApprovalResponse,
     ApprovalStatus,
     OperationType,
-    OPERATION_REQUIRED_APPROVERS,
-    APPROVAL_EXPIRATION_HOURS,
-    MIN_JUSTIFICATION_LENGTH,
-    request_approval,
+    _load_approvals,
     approve_request,
-    reject_request,
     check_expiration,
     get_pending_approvals,
     is_operation_approved,
-    _load_approvals,
-    _save_approvals,
-    APPROVALS_DIR,
-    APPROVALS_FILE,
+    reject_request,
+    request_approval,
 )
 
 

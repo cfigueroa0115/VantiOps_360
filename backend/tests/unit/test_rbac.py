@@ -8,11 +8,9 @@ Requirements: 13.1, 13.2, 13.6
 
 from __future__ import annotations
 
-import pytest
-
 from auth.rbac import (
-    Permission,
     PERMISSIONS,
+    Permission,
     Role,
     get_allowed_permissions,
     is_authorized,

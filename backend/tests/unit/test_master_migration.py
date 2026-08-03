@@ -15,7 +15,6 @@ Requirements: 19.1, 19.2, 19.5, 19.6, 19.7
 from __future__ import annotations
 
 import json
-import tempfile
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -25,17 +24,12 @@ import polars as pl
 import pytest
 
 from migration.master_records import (
-    DEFAULT_SOURCE_PATH,
     MIN_SUCCESS_RATE,
-    VALID_ESTADOS,
-    VALID_TIPOS_PQR,
     MasterMigrationPipeline,
     MigrationAbortError,
     MigrationConfig,
-    MigrationReport,
     QuarantinedRecord,
 )
-
 
 # ─── Fixtures ────────────────────────────────────────────────────────
 

@@ -15,13 +15,25 @@ Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 3.8
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import polars as pl
 
+from profiling.detectors import (
+    DuplicateReport,
+    NullStats,
+    calculate_null_stats,
+    detect_outliers_iqr,
+    find_duplicates,
+)
+from profiling.type_inference import ColumnTypeInfo, infer_types
+from profiling.validators import (
+    find_semantic_similarities,
+    validate_dates,
+)
 from quality.models import (
     ColumnQualityMetric,
     DatasetMetrics,
@@ -30,21 +42,6 @@ from quality.models import (
     SeverityLevel,
 )
 from quality.severity import flag_column_severity
-from profiling.detectors import (
-    DuplicateReport,
-    NullStats,
-    OutlierReport,
-    calculate_null_stats,
-    detect_outliers_iqr,
-    find_duplicates,
-)
-from profiling.type_inference import ColumnTypeInfo, infer_types
-from profiling.validators import (
-    DateValidationReport,
-    SimilarityGroup,
-    find_semantic_similarities,
-    validate_dates,
-)
 
 # Schema version for the quality report format
 SCHEMA_VERSION = "1.0.0"

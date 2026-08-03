@@ -8,7 +8,7 @@ concentration_pct, and analysis_level fields to Pareto chart data.
 
 from __future__ import annotations
 
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 # ---------------------------------------------------------------------------

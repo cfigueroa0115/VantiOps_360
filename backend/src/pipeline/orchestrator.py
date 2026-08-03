@@ -24,17 +24,10 @@ from typing import Any, Callable
 
 import polars as pl
 
-from core.retry import is_transient_error, retry_policy
+from core.retry import retry_policy
 from ingestion.excel_adapter import ExcelIngestionAdapter
 from pipeline.models import BatchStatus, IngestionBatch
 from pipeline.schemas import PQRSchema
-from profiling.detectors import (
-    calculate_null_stats,
-    detect_outliers_iqr,
-    find_duplicates,
-)
-from profiling.type_inference import infer_types
-from profiling.validators import find_semantic_similarities, validate_dates
 from quality.models import QualityReport, QualityScore
 from quality.report_generator import QualityReportGenerator
 from quality.score_computer import QualityScoreComputer

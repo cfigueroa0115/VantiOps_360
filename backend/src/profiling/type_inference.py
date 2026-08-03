@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 
 import polars as pl
 
-
 # Boolean values recognized (case-insensitive)
 BOOLEAN_VALUES = frozenset(
     {"true", "false", "yes", "no", "1", "0", "si", "verdadero", "falso"}

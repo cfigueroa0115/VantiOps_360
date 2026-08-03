@@ -12,22 +12,18 @@ Requirements: 22.1, 22.2, 22.3, 22.4
 """
 
 import json
-import os
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 
 from communications.email_mgr import (
+    MAX_DIRECTORY_SIZE,
     EmailDirectory,
     EmailEntry,
     EmailStatus,
     ThrottledSender,
-    MAX_DIRECTORY_SIZE,
-    MAX_EMAILS_PER_MINUTE,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

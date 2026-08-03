@@ -20,11 +20,9 @@ import pytest
 
 from quality.models import QualityScore, SeverityLevel
 from quality.score_computer import (
-    DEFAULT_DOMAIN_CATALOGS,
     QualityScoreComputer,
     QualityViolation,
 )
-
 
 # ============================================================================
 # Helpers

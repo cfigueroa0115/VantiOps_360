@@ -7,18 +7,18 @@ Also tests MIN_GROUP_SIZE enforcement and grouped_descriptive_stats.
 
 from __future__ import annotations
 
-import polars as pl
-import pytest
-
 from statistics.descriptive import (
+    MIN_GROUP_SIZE,
     ConditionalProbResult,
     DescriptiveStats,
-    MIN_GROUP_SIZE,
     conditional_probability,
     descriptive_stats,
     descriptive_stats_tiempo_gestion,
     grouped_descriptive_stats,
 )
+
+import polars as pl
+import pytest
 
 
 class TestDescriptiveStats:

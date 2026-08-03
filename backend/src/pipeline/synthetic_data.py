@@ -15,7 +15,6 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 
-
 # Default distributions derived from the real dataset profile.
 # These are used when no source DataFrame is provided for learning.
 _DEFAULT_DISTRIBUTIONS: dict[str, dict[str, float]] = {

@@ -5,17 +5,17 @@ Provides the approvals engine for critical operations per REQ-15.
 """
 
 from governance.approvals import (
-    ApprovalStatus,
-    OperationType,
     OPERATION_REQUIRED_APPROVERS,
     ApprovalRequest,
     ApprovalResponse,
-    request_approval,
+    ApprovalStatus,
+    OperationType,
     approve_request,
-    reject_request,
     check_expiration,
     get_pending_approvals,
     is_operation_approved,
+    reject_request,
+    request_approval,
 )
 
 __all__ = [

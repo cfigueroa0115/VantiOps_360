@@ -5,10 +5,6 @@ and two-proportion z-test implementations.
 """
 
 import re
-
-import polars as pl
-import pytest
-
 from statistics.inference import (
     MeanConfidenceInterval,
     NormalityTestResult,
@@ -23,8 +19,9 @@ from statistics.inference import (
     two_proportion_z_test,
     wilson_confidence_interval,
 )
-from statistics.descriptive import MIN_GROUP_SIZE
 
+import polars as pl
+import pytest
 
 # ---------------------------------------------------------------------------
 # Pareto Analysis Tests

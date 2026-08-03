@@ -9,15 +9,14 @@ Requirements: 2.1, 2.7
 from __future__ import annotations
 
 import polars as pl
-import pytest
 
 from profiling.type_inference import (
     BOOLEAN_VALUES,
     ColumnTypeInfo,
-    infer_types,
     _is_boolean,
     _is_datetime,
     _is_numeric,
+    infer_types,
 )
 
 

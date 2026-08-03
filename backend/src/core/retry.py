@@ -23,11 +23,11 @@ Non-transient errors (zero retries, propagate immediately):
   - Any error not in the transient classification
 """
 
+import logging
 import random
 import time
-import logging
 from functools import wraps
-from typing import Callable, TypeVar, Any
+from typing import Any, Callable, TypeVar
 
 logger = logging.getLogger(__name__)
 

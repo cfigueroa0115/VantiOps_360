@@ -17,17 +17,13 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
-
 from auth.email_validator import (
-    CORPORATE_DOMAIN,
     WhitelistCache,
     get_denial_reason,
     is_email_authorized,
     reload_whitelist,
     validate_email_format,
 )
-
 
 # ---------------------------------------------------------------------------
 # Format validation tests

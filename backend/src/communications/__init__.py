@@ -11,10 +11,10 @@ Requirements:
 """
 
 from communications.email_mgr import (  # noqa: F401
+    MAX_DIRECTORY_SIZE,
+    MAX_EMAILS_PER_MINUTE,
     EmailDirectory,
     EmailEntry,
     EmailStatus,
     ThrottledSender,
-    MAX_DIRECTORY_SIZE,
-    MAX_EMAILS_PER_MINUTE,
 )

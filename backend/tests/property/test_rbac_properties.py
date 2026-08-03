@@ -14,16 +14,15 @@ Uses Hypothesis to verify:
 from __future__ import annotations
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 
 from auth.rbac import (
-    Role,
-    Permission,
     PERMISSIONS,
+    Permission,
+    Role,
     is_authorized,
     validate_role,
 )
-
 
 # --- Strategies ---
 

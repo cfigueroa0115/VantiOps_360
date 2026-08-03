@@ -14,18 +14,17 @@ Uses Hypothesis to verify:
 import math
 
 import hypothesis.strategies as st
-from hypothesis import given, assume, settings
+from hypothesis import assume, given, settings
 
 from operations.capacity import (
+    ALERT_THRESHOLD_GREEN_MAX,
+    ALERT_THRESHOLD_ORANGE_MAX,
+    ALERT_THRESHOLD_YELLOW_MAX,
     calculate_net_capacity,
     calculate_utilization,
     get_alert_level,
     get_capacity_summary,
-    ALERT_THRESHOLD_GREEN_MAX,
-    ALERT_THRESHOLD_YELLOW_MAX,
-    ALERT_THRESHOLD_ORANGE_MAX,
 )
-
 
 # --- Strategies ---
 

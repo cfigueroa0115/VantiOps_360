@@ -11,11 +11,10 @@ Requirements: 11.1, 11.2
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import polars as pl
-
 
 # ---------------------------------------------------------------------------
 # Constants

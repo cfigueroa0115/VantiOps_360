@@ -10,7 +10,6 @@ without a connection, these tests verify migration file correctness through:
 Validates: Requirements 12.1, 12.3
 """
 
-import os
 import re
 from pathlib import Path
 

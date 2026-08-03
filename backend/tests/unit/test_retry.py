@@ -1,14 +1,13 @@
 """Unit tests for the centralized retry policy (REQ-37)."""
 
 import pytest
+
 from core.retry import (
-    TransientHTTPError,
     NonTransientHTTPError,
-    is_transient_error,
+    TransientHTTPError,
     compute_delay,
+    is_transient_error,
     retry_policy,
-    TRANSIENT_ERRORS,
-    NON_TRANSIENT_ERRORS,
 )
 
 

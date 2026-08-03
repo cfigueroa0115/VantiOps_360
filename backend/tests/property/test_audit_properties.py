@@ -19,24 +19,17 @@ using the file-based fallback mechanism.
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import HealthCheck, given, settings
 
 from audit.logger import (
     log_audit_event,
     query_audit_events,
-    AuditEvent,
-    AUDIT_LOG_FILE,
-    AUDIT_LOG_DIR,
-    _write_to_file,
-    _query_from_file,
 )
-
 
 # --- Strategies ---
 

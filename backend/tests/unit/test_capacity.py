@@ -17,7 +17,6 @@ from operations.capacity import (
     DEFAULT_PRODUCTIVITY_FACTOR,
     MONTHLY_HOURS_BASE,
     PQR_DEDICATION,
-    CapacitySummary,
     calculate_net_capacity,
     calculate_utilization,
     get_alert_level,

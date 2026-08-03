@@ -16,7 +16,6 @@ import polars as pl
 
 from profiling.detectors import detect_outliers_iqr
 
-
 LOW_CONFIDENCE_THRESHOLD = 30
 
 # Minimum group size for privacy protection (Requirement 9.3).

@@ -8,8 +8,8 @@ Tests cover core functionality and edge cases for:
 Requirements: 2.3, 2.4, 2.5
 """
 
-import pytest
 import polars as pl
+import pytest
 
 from profiling.detectors import (
     DuplicateReport,
@@ -19,7 +19,6 @@ from profiling.detectors import (
     detect_outliers_iqr,
     find_duplicates,
 )
-
 
 # ============================================================================
 # detect_outliers_iqr tests

@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
-import pytest
 
-from pipeline.synthetic_data import SyntheticDataGenerator, _DEFAULT_DISTRIBUTIONS, _DEFAULT_NUMERIC_PARAMS
+from pipeline.synthetic_data import (
+    _DEFAULT_DISTRIBUTIONS,
+    _DEFAULT_NUMERIC_PARAMS,
+    SyntheticDataGenerator,
+)
 
 
 class TestSyntheticDataGeneratorDefaults:

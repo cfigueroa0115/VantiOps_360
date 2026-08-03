@@ -11,17 +11,14 @@ Uses Hypothesis to verify:
 """
 
 import hypothesis.strategies as st
-from hypothesis import given, assume, settings
+from hypothesis import assume, given, settings
 
 from core.retry import (
+    NonTransientHTTPError,
+    TransientHTTPError,
     compute_delay,
     is_transient_error,
-    TransientHTTPError,
-    NonTransientHTTPError,
-    TRANSIENT_ERRORS,
-    NON_TRANSIENT_ERRORS,
 )
-
 
 # --- Strategies ---
 

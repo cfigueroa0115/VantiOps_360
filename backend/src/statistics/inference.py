@@ -16,14 +16,12 @@ Requirements: 9.2, 9.3
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from statistics.descriptive import MIN_GROUP_SIZE
 
 import numpy as np
 import polars as pl
 from scipy import stats
-
-from statistics.descriptive import MIN_GROUP_SIZE
-
 
 # ---------------------------------------------------------------------------
 # Data classes
