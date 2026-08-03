@@ -30,3 +30,16 @@ export function formatDecimal(value: unknown, decimals = 1): string {
 export function formatPercent(value: unknown, decimals = 1): string {
   return `${asFiniteNumber(value).toFixed(decimals)}%`;
 }
+
+/**
+ * Format a metric value as percentage.
+ * Returns "—" for null, undefined, empty string, NaN, Infinity.
+ * Returns the formatted number for valid values (including real zero).
+ */
+export function formatMetric(value: unknown, decimals = 1): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string" && value.trim() === "") return "—";
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return `${n.toFixed(decimals)}%`;
+}
