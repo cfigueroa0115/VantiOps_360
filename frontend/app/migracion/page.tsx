@@ -196,7 +196,7 @@ export default function MigracionPage() {
         <div className="rounded-xl border border-green-200 bg-green-50 p-6">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle2 size={18} className="text-green-600" />
-            <h2 className="text-lg font-semibold text-green-800">Reconciliación Exitosa</h2>
+            <h2 className="text-lg font-semibold text-green-800">Resultado esperado de la simulación</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
@@ -205,11 +205,11 @@ export default function MigracionPage() {
             </div>
             <div>
               <p className="text-gray-600">Integridad FK</p>
-              <p className="font-bold text-green-800">100%</p>
+              <p className="font-bold text-green-800">Validación de integridad propuesta</p>
             </div>
             <div>
               <p className="text-gray-600">Checksums</p>
-              <p className="font-bold text-green-800">Verificados</p>
+              <p className="font-bold text-green-800">Verificación de checksums contemplada</p>
             </div>
             <div>
               <p className="text-gray-600">Destino</p>
@@ -218,6 +218,11 @@ export default function MigracionPage() {
           </div>
         </div>
       )}
+
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-500 italic text-center">
+        Simulación conceptual de la estrategia de migración. No ejecuta una migración productiva ni modifica registros existentes.
+      </p>
     </div>
   );
 }
