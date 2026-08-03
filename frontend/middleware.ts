@@ -78,16 +78,6 @@ export const PROTECTED_ROUTES: Record<string, Role[]> = {
     "AUDITOR",
     "PARTNER_OPERATOR",
   ],
-  "/anulaciones": [
-    "SYSTEM_ADMIN",
-    "OPERATIONS_LEAD",
-    "ANALYST",
-    "LEGAL_APPROVER",
-    "VP_APPROVER",
-    "BUSINESS_OWNER",
-    "AUDITOR",
-    "PARTNER_OPERATOR",
-  ],
 
   // Capacity routes
   "/api/capacity": ["SYSTEM_ADMIN", "OPERATIONS_LEAD", "BUSINESS_OWNER"],
@@ -292,7 +282,6 @@ export const config = {
     "/admin/:path*",
     "/auditoria/:path*",
     "/aprobaciones/:path*",
-    "/anulaciones/:path*",
     "/capacidad/:path*",
   ],
 };
