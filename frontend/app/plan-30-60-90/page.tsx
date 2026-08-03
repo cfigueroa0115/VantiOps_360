@@ -142,19 +142,15 @@ export default function Plan306090Page() {
                 <p className="text-sm text-gray-600">{phase.days}</p>
               </div>
               <span className={`ml-auto text-xs font-medium px-3 py-1 rounded-full border ${phase.borderColor} ${phase.color}`}>
-                {phase.deliverables.filter((d) => d.done).length}/{phase.deliverables.length} entregables propuestos
+                {phase.deliverables.length} entregables propuestos
               </span>
             </div>
             <p className="text-sm text-gray-700 mb-4 italic">&ldquo;{phase.objective}&rdquo;</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {phase.deliverables.map((del, i) => (
                 <div key={i} className="flex items-start gap-2 bg-white/60 rounded-lg px-3 py-2 border border-white/80">
-                  {del.done ? (
-                    <CheckCircle2 size={14} className="text-green-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <Circle size={14} className="text-gray-300 shrink-0 mt-0.5" />
-                  )}
-                  <span className={`text-xs ${del.done ? "text-gray-700" : "text-gray-500"}`}>{del.item}</span>
+                  <Circle size={14} className="text-gray-400 shrink-0 mt-0.5" />
+                  <span className="text-xs text-gray-700">{del.item}</span>
                 </div>
               ))}
             </div>
