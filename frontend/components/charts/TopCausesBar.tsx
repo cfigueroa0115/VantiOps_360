@@ -48,9 +48,9 @@ export function TopCausesBar({ data, loading, error, onRetry }: TopCausesBarProp
           <BarChart
             data={top10}
             layout="vertical"
-            margin={{ top: 5, right: 20, left: 10, bottom: 20 }}
+            margin={{ top: 5, right: 15, left: 0, bottom: 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
             <XAxis
               type="number"
               tick={{ fontSize: 10, fill: "#6b7280" }}
@@ -65,9 +65,9 @@ export function TopCausesBar({ data, loading, error, onRetry }: TopCausesBarProp
               type="category"
               dataKey="causa"
               tick={{ fontSize: 9, fill: "#374151" }}
-              width={180}
+              width={145}
               tickFormatter={(value: string) =>
-                value.length > 28 ? `${value.substring(0, 28)}…` : value
+                value.length > 22 ? `${value.substring(0, 22)}…` : value
               }
             />
             <Tooltip
@@ -79,7 +79,7 @@ export function TopCausesBar({ data, loading, error, onRetry }: TopCausesBarProp
               fill="#22c55e"
               radius={[0, 4, 4, 0]}
               name="Cantidad"
-              barSize={22}
+              barSize={24}
             />
           </BarChart>
         </ResponsiveContainer>

@@ -56,20 +56,36 @@ export function CancellationDonut({
         aria-label="Gráfico de dona mostrando la proporción de la causa principal de cancelación frente al resto de causas"
         role="img"
       >
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
-              cy="45%"
-              innerRadius={55}
-              outerRadius={90}
+              cy="50%"
+              innerRadius={60}
+              outerRadius={95}
               dataKey="count"
               nameKey="category"
               paddingAngle={2}
-              label={({ percentage }: CancellationDataPoint) =>
-                `${formatPercent(percentage)}`
-              }
+              label={({ cx, cy, midAngle, outerRadius: or, percentage }: any) => {
+                const RADIAN = Math.PI / 180;
+                const radius = or + 20;
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="#374151"
+                    textAnchor={x > cx ? "start" : "end"}
+                    dominantBaseline="central"
+                    fontSize={12}
+                    fontWeight={600}
+                  >
+                    {formatPercent(percentage)}
+                  </text>
+                );
+              }}
               labelLine={{ stroke: "#9ca3af", strokeWidth: 1 }}
             >
               {data.map((_, index) => (
@@ -87,11 +103,12 @@ export function CancellationDonut({
             />
             <Legend
               verticalAlign="bottom"
-              height={36}
+              iconType="square"
+              iconSize={10}
               formatter={(value: string) =>
-                value.length > 35 ? `${value.substring(0, 35)}…` : value
+                value.length > 32 ? `${value.substring(0, 32)}…` : value
               }
-              wrapperStyle={{ fontSize: "11px", paddingTop: "4px" }}
+              wrapperStyle={{ fontSize: "11px", paddingTop: "4px", lineHeight: "20px" }}
             />
           </PieChart>
         </ResponsiveContainer>
