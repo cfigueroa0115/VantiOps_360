@@ -44,11 +44,11 @@ export function TopCausesBar({ data, loading, error, onRetry }: TopCausesBarProp
         aria-label="Gráfico de barras horizontal mostrando las 10 causas principales de PQR ordenadas por cantidad descendente"
         role="img"
       >
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={420}>
           <BarChart
             data={top10}
             layout="vertical"
-            margin={{ top: 10, right: 30, left: 160, bottom: 10 }}
+            margin={{ top: 10, right: 30, left: 220, bottom: 10 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
@@ -64,11 +64,14 @@ export function TopCausesBar({ data, loading, error, onRetry }: TopCausesBarProp
             <YAxis
               type="category"
               dataKey="causa"
-              tick={{ fontSize: 11, fill: "#374151" }}
-              width={150}
+              tick={{ fontSize: 10, fill: "#374151" }}
+              width={210}
+              tickFormatter={(value: string) =>
+                value.length > 35 ? `${value.substring(0, 35)}...` : value
+              }
             />
             <Tooltip
-              formatter={(value: number) => [value, "Cantidad"]}
+              formatter={(value: number) => [value.toLocaleString(), "Cantidad"]}
               labelStyle={{ fontWeight: 600 }}
             />
             <Bar
