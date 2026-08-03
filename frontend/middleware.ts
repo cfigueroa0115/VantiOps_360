@@ -95,7 +95,6 @@ export const PROTECTED_ROUTES: Record<string, Role[]> = {
 
   // Evidence routes
   "/api/evidence": ["SYSTEM_ADMIN", "OPERATIONS_LEAD", "AUDITOR"],
-  "/evidencia": ["SYSTEM_ADMIN", "OPERATIONS_LEAD", "AUDITOR"],
 
   // Migration routes
   "/api/migration": ["SYSTEM_ADMIN"],
@@ -295,6 +294,5 @@ export const config = {
     "/aprobaciones/:path*",
     "/anulaciones/:path*",
     "/capacidad/:path*",
-    "/evidencia/:path*",
   ],
 };
