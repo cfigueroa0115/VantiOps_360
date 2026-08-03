@@ -363,10 +363,10 @@ describe("RBAC Middleware", () => {
     });
 
     it("includes callbackUrl in redirect", async () => {
-      const req = createMockRequest("/anulaciones");
+      const req = createMockRequest("/auditoria");
       const res = (await middleware(req)) as MockResponse;
 
-      expect(res.redirectUrl).toContain("callbackUrl=%2Fanulaciones");
+      expect(res.redirectUrl).toContain("callbackUrl=%2Fauditoria");
     });
   });
 
