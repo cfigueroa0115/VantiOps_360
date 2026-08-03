@@ -148,7 +148,7 @@ export default function RiesgoPage() {
           </div>
           <div>
             <p className="text-gray-500">Dataset</p>
-            <p className="font-medium">600 registros</p>
+            <p className="font-medium">51.008 registros</p>
           </div>
         </div>
       </div>

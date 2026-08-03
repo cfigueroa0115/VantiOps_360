@@ -25,7 +25,7 @@ const PHASES: Phase[] = [
     objective: "Contener la crisis operativa, reducir backlog y establecer visibilidad",
     deliverables: [
       { item: "War Room diario con métricas de backlog y ANS", done: true },
-      { item: "Inventario completo de PQR abiertas (600 registros)", done: true },
+      { item: "Inventario completo de PQR abiertas (51.008 registros de la base suministrada)", done: true },
       { item: "Priorización de backlog por severidad y antigüedad", done: true },
       { item: "Dashboard operativo en tiempo real", done: true },
       { item: "Modelo de riesgo para predicción de incumplimiento", done: true },
