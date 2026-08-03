@@ -371,9 +371,9 @@ test(backend): add property test for ETL idempotency
 ## Autoría y Licencia
 
 - **Proyecto**: VantiOps 360
-- **Organización**: Vanti S.A. ESP
-- **Tipo**: Prototipo de analítica operacional (uso interno)
-- **Licencia**: Propietario — Uso exclusivo Vanti
+- **Autor**: Carlos Alberto Figueroa Martínez
+- **Tipo**: Prototipo independiente desarrollado como respuesta a una prueba técnica
+- **Licencia**: Uso académico / evaluación técnica
 
 ---
 
