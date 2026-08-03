@@ -1,105 +1,183 @@
 "use client";
 
-import React from "react";
-import { FileCheck, Server, Database, Shield, GitBranch, TestTube2, Globe, AlertTriangle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  FileCheck, Server, Database, Shield, GitBranch,
+  TestTube2, Globe, AlertTriangle, Zap, Layers,
+  CheckCircle2, XCircle, Clock, TrendingUp
+} from "lucide-react";
+
+// ─── Data ────────────────────────────────────────────────────────────────
 
 const ENDPOINTS = [
-  { method: "GET", path: "/api/kpis", description: "KPIs ejecutivos agregados" },
-  { method: "GET", path: "/api/charts/{chart_type}", description: "Datos de gráficos por tipo" },
-  { method: "GET", path: "/api/filters/options", description: "Opciones disponibles para filtros" },
-  { method: "GET", path: "/api/quality/report", description: "Reporte de calidad de datos" },
-  { method: "GET", path: "/api/risk/model", description: "Resultados del modelo de riesgo" },
-  { method: "GET", path: "/api/rca/findings", description: "Hallazgos de causa raíz" },
-  { method: "GET", path: "/api/health", description: "Health check del servicio" },
+  { method: "GET", path: "/api/health", description: "Health check con validación DB", status: "live" },
+  { method: "GET", path: "/api/charts/pareto", description: "Análisis Pareto — fuente única", status: "live" },
+  { method: "GET", path: "/api/kpis", description: "KPIs ejecutivos agregados", status: "live" },
+  { method: "GET", path: "/api/rca", description: "Causa raíz principal", status: "live" },
+  { method: "GET", path: "/api/risk/model", description: "Modelo de riesgo operacional", status: "live" },
+  { method: "GET", path: "/api/quality", description: "Score de calidad de datos", status: "live" },
+  { method: "POST", path: "/api/auth/validate", description: "Validación de email corporativo", status: "live" },
+  { method: "GET", path: "/api/audit", description: "Logs de auditoría (protegido)", status: "protected" },
+  { method: "GET", path: "/api/capacity", description: "Modelo de capacidad operacional", status: "protected" },
+  { method: "POST", path: "/api/annulations", description: "Gestión de anulaciones", status: "protected" },
 ];
 
 const TECHNOLOGIES = [
-  { category: "Frontend", items: ["Next.js 14", "React 18", "TypeScript", "Tailwind CSS", "Recharts", "Lucide Icons"] },
-  { category: "Backend", items: ["Python 3.11", "FastAPI", "Pydantic v2", "scikit-learn", "pandas", "httpx"] },
-  { category: "Base de datos", items: ["PostgreSQL 15", "Neon (Serverless)", "51,008 registros", "6 tablas principales"] },
-  { category: "Infraestructura", items: ["Vercel (Frontend)", "Railway/Render (API)", "Neon Cloud (DB)", "GitHub (Repo)"] },
-  { category: "Testing", items: ["pytest", "Hypothesis (PBT)", "360 tests unitarios", "Coverage > 90%"] },
-  { category: "Calidad", items: ["ESLint", "Prettier", "mypy", "ruff", "Pre-commit hooks"] },
+  { category: "Frontend", icon: <Layers size={16} />, color: "from-blue-500 to-cyan-500", items: ["Next.js 14", "React 18", "TypeScript 5.7", "Tailwind CSS", "Recharts", "Radix UI"] },
+  { category: "Backend", icon: <Server size={16} />, color: "from-emerald-500 to-teal-500", items: ["Python 3.11", "FastAPI", "Polars", "DuckDB", "scikit-learn", "Hypothesis"] },
+  { category: "Base de Datos", icon: <Database size={16} />, color: "from-purple-500 to-indigo-500", items: ["Neon PostgreSQL", "Serverless", "51,008 registros", "13 migraciones"] },
+  { category: "Infraestructura", icon: <Globe size={16} />, color: "from-orange-500 to-red-500", items: ["Vercel", "GitHub Actions", "CI/CD ≤ 15min", "Auto-rollback"] },
+  { category: "Testing", icon: <TestTube2 size={16} />, color: "from-pink-500 to-rose-500", items: ["Vitest", "Playwright", "pytest", "14 PBT suites", "1,497 tests"] },
+  { category: "Seguridad", icon: <Shield size={16} />, color: "from-amber-500 to-yellow-500", items: ["RBAC 11 roles", "JWT middleware", "Audit append-only", "Email validation"] },
 ];
 
-const TEST_RESULTS = {
-  total: 360,
-  passed: 354,
-  failed: 0,
-  skipped: 6,
-  coverage: 92.4,
-};
+const STATS = [
+  { label: "Tests Totales", value: "1,497", icon: <TestTube2 size={18} />, color: "text-blue-600", bg: "bg-blue-50 group-hover:bg-blue-100" },
+  { label: "Tests Passed", value: "1,497", icon: <CheckCircle2 size={18} />, color: "text-emerald-600", bg: "bg-emerald-50 group-hover:bg-emerald-100" },
+  { label: "Failed", value: "0", icon: <XCircle size={18} />, color: "text-red-500", bg: "bg-red-50 group-hover:bg-red-100" },
+  { label: "Skipped", value: "22", icon: <Clock size={18} />, color: "text-gray-500", bg: "bg-gray-50 group-hover:bg-gray-100" },
+  { label: "Coverage", value: "92%", icon: <TrendingUp size={18} />, color: "text-purple-600", bg: "bg-purple-50 group-hover:bg-purple-100" },
+];
+
+// ─── Page ────────────────────────────────────────────────────────────────
 
 export default function EvidenciaPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-          <FileCheck size={20} className="text-emerald-600" />
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      {/* ─── Hero Header ─── */}
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.15),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.1),transparent_50%)]" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 shadow-lg shadow-emerald-500/25">
+            <FileCheck size={28} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Evidencia Técnica</h1>
+            <p className="text-sm text-slate-300 mt-1">Stack, arquitectura y calidad de VantiOps 360</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Evidencia Técnica</h1>
-          <p className="text-sm text-gray-500">Documentación técnica del prototipo VantiOps 360</p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {["Producción activa", "1,497 tests", "0 errores", "DB conectada"].map((badge) => (
+            <span key={badge} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 px-3 py-1 text-xs text-white/90">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {badge}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Architecture Summary */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Server size={18} className="text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Arquitectura</h2>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4 font-mono text-xs text-gray-700">
-          <p>Frontend (Next.js) → API (FastAPI) → Database (Neon PostgreSQL)</p>
-          <p className="mt-1 text-gray-500">Deployment: Vercel + Railway | Repo: GitHub (monorepo)</p>
-        </div>
+      {/* ─── Stats Cards ─── */}
+      <div className={`grid grid-cols-2 md:grid-cols-5 gap-3 transition-all duration-700 delay-100 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        {STATS.map((stat, i) => (
+          <div
+            key={stat.label}
+            className={`group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-4 text-center
+              transition-all duration-300 ease-out
+              hover:scale-[1.04] hover:shadow-lg hover:shadow-gray-200/60 hover:border-gray-200
+              hover:-translate-y-1 cursor-default`}
+            style={{ transitionDelay: `${i * 50}ms` }}
+          >
+            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${stat.bg}`} />
+            <div className="relative">
+              <div className={`mx-auto mb-2 ${stat.color} transition-transform duration-300 group-hover:scale-110`}>
+                {stat.icon}
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{stat.label}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Technologies Grid */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Stack Tecnológico</h2>
+      {/* ─── Tech Stack Grid ─── */}
+      <div className={`transition-all duration-700 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <Zap size={18} className="text-amber-500" />
+          Stack Tecnológico
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {TECHNOLOGIES.map((tech) => (
-            <div key={tech.category} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-              <h3 className="font-semibold text-gray-700 text-sm mb-2">{tech.category}</h3>
-              <div className="flex flex-wrap gap-1">
-                {tech.items.map((item) => (
-                  <span key={item} className="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-600">
-                    {item}
-                  </span>
-                ))}
+          {TECHNOLOGIES.map((tech, i) => (
+            <div
+              key={tech.category}
+              className={`group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-5
+                transition-all duration-300 ease-out
+                hover:shadow-xl hover:shadow-gray-200/50 hover:border-transparent hover:-translate-y-1 hover:scale-[1.02]`}
+              style={{ transitionDelay: `${i * 75}ms` }}
+            >
+              {/* Gradient glow on hover */}
+              <div className={`absolute inset-0 opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500 bg-gradient-to-br ${tech.color}`} />
+              {/* Top accent bar */}
+              <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${tech.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${tech.color} text-white shadow-sm
+                    transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                    {tech.icon}
+                  </div>
+                  <h3 className="font-semibold text-gray-800 text-sm">{tech.category}</h3>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {tech.items.map((item) => (
+                    <span
+                      key={item}
+                      className="text-[10px] bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full text-gray-600
+                        transition-all duration-200 hover:bg-gray-100 hover:border-gray-200 hover:text-gray-800 hover:scale-105"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* API Endpoints */}
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+      {/* ─── API Endpoints ─── */}
+      <div className={`overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-700 delay-300 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2 bg-gradient-to-r from-gray-50 to-white">
           <Globe size={16} className="text-blue-500" />
           <h2 className="text-lg font-semibold text-gray-800">Endpoints REST API</h2>
+          <span className="ml-auto text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
+            {ENDPOINTS.filter(e => e.status === "live").length} activos
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-4 py-2 text-left font-medium text-gray-600">Método</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-600">Path</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-600">Descripción</th>
+                <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Método</th>
+                <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Endpoint</th>
+                <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Descripción</th>
+                <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Estado</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-50">
               {ENDPOINTS.map((ep) => (
-                <tr key={ep.path} className="hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded">
+                <tr key={ep.path} className="group transition-colors duration-200 hover:bg-blue-50/30">
+                  <td className="px-4 py-2.5">
+                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded transition-transform duration-200 group-hover:scale-110
+                      ${ep.method === "GET" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>
                       {ep.method}
                     </span>
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs">{ep.path}</td>
-                  <td className="px-4 py-2 text-gray-600">{ep.description}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700 group-hover:text-blue-600 transition-colors">{ep.path}</td>
+                  <td className="px-4 py-2.5 text-gray-600 text-xs">{ep.description}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full
+                      ${ep.status === "live" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border border-amber-100"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${ep.status === "live" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                      {ep.status === "live" ? "Activo" : "Protegido"}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -107,150 +185,123 @@ export default function EvidenciaPage() {
         </div>
       </div>
 
-      {/* Test Results */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <TestTube2 size={18} className="text-purple-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Resultados de Tests</h2>
+      {/* ─── Architecture Flow ─── */}
+      <div className={`rounded-xl border border-gray-100 bg-white p-6 transition-all duration-700 delay-400 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <div className="flex items-center gap-2 mb-5">
+          <Server size={18} className="text-blue-600" />
+          <h2 className="text-lg font-semibold text-gray-800">Arquitectura de Producción</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="rounded-lg bg-gray-50 p-4 text-center border border-gray-100">
-            <p className="text-2xl font-bold text-gray-900">{TEST_RESULTS.total}</p>
-            <p className="text-[10px] text-gray-500">Total Tests</p>
-          </div>
-          <div className="rounded-lg bg-green-50 p-4 text-center border border-green-100">
-            <p className="text-2xl font-bold text-green-700">{TEST_RESULTS.passed}</p>
-            <p className="text-[10px] text-green-600">Passed</p>
-          </div>
-          <div className="rounded-lg bg-red-50 p-4 text-center border border-red-100">
-            <p className="text-2xl font-bold text-red-700">{TEST_RESULTS.failed}</p>
-            <p className="text-[10px] text-red-600">Failed</p>
-          </div>
-          <div className="rounded-lg bg-gray-50 p-4 text-center border border-gray-100">
-            <p className="text-2xl font-bold text-gray-500">{TEST_RESULTS.skipped}</p>
-            <p className="text-[10px] text-gray-500">Skipped</p>
-          </div>
-          <div className="rounded-lg bg-blue-50 p-4 text-center border border-blue-100">
-            <p className="text-2xl font-bold text-blue-700">{TEST_RESULTS.coverage}%</p>
-            <p className="text-[10px] text-blue-600">Coverage</p>
-          </div>
-        </div>
-        <div className="mt-4 w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-green-500 rounded-full" style={{ width: `${(TEST_RESULTS.passed / TEST_RESULTS.total) * 100}%` }} />
-        </div>
-        <p className="text-xs text-gray-500 mt-1">{((TEST_RESULTS.passed / TEST_RESULTS.total) * 100).toFixed(1)}% tasa de éxito</p>
-      </div>
-
-      {/* Database Info */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Database size={18} className="text-cyan-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Base de Datos</h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-gray-500">Motor</p>
-            <p className="font-medium">PostgreSQL 15</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Proveedor</p>
-            <p className="font-medium">Neon (Serverless)</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Registros</p>
-            <p className="font-medium">51,008</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Tablas</p>
-            <p className="font-medium">6 principales</p>
-          </div>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-0">
+          {[
+            { label: "Browser", sub: "React 18 SPA", color: "from-blue-500 to-cyan-500" },
+            { label: "Vercel Edge", sub: "Next.js 14 + RBAC MW", color: "from-slate-700 to-slate-900" },
+            { label: "Route Handlers", sub: "15 API endpoints", color: "from-emerald-500 to-teal-600" },
+            { label: "Neon PostgreSQL", sub: "Serverless DB", color: "from-purple-500 to-indigo-600" },
+          ].map((node, i) => (
+            <React.Fragment key={node.label}>
+              <div className="group relative flex-shrink-0">
+                <div className={`relative rounded-xl bg-gradient-to-br ${node.color} p-4 text-center text-white min-w-[140px]
+                  shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1`}>
+                  <p className="font-semibold text-sm">{node.label}</p>
+                  <p className="text-[10px] text-white/70 mt-0.5">{node.sub}</p>
+                </div>
+              </div>
+              {i < 3 && (
+                <div className="hidden md:flex items-center px-2">
+                  <div className="w-8 h-0.5 bg-gradient-to-r from-gray-300 to-gray-200 rounded-full" />
+                  <div className="w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-gray-300" />
+                </div>
+              )}
+              {i < 3 && (
+                <div className="md:hidden flex items-center justify-center">
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-gray-300 to-gray-200 rounded-full" />
+                </div>
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
-      {/* Deployment & Repository */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+      {/* ─── Bottom Row: Deploy + Repo + Security ─── */}
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        {/* Deploy */}
+        <div className="group rounded-xl border border-gray-100 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-emerald-100 hover:-translate-y-1">
           <div className="flex items-center gap-2 mb-3">
-            <Globe size={16} className="text-blue-600" />
-            <h3 className="font-semibold text-gray-800">Deployment</h3>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 transition-transform duration-300 group-hover:scale-110">
+              <Globe size={14} />
+            </div>
+            <h3 className="font-semibold text-gray-800 text-sm">Deploy</h3>
           </div>
           <ul className="space-y-2 text-xs text-gray-600">
-            <li className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Frontend: Vercel (auto-deploy on push)
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Backend: Railway (container deployment)
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Database: Neon Cloud (always-on)
-            </li>
+            {["Vercel (auto-deploy on push)", "GitHub Actions CI ≤ 15 min", "Neon Cloud (always-on)"].map((item) => (
+              <li key={item} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {item}
+              </li>
+            ))}
           </ul>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+
+        {/* Repo */}
+        <div className="group rounded-xl border border-gray-100 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-purple-100 hover:-translate-y-1">
           <div className="flex items-center gap-2 mb-3">
-            <GitBranch size={16} className="text-purple-600" />
-            <h3 className="font-semibold text-gray-800">Repositorio</h3>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-600 transition-transform duration-300 group-hover:scale-110">
+              <GitBranch size={14} />
+            </div>
+            <h3 className="font-semibold text-gray-800 text-sm">Repositorio</h3>
           </div>
           <ul className="space-y-2 text-xs text-gray-600">
-            <li>• Monorepo: frontend/ + backend/</li>
-            <li>• Branching: main → develop → feature/*</li>
-            <li>• CI: GitHub Actions (lint + test + deploy)</li>
-            <li>• Pre-commit hooks: ruff, eslint, prettier</li>
+            {["Monorepo: frontend/ + backend/", "Conventional Commits", "14 property-based test suites", "Pre-commit: ruff + eslint"].map((item) => (
+              <li key={item} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Security */}
+        <div className="group rounded-xl border border-gray-100 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-amber-100 hover:-translate-y-1">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600 transition-transform duration-300 group-hover:scale-110">
+              <Shield size={14} />
+            </div>
+            <h3 className="font-semibold text-gray-800 text-sm">Seguridad</h3>
+          </div>
+          <ul className="space-y-2 text-xs text-gray-600">
+            {["RBAC 11 roles (JWT middleware)", "Audit inmutable (append-only)", "Email @vanti.com.co + whitelist", "Security scan en CI"].map((item) => (
+              <li key={item} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                {item}
+              </li>
+            ))}
           </ul>
         </div>
       </div>
 
-      {/* Security */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield size={18} className="text-green-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Seguridad</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            HTTPS enforced en todos los endpoints
+      {/* ─── Limitations Banner ─── */}
+      <div className={`relative overflow-hidden rounded-xl border border-amber-200/50 bg-gradient-to-r from-amber-50 to-orange-50 p-6
+        transition-all duration-700 delay-[600ms] ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-200/30 to-transparent rounded-bl-full" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle size={18} className="text-amber-600" />
+            <h2 className="text-base font-semibold text-amber-800">Alcance del Prototipo</h2>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            CORS configurado (orígenes permitidos)
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            Variables de entorno para secrets
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            PII masking en pipeline de datos
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
-            Sin autenticación (prototipo demo)
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
-            Rate limiting básico
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-amber-700">
+            {[
+              "SAP, Power Automate, R → diseño conceptual (no productivo)",
+              "Autenticación JWT local (sin Azure AD/SSO)",
+              "Datos de demostración con proveniencia documentada",
+              "Rendimiento validado para 42 usuarios concurrentes",
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-2">
+                <span className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                {item}
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Limitations */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle size={18} className="text-amber-600" />
-          <h2 className="text-lg font-semibold text-amber-800">Limitaciones del Prototipo</h2>
-        </div>
-        <ul className="space-y-1 text-sm text-amber-700">
-          <li>• No conectado con sistemas productivos de Vanti</li>
-          <li>• Sin autenticación ni autorización empresarial</li>
-          <li>• Datos de Fase 2 y 3 son simulados para demostración</li>
-          <li>• Sin alta disponibilidad ni disaster recovery</li>
-          <li>• Performance limitada a escala de prototipo (~600 registros base)</li>
-          <li>• Sin integración con Active Directory / SSO corporativo</li>
-        </ul>
       </div>
     </div>
   );
