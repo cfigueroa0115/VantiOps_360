@@ -40,3 +40,5 @@ frontend/playwright-report/
 frontend/artifacts/errors/
 frontend/coverage/
 frontend/coverage-output.txt
+.vercel
+.env*
