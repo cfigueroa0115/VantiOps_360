@@ -175,6 +175,11 @@ export default function OperacionesPage() {
           })}
         </div>
       </div>
+
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-500 italic text-center">
+        Indicadores simulados para demostración del modelo de torre de control.
+      </p>
     </div>
   );
 }

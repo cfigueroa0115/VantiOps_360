@@ -46,7 +46,13 @@ const FMEA_DATA = [
 ];
 
 export default function RCAPage() {
-  const { data, loading } = useChartData("pareto");
+  const { data, loading, error } = useChartData("pareto");
+
+  // Derive main cause from live Pareto endpoint (same source as Dashboard)
+  const paretoArray = data?.data || [];
+  const liveTopCause = paretoArray.length > 0 ? (paretoArray[0] as any).causa : null;
+  const liveTopPct = paretoArray.length > 0 ? Number((paretoArray[0] as any).percentage) : null;
+  const liveTotalRecords = paretoArray.length > 0 ? paretoArray.reduce((sum: number, d: any) => sum + (d.count || 0), 0) : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -61,35 +67,74 @@ export default function RCAPage() {
         </div>
       </div>
 
-      {/* Main Cause */}
+      {/* Main Cause — from live endpoint */}
       <div className="rounded-xl border-2 border-purple-200 bg-purple-50 p-6">
         <div className="flex items-center gap-2 mb-2">
           <Target size={18} className="text-purple-600" />
           <h2 className="text-lg font-semibold text-purple-900">Causa Principal Identificada</h2>
         </div>
-        <p className="text-2xl font-bold text-purple-800">&ldquo;Cancela Servihogar a solicitud cliente&rdquo;</p>
-        <p className="text-sm text-purple-600 mt-2">Concentra ~49.2% del volumen total de PQR — 80/20 de Pareto confirmado</p>
+        {loading ? (
+          <p className="text-sm text-purple-600 animate-pulse">Cargando datos del endpoint Pareto...</p>
+        ) : error ? (
+          <p className="text-sm text-red-600">Error al obtener datos del endpoint Pareto.</p>
+        ) : liveTopCause ? (
+          <>
+            <p className="text-2xl font-bold text-purple-800">&ldquo;{liveTopCause}&rdquo;</p>
+            <p className="text-sm text-purple-600 mt-2">
+              Concentra {liveTopPct?.toFixed(2)}% del volumen total de PQR
+              {liveTotalRecords ? ` (${liveTotalRecords.toLocaleString()} registros analizados)` : ""}
+            </p>
+            <p className="text-[10px] text-purple-500 mt-1">Fuente: /api/charts/pareto — misma fuente que el Dashboard</p>
+          </>
+        ) : (
+          <p className="text-sm text-purple-600">Sin datos disponibles del endpoint Pareto.</p>
+        )}
       </div>
 
-      {/* Pareto Chart */}
+      {/* Disclaimer metodológico */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+        La concentración estadística identifica una prioridad de análisis. Los cinco porqués, Ishikawa y FMEA
+        representan hipótesis que deben validarse con expertos del proceso antes de considerarse causa raíz confirmada.
+      </div>
+
+      {/* Pareto Chart — live data with fallback */}
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Análisis de Pareto</h2>
-        <div className="space-y-2">
-          {PARETO_DATA.map((item, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="w-64 text-sm text-gray-700 truncate">{item.cause}</span>
-              <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
-                <div
-                  className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
-                  style={{ width: `${item.pct * 2}%` }}
-                />
-                <span className="absolute right-2 top-1 text-xs font-medium text-gray-600">
-                  {item.pct}% (acum: {item.cumulative}%)
-                </span>
+        {paretoArray.length > 0 ? (
+          <div className="space-y-2">
+            {paretoArray.slice(0, 8).map((item: any, i: number) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="w-64 text-sm text-gray-700 truncate">{item.causa}</span>
+                <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
+                    style={{ width: `${Math.min(Number(item.percentage) * 2, 100)}%` }}
+                  />
+                  <span className="absolute right-2 top-1 text-xs font-medium text-gray-600">
+                    {Number(item.percentage).toFixed(1)}% (acum: {Number(item.cumulative_pct).toFixed(1)}%)
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {PARETO_DATA.map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="w-64 text-sm text-gray-700 truncate">{item.cause}</span>
+                <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
+                    style={{ width: `${item.pct * 2}%` }}
+                  />
+                  <span className="absolute right-2 top-1 text-xs font-medium text-gray-600">
+                    {item.pct}% (acum: {item.cumulative}%)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* SIPOC */}

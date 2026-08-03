@@ -82,9 +82,11 @@ export default function AboutPage() {
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
         <h2 className="text-lg font-semibold text-amber-800 mb-2">Aviso Importante</h2>
         <p className="text-sm text-amber-700 leading-relaxed">
-          Este es un prototipo conceptual creado exclusivamente para validación de experiencia técnica y arquitectónica. 
-          No está conectado con sistemas productivos de Vanti ni contiene datos reales de clientes. Los datos de las 
-          fases 2 y 3 son simulados para demostración. Cualquier similitud con datos reales es coincidencia.
+          VantiOps 360 es un prototipo independiente desarrollado por Carlos Alberto Figueroa Martínez como
+          respuesta a una prueba técnica. No es un producto oficial de Vanti ni está conectado a sistemas
+          productivos de la compañía. La Fase 1 utiliza la base suministrada exclusivamente para el assessment,
+          presentada mediante análisis agregados. Las Fases 2 y 3 utilizan datos sintéticos o diseños conceptuales
+          claramente identificados.
         </p>
       </div>
 

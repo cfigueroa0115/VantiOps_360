@@ -128,7 +128,7 @@ export default function AliadosPage() {
           <Users size={20} className="text-teal-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">VantiFlow Partners</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Vantilisto Partners</h1>
           <p className="text-sm text-gray-500">Gestión de aliados estratégicos y onboarding</p>
         </div>
       </div>
@@ -211,6 +211,11 @@ export default function AliadosPage() {
           </table>
         </div>
       </div>
+
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-500 italic text-center">
+        Datos simulados exclusivamente para demostrar el modelo de aprobación secuencial y trazabilidad.
+      </p>
     </div>
   );
 }
