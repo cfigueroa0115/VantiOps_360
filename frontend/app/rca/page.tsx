@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useChartData } from "@/hooks/useChartData";
 import { SearchCode, Target, ListOrdered, Table2, GitBranch } from "lucide-react";
 
@@ -207,47 +208,66 @@ export default function RCAPage() {
           <h2 className="text-lg font-semibold text-gray-800">Flujos BPMN</h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {/* AS-IS */}
-          <div className="rounded-lg border border-red-100 bg-red-50/30 p-4">
-            <h3 className="font-semibold text-red-700 text-sm mb-3">AS-IS (Estado Actual)</h3>
-            <div className="bg-white rounded border border-gray-200 p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
-{`[Inicio] → [Cliente llama]
-  → [Agente recibe solicitud]
-  → [Registra cancelación]
-  → [Ejecuta cancelación inmediata]
-  → [Cierra caso]
-  → [Fin]
-
-⚠ Sin intento de retención
-⚠ Sin análisis de causa
-⚠ Sin validación de datos completos`}
+          <article data-testid="bpmn-asis-card" className="rounded-xl border border-red-200 bg-red-50/30 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-red-700">AS-IS (Estado actual)</h3>
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+              <Image
+                data-testid="bpmn-asis-image"
+                src="/bpmn/AsIs.jpg"
+                alt="Diagrama BPMN del proceso actual de cancelación AS-IS"
+                width={2000}
+                height={900}
+                className="h-auto w-full object-contain cursor-zoom-in"
+                sizes="(max-width: 1280px) 100vw, 50vw"
+              />
             </div>
-          </div>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600" aria-hidden="true">⚠</span>
+                <span>Sin intento de retención</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600" aria-hidden="true">⚠</span>
+                <span>Sin análisis de causa</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600" aria-hidden="true">⚠</span>
+                <span>Sin validación de datos completos</span>
+              </li>
+            </ul>
+          </article>
 
           {/* TO-BE */}
-          <div className="rounded-lg border border-green-100 bg-green-50/30 p-4">
-            <h3 className="font-semibold text-green-700 text-sm mb-3">TO-BE (Estado Deseado)</h3>
-            <div className="bg-white rounded border border-gray-200 p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
-{`[Inicio] → [Cliente solicita cancelación]
-  → [Sistema valida datos completos]
-  → [Scoring de riesgo de abandono]
-  → <¿Alto riesgo?>
-    SÍ → [Escalamiento a Retención]
-       → [Oferta de valor personalizada]
-       → <¿Acepta?>
-         SÍ → [Actualiza servicio] → [Fin]
-         NO → [Registra causa real]
-    NO → [Registra causa real]
-  → [Ejecuta cancelación controlada]
-  → [Encuesta post-cancelación]
-  → [Fin]
-
-✓ Intento de retención obligatorio
-✓ Causa raíz documentada
-✓ Datos completos validados`}
+          <article data-testid="bpmn-tobe-card" className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-emerald-700">TO-BE (Estado deseado)</h3>
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+              <Image
+                data-testid="bpmn-tobe-image"
+                src="/bpmn/ToBe.jpg"
+                alt="Diagrama BPMN del proceso futuro de cancelación TO-BE"
+                width={2000}
+                height={900}
+                className="h-auto w-full object-contain cursor-zoom-in"
+                sizes="(max-width: 1280px) 100vw, 50vw"
+              />
             </div>
-          </div>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600" aria-hidden="true">✓</span>
+                <span>Intento de retención obligatorio</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600" aria-hidden="true">✓</span>
+                <span>Causa raíz documentada</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600" aria-hidden="true">✓</span>
+                <span>Datos completos validados</span>
+              </li>
+            </ul>
+          </article>
         </div>
       </div>
     </div>
