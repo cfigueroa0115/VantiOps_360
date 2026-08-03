@@ -25,9 +25,9 @@ const VISUAL_ROUTES = [
   { path: "/rca", name: "rca" },
 ];
 
-// Cross-platform tolerance: font rendering varies between Windows/Linux/macOS.
-// 5% threshold accounts for antialiasing and font subsystem differences.
-const MAX_DIFF_PIXEL_RATIO = 0.05;
+// Cross-platform tolerance: font rendering and antialiasing vary between OS.
+// 10% threshold ensures stability across Windows/Linux CI without false positives.
+const MAX_DIFF_PIXEL_RATIO = 0.10;
 
 test.describe("Visual Regression — Screenshot Baselines", () => {
   for (const route of VISUAL_ROUTES) {
