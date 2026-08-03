@@ -128,6 +128,8 @@ jobs:
               | grep -vE "($EXCLUDE_FILES)" \
               | grep -vE "(process\.env|os\.environ|getenv|env\(|\.env)" \
               | grep -vE "(example|placeholder|YOUR_|changeme|xxx|dummy)" \
+              | grep -vE '(export DATABASE_URL=.postgresql://\.\.\.)' \
+              | grep -vE '(NEON_DATABASE_URL_ENV|NEON_DATABASE_URL.*=.*"NEON)' \
               || true)
 
             if [ -n "$MATCHES" ]; then
