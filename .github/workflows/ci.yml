@@ -148,24 +148,20 @@ jobs:
 
       # ─── Playwright E2E ──────────────────────────────────────────────
       - name: Install Playwright Chromium
-        if: env.DATABASE_URL != ''
         run: npx playwright install --with-deps chromium
         working-directory: frontend
 
       - name: Start application for E2E
-        if: env.DATABASE_URL != ''
         run: |
           npm run start > /tmp/vantiops.log 2>&1 &
           npx wait-on http://127.0.0.1:3000 --timeout 30000
         working-directory: frontend
 
       - name: Playwright E2E tests
-        if: env.DATABASE_URL != ''
         run: npm run test:e2e
         working-directory: frontend
 
       - name: Visual Regression (compare only)
-        if: env.DATABASE_URL != ''
         run: npx playwright test tests/e2e/visual-regression.spec.ts
         working-directory: frontend
 
@@ -174,7 +170,7 @@ jobs:
         if: success()
         working-directory: frontend
         run: |
-          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           # Collect coverage from coverage-summary.json
@@ -189,9 +185,10 @@ jobs:
             LINE_PCT=$(node -p "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total.lines.pct")
           fi
 
-          # Count tests from vitest output (best effort)
-          FRONTEND_TESTS="null"
-          BACKEND_TESTS="null"
+          # Determine E2E and visual regression status
+          E2E_STATUS='"success"'
+          VISUAL_STATUS='"success"'
+          VERIFICATION_STATUS='"success"'
 
           cat > public/evidence/latest-validation.json <<EOF
           {
@@ -200,14 +197,22 @@ jobs:
             "source": "github-actions",
             "workflowStatus": "success",
             "qualityJobStatus": "success",
+            "e2eStatus": ${E2E_STATUS},
+            "visualRegressionStatus": ${VISUAL_STATUS},
+            "verificationStatus": ${VERIFICATION_STATUS},
             "productionSmokeStatus": "pending",
             "backendTests": null,
             "frontendTests": null,
-            "coverage": ${STMT_PCT}
+            "coverage": {
+              "statements": ${STMT_PCT},
+              "branches": ${BRANCH_PCT},
+              "functions": ${FUNC_PCT},
+              "lines": ${LINE_PCT}
+            }
           }
           EOF
 
-          echo "Verified evidence generated"
+          echo "Verified evidence generated (verification: ${VERIFICATION_STATUS})"
 
       - name: Upload verified evidence
         if: success()
@@ -285,6 +290,7 @@ jobs:
       - name: Playwright production smoke
         env:
           PLAYWRIGHT_BASE_URL: https://vantiops-360.vercel.app
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npm run test:e2e
 
       - name: Upload production Playwright report
