@@ -23,8 +23,8 @@ export default function RootLayout({
           <Sidebar activePath="/" />
 
           {/* Main content area */}
-          <main className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto bg-gray-50">
+          <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+            <div className="flex-1 overflow-y-auto bg-gray-50 pt-2 lg:pt-0">
               {children}
             </div>
             {/* Global authorship footer */}

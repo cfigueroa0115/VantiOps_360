@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { VantiLogo } from "@/components/brand/VantiLogo";
@@ -18,6 +18,8 @@ import {
   Scale,
   FileCheck,
   Info,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -75,14 +77,24 @@ export interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  return (
-    <aside
-      className={cn(
-        "flex h-full w-64 flex-col border-r border-gray-200 bg-white",
-        className,
-      )}
-    >
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Close on escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  const sidebarContent = (
+    <>
       {/* Brand */}
       <div className="border-b border-gray-100 px-3 py-5">
         <div className="flex flex-col items-center">
@@ -132,6 +144,55 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="border-t border-gray-100 px-4 py-3">
         <p className="text-xs text-gray-400">VantiOps 360 — Prototipo</p>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-[30px] left-3 z-40 flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-gray-200 shadow-sm lg:hidden"
+        aria-label="Abrir menú de navegación"
+      >
+        <Menu size={18} className="text-gray-700" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar (slide-in) */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="Cerrar menú"
+        >
+          <X size={18} className="text-gray-600" />
+        </button>
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar (always visible) */}
+      <aside
+        className={cn(
+          "hidden lg:flex h-full w-64 flex-col border-r border-gray-200 bg-white shrink-0",
+          className,
+        )}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
