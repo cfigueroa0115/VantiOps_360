@@ -6,6 +6,15 @@ import {
   hasActiveFilters,
   FilterValidationError,
 } from "@/lib/server/query-filters";
+import {
+  normalizeParetoRows,
+  normalizeTopCauseRows,
+  normalizeCancellationRows,
+  normalizeDistributionRows,
+  normalizeTemporalRows,
+  normalizeP90Rows,
+  normalizeHistogramRows,
+} from "@/lib/server/chart-normalizers";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +55,22 @@ export async function GET(
     }
 
     const { clause, values } = buildParameterizedWhere(filters);
-    const data = await getChartData(chartType as ChartType, clause, values);
+    const rawData = await getChartData(chartType as ChartType, clause, values);
+
+    // Normalize PostgreSQL string numbers to real numbers
+    let data: any[];
+    switch (chartType) {
+      case "pareto": data = normalizeParetoRows(rawData as Record<string, unknown>[]); break;
+      case "top_causes": data = normalizeTopCauseRows(rawData as Record<string, unknown>[]); break;
+      case "cancellation_donut": data = normalizeCancellationRows(rawData as Record<string, unknown>[]); break;
+      case "distribution_company":
+      case "distribution_channel":
+      case "distribution_result": data = normalizeDistributionRows(rawData as Record<string, unknown>[]); break;
+      case "temporal_trend": data = normalizeTemporalRows(rawData as Record<string, unknown>[]); break;
+      case "p90_by_cause": data = normalizeP90Rows(rawData as Record<string, unknown>[]); break;
+      case "open_cases_histogram": data = normalizeHistogramRows(rawData as Record<string, unknown>[]); break;
+      default: data = rawData as any[];
+    }
 
     // Filtered record count
     const countResult = await query(`SELECT COUNT(*)::int AS cnt FROM pqr_records ${clause}`, values);

@@ -2,24 +2,11 @@
 
 import React from "react";
 import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { ChartWrapper } from "./ChartWrapper";
-
-interface ParetoDataPoint {
-  causa: string;
-  count: number;
-  percentage: number;
-  cumulative_pct: number;
-}
+import { buildExecutivePareto, type ParetoDataPoint } from "@/lib/charts/pareto";
 
 interface ParetoChartProps {
   data: ParetoDataPoint[];
@@ -28,85 +15,46 @@ interface ParetoChartProps {
   onRetry?: () => void;
 }
 
-/**
- * Pareto chart: causes sorted by frequency (bars) with cumulative % line
- * on a secondary y-axis (0-100%).
- * Validates: Requirements 6.1
- */
+function truncateLabel(value: string, max = 26) {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
 export function ParetoChart({ data, loading, error, onRetry }: ParetoChartProps) {
+  const pareto = buildExecutivePareto(data);
+
   return (
-    <ChartWrapper
-      loading={loading}
-      error={error}
-      onRetry={onRetry}
-      data={data}
-      title="Diagrama de Pareto — Causas por Frecuencia"
-    >
-      <div
-        aria-label="Diagrama de Pareto mostrando causas de PQR ordenadas por frecuencia con línea de porcentaje acumulado"
-        role="img"
-      >
-        <ResponsiveContainer width="100%" height={350}>
-          <ComposedChart
-            data={data}
-            margin={{ top: 10, right: 40, left: 10, bottom: 60 }}
-          >
+    <ChartWrapper loading={loading} error={error} onRetry={onRetry} data={data} title="Diagrama de Pareto — Causas Principales">
+      <div aria-label="Diagrama de Pareto ejecutivo mostrando las causas principales hasta el umbral 80%" role="img">
+        {pareto.data.length > 0 && (
+          <p className="text-sm text-gray-600 mb-3">
+            Las <strong>{pareto.coreCauseCount}</strong> causas principales explican el <strong>{pareto.cutoffCumulativePct.toFixed(1)}%</strong> del volumen.
+            {pareto.hiddenCauseCount > 0 && ` Se agruparon ${pareto.hiddenCauseCount} causas en "Otras causas".`}
+          </p>
+        )}
+        <ResponsiveContainer width="100%" height={400}>
+          <ComposedChart data={pareto.data} margin={{ top: 10, right: 50, left: 10, bottom: 80 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="causa"
               angle={-35}
               textAnchor="end"
               tick={{ fontSize: 11, fill: "#6b7280" }}
-              interval={0}
-              height={80}
+              tickFormatter={(v) => truncateLabel(v)}
+              height={90}
             />
-            <YAxis
-              yAxisId="left"
-              tick={{ fontSize: 11, fill: "#6b7280" }}
-              label={{
-                value: "Frecuencia",
-                angle: -90,
-                position: "insideLeft",
-                style: { fontSize: 12, fill: "#6b7280" },
-              }}
-            />
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              domain={[0, 100]}
-              tick={{ fontSize: 11, fill: "#6b7280" }}
-              label={{
-                value: "% Acumulado",
-                angle: 90,
-                position: "insideRight",
-                style: { fontSize: 12, fill: "#6b7280" },
-              }}
-              tickFormatter={(value: number) => `${value}%`}
-            />
+            <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: "Frecuencia", angle: -90, position: "insideLeft", style: { fontSize: 12 } }} />
+            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v}%`} />
             <Tooltip
               formatter={(value: number, name: string) => {
-                if (name === "Frecuencia") return [value, "Frecuencia"];
-                return [`${value.toFixed(1)}%`, "% Acumulado"];
+                if (name === "Frecuencia") return [value.toLocaleString("es-CO"), "Frecuencia"];
+                return [`${Number(value).toFixed(1)}%`, "% Acumulado"];
               }}
-              labelStyle={{ fontWeight: 600 }}
+              labelFormatter={(label) => label}
             />
             <Legend verticalAlign="top" height={36} />
-            <Bar
-              yAxisId="left"
-              dataKey="count"
-              name="Frecuencia"
-              fill="#3b82f6"
-              radius={[2, 2, 0, 0]}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="cumulative_pct"
-              name="% Acumulado"
-              stroke="#ef4444"
-              strokeWidth={2}
-              dot={{ r: 3, fill: "#ef4444" }}
-            />
+            <ReferenceLine yAxisId="right" y={80} stroke="#f59e0b" strokeDasharray="6 4" label={{ value: "80%", position: "right", fill: "#f59e0b", fontSize: 11 }} />
+            <Bar yAxisId="left" dataKey="count" name="Frecuencia" fill="#22c55e" radius={[2, 2, 0, 0]} />
+            <Line yAxisId="right" type="monotone" dataKey="cumulative_pct" name="% Acumulado" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
