@@ -1,7 +1,7 @@
 /**
- * Typed API client for PQR Analytics backend communication.
- * Implements retry logic with exponential backoff, timeout management,
- * and filter parameter serialization.
+ * Typed API client for VantiOps 360.
+ * All requests use RELATIVE paths (same-origin).
+ * No external URLs, no NEXT_PUBLIC_API_URL.
  */
 
 import type {
@@ -14,18 +14,30 @@ import type {
   RiskModelResponse,
 } from "@/lib/types";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "";
+// ─── Configuration ───
+// Single retry for network/502/503/504 only. No retry for 4xx or 500.
+const MAX_RETRIES = 1;
+const RETRY_DELAY_MS = 2000;
+const REQUEST_TIMEOUT_MS = 25_000;
 
-const MAX_RETRIES = 3;
-const RETRY_DELAYS_MS = [1000, 2000, 4000]; // exponential backoff
-const REQUEST_TIMEOUT_MS = 10_000; // 10 seconds per request (Req 5.6)
+// ─── Endpoints (relative, same-origin) ───
+export const API_ENDPOINTS = {
+  kpis: "/api/kpis",
+  quality: "/api/quality",
+  filters: "/api/filters",
+  chart: (type: string) => `/api/charts/${type}`,
+  health: "/api/health",
+  readiness: "/api/readiness",
+  rca: "/api/rca",
+  risk: "/api/risk",
+} as const;
 
-/** Typed error thrown after all retries are exhausted */
+/** Structured API error */
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly endpoint: string,
+    public readonly code: string,
     message: string,
   ) {
     super(message);
@@ -34,38 +46,28 @@ export class ApiError extends Error {
 }
 
 /**
- * Serialize FilterParams into URLSearchParams query string.
- * Arrays are serialized as comma-separated values.
+ * Serialize FilterParams into URLSearchParams.
+ * Uses repeated params (not CSV) for arrays.
  */
 export function serializeFilters(filters?: FilterParams): string {
   if (!filters) return "";
 
   const params = new URLSearchParams();
 
-  if (filters.dateRange) {
-    params.set("date_start", filters.dateRange.start);
-    params.set("date_end", filters.dateRange.end);
-  }
-  if (filters.companies?.length) {
-    params.set("companies", filters.companies.join(","));
-  }
-  if (filters.causes?.length) {
-    params.set("causes", filters.causes.join(","));
-  }
-  if (filters.channels?.length) {
-    params.set("channels", filters.channels.join(","));
-  }
-  if (filters.statuses?.length) {
-    params.set("statuses", filters.statuses.join(","));
-  }
-  if (filters.results?.length) {
-    params.set("results", filters.results.join(","));
-  }
-  if (filters.responsibleUnits?.length) {
-    params.set("responsible_units", filters.responsibleUnits.join(","));
-  }
-  if (filters.managementTimeRange) {
+  if (filters.dateRange?.start) params.set("date_start", filters.dateRange.start);
+  if (filters.dateRange?.end) params.set("date_end", filters.dateRange.end);
+
+  filters.companies?.forEach(v => params.append("companies", v));
+  filters.causes?.forEach(v => params.append("causes", v));
+  filters.channels?.forEach(v => params.append("channels", v));
+  filters.statuses?.forEach(v => params.append("statuses", v));
+  filters.results?.forEach(v => params.append("results", v));
+  filters.responsibleUnits?.forEach(v => params.append("responsible_units", v));
+
+  if (filters.managementTimeRange?.min !== undefined) {
     params.set("time_min", String(filters.managementTimeRange.min));
+  }
+  if (filters.managementTimeRange?.max !== undefined) {
     params.set("time_max", String(filters.managementTimeRange.max));
   }
 
@@ -74,24 +76,22 @@ export function serializeFilters(filters?: FilterParams): string {
 }
 
 /**
- * Internal fetch wrapper with timeout and retry logic.
- * Retries up to MAX_RETRIES times with exponential backoff on network
- * errors or 5xx responses.
+ * Fetch with timeout, single retry for transient errors only.
+ * No retry for client errors (4xx) or server logic errors (500).
  */
 async function fetchWithRetry<T>(endpoint: string): Promise<T> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(
-        () => controller.abort(),
-        REQUEST_TIMEOUT_MS,
-      );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        signal: controller.signal,
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
+        cache: "no-store",
       });
 
       clearTimeout(timeoutId);
@@ -100,83 +100,70 @@ async function fetchWithRetry<T>(endpoint: string): Promise<T> {
         return (await response.json()) as T;
       }
 
-      // Retry on server errors (5xx)
-      if (response.status >= 500 && attempt < MAX_RETRIES) {
-        lastError = new ApiError(
-          response.status,
-          endpoint,
-          `Server error ${response.status}`,
-        );
-        await delay(RETRY_DELAYS_MS[attempt]);
+      // Parse error body if available
+      let errorBody: any = {};
+      try { errorBody = await response.json(); } catch {}
+
+      const code = errorBody?.error?.code || `HTTP_${response.status}`;
+      const message = errorBody?.error?.message || `${response.status} ${response.statusText}`;
+
+      // Only retry on 502, 503, 504 (transient infrastructure errors)
+      if ([502, 503, 504].includes(response.status) && attempt < MAX_RETRIES) {
+        lastError = new ApiError(response.status, endpoint, code, message);
+        await delay(RETRY_DELAY_MS);
         continue;
       }
 
-      // Client errors (4xx) — do not retry
-      throw new ApiError(
-        response.status,
-        endpoint,
-        `Request failed: ${response.status} ${response.statusText}`,
-      );
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
+      // All other errors: throw immediately, no retry
+      throw new ApiError(response.status, endpoint, code, message);
 
-      // Network/timeout errors — retry if attempts remain
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof ApiError) throw error;
+
+      // Network error or abort — retry once
       lastError = error instanceof Error ? error : new Error(String(error));
 
       if (attempt < MAX_RETRIES) {
-        await delay(RETRY_DELAYS_MS[attempt]);
+        await delay(RETRY_DELAY_MS);
         continue;
       }
     }
   }
 
   throw new ApiError(
-    0,
-    endpoint,
-    `Request to ${endpoint} failed after ${MAX_RETRIES} retries: ${lastError?.message ?? "Unknown error"}`,
+    0, endpoint, "NETWORK_ERROR",
+    `No fue posible conectar con ${endpoint}: ${lastError?.message || "Error de red"}`
   );
 }
 
-/** Delay helper for exponential backoff */
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ─── Public API methods ───────────────────────────────────────────────────────
+// ─── Public API methods ───
 
-/** Fetch KPI data with optional filters */
 export async function fetchKPIs(filters?: FilterParams): Promise<KPIData> {
-  const qs = serializeFilters(filters);
-  return fetchWithRetry<KPIData>(`/api/kpis${qs}`);
+  return fetchWithRetry<KPIData>(`${API_ENDPOINTS.kpis}${serializeFilters(filters)}`);
 }
 
-/** Fetch chart data for a specific chart type with optional filters */
-export async function fetchChartData(
-  chartType: string,
-  filters?: FilterParams,
-): Promise<ChartDataResponse> {
-  const qs = serializeFilters(filters);
-  return fetchWithRetry<ChartDataResponse>(`/api/charts/${chartType}${qs}`);
+export async function fetchChartData(chartType: string, filters?: FilterParams): Promise<ChartDataResponse> {
+  return fetchWithRetry<ChartDataResponse>(`${API_ENDPOINTS.chart(chartType)}${serializeFilters(filters)}`);
 }
 
-/** Fetch available filter options from the dataset */
 export async function fetchFilterOptions(): Promise<FilterOptions> {
-  return fetchWithRetry<FilterOptions>("/api/filters");
+  return fetchWithRetry<FilterOptions>(API_ENDPOINTS.filters);
 }
 
-/** Fetch quality report metrics */
-export async function fetchQualityReport(): Promise<QualityReportResponse> {
-  return fetchWithRetry<QualityReportResponse>("/api/quality");
+export async function fetchQualityReport(filters?: FilterParams): Promise<QualityReportResponse> {
+  return fetchWithRetry<QualityReportResponse>(`${API_ENDPOINTS.quality}${serializeFilters(filters)}`);
 }
 
-/** Fetch risk model results */
 export async function fetchRiskModel(): Promise<RiskModelResponse> {
-  return fetchWithRetry<RiskModelResponse>("/api/risk");
+  return fetchWithRetry<RiskModelResponse>(API_ENDPOINTS.risk);
 }
 
-/** Fetch root cause analysis findings */
 export async function fetchRCAFindings(): Promise<RCAFindingsResponse> {
-  return fetchWithRetry<RCAFindingsResponse>("/api/rca");
+  return fetchWithRetry<RCAFindingsResponse>(API_ENDPOINTS.rca);
 }
