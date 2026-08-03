@@ -2,31 +2,43 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { FilterParams } from "@/lib/types";
+import { parsePersistedFilterState } from "@/lib/filters/parse-persisted-filters";
 
-const SESSION_KEY = "pqr-analytics-filters";
+export const FILTER_SESSION_KEY = "pqr-analytics-filters";
 
 /**
  * Loads persisted filters from sessionStorage.
- * Returns an empty FilterParams object if nothing is stored or parsing fails.
+ * Validates structure before use. Removes corrupted data.
  */
 function loadFromSession(): FilterParams {
   if (typeof window === "undefined") return {};
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(FILTER_SESSION_KEY);
     if (!raw) return {};
-    return JSON.parse(raw) as FilterParams;
+    const decoded: unknown = JSON.parse(raw);
+    const result = parsePersistedFilterState(decoded);
+    if (!result.valid) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[VantiOps] Invalid persisted filters were discarded");
+      }
+      sessionStorage.removeItem(FILTER_SESSION_KEY);
+      return {};
+    }
+    return result.filters;
   } catch {
+    sessionStorage.removeItem(FILTER_SESSION_KEY);
     return {};
   }
 }
 
 /**
- * Persists current filters to sessionStorage.
+ * Persists current filters to sessionStorage using versioned format.
  */
 function saveToSession(filters: FilterParams): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(filters));
+    const state = { version: 1, filters };
+    sessionStorage.setItem(FILTER_SESSION_KEY, JSON.stringify(state));
   } catch {
     // Silently ignore storage errors (quota exceeded, etc.)
   }
@@ -61,7 +73,8 @@ export interface UseFiltersReturn {
 /**
  * Filter state management hook.
  * - Maintains FilterParams state with AND logic (all active filters are combined)
- * - Persists to sessionStorage (Req 7.4)
+ * - Persists to sessionStorage with version 1 format
+ * - Validates on load, discards corrupted data
  * - Provides setFilter/clearFilter/clearAll actions
  */
 export function useFilters(): UseFiltersReturn {
