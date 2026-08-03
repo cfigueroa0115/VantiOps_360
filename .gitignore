@@ -33,3 +33,10 @@ Thumbs.db
 node_modules/
 .next/
 out/
+
+# === Test artifacts (generated, not versioned) ===
+frontend/test-results/
+frontend/playwright-report/
+frontend/artifacts/errors/
+frontend/coverage/
+frontend/coverage-output.txt
