@@ -56,14 +56,14 @@ export function CancellationDonut({
         aria-label="Gráfico de dona mostrando la proporción de la causa principal de cancelación frente al resto de causas"
         role="img"
       >
-        <ResponsiveContainer width="100%" height={320}>
+        <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="45%"
-              innerRadius={65}
-              outerRadius={100}
+              innerRadius={55}
+              outerRadius={90}
               dataKey="count"
               nameKey="category"
               paddingAngle={2}
@@ -87,11 +87,11 @@ export function CancellationDonut({
             />
             <Legend
               verticalAlign="bottom"
-              height={50}
+              height={36}
               formatter={(value: string) =>
-                value.length > 30 ? `${value.substring(0, 30)}...` : value
+                value.length > 35 ? `${value.substring(0, 35)}…` : value
               }
-              wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+              wrapperStyle={{ fontSize: "11px", paddingTop: "4px" }}
             />
           </PieChart>
         </ResponsiveContainer>

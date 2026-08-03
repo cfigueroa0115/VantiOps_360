@@ -44,41 +44,42 @@ export function TopCausesBar({ data, loading, error, onRetry }: TopCausesBarProp
         aria-label="Gráfico de barras horizontal mostrando las 10 causas principales de PQR ordenadas por cantidad descendente"
         role="img"
       >
-        <ResponsiveContainer width="100%" height={420}>
+        <ResponsiveContainer width="100%" height={380}>
           <BarChart
             data={top10}
             layout="vertical"
-            margin={{ top: 10, right: 30, left: 220, bottom: 10 }}
+            margin={{ top: 5, right: 20, left: 10, bottom: 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
             <XAxis
               type="number"
-              tick={{ fontSize: 11, fill: "#6b7280" }}
+              tick={{ fontSize: 10, fill: "#6b7280" }}
               label={{
                 value: "Cantidad",
                 position: "insideBottom",
-                offset: -5,
-                style: { fontSize: 12, fill: "#6b7280" },
+                offset: -10,
+                style: { fontSize: 11, fill: "#6b7280" },
               }}
             />
             <YAxis
               type="category"
               dataKey="causa"
-              tick={{ fontSize: 10, fill: "#374151" }}
-              width={210}
+              tick={{ fontSize: 9, fill: "#374151" }}
+              width={180}
               tickFormatter={(value: string) =>
-                value.length > 35 ? `${value.substring(0, 35)}...` : value
+                value.length > 28 ? `${value.substring(0, 28)}…` : value
               }
             />
             <Tooltip
               formatter={(value: number) => [value.toLocaleString(), "Cantidad"]}
-              labelStyle={{ fontWeight: 600 }}
+              labelStyle={{ fontWeight: 600, fontSize: 12 }}
             />
             <Bar
               dataKey="count"
               fill="#22c55e"
               radius={[0, 4, 4, 0]}
               name="Cantidad"
+              barSize={22}
             />
           </BarChart>
         </ResponsiveContainer>
