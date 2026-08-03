@@ -25,8 +25,8 @@ const VISUAL_ROUTES = [
   { path: "/rca", name: "rca" },
 ];
 
-// 0.1% pixel difference threshold
-const MAX_DIFF_PIXEL_RATIO = 0.001;
+// Cross-platform tolerance for font rendering differences (Windows vs Linux)
+const MAX_DIFF_PIXEL_RATIO = 0.02;
 
 test.describe("Visual Regression — Screenshot Baselines", () => {
   for (const route of VISUAL_ROUTES) {
