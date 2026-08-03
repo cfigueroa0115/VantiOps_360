@@ -34,18 +34,22 @@ export function parseFiltersFromRequest(request: Request): AnalyticsFilters {
   const { searchParams } = new URL(request.url);
   const errors: ValidationError[] = [];
 
-  const dateStart = searchParams.get("date_start") || undefined;
-  const dateEnd = searchParams.get("date_end") || undefined;
+  const dateStartRaw = searchParams.get("date_start") || undefined;
+  const dateEndRaw = searchParams.get("date_end") || undefined;
   const timeMinStr = searchParams.get("time_min");
   const timeMaxStr = searchParams.get("time_max");
 
-  // Validate dates
-  if (dateStart && !/^\d{4}-\d{2}-\d{2}$/.test(dateStart)) {
-    errors.push({ field: "date_start", message: "Invalid date format. Use YYYY-MM-DD." });
+  // Validate dates using calendar-aware validator
+  if (dateStartRaw && !validateDate(dateStartRaw)) {
+    errors.push({ field: "date_start", message: "Fecha inválida o inexistente en el calendario." });
   }
-  if (dateEnd && !/^\d{4}-\d{2}-\d{2}$/.test(dateEnd)) {
-    errors.push({ field: "date_end", message: "Invalid date format. Use YYYY-MM-DD." });
+  if (dateEndRaw && !validateDate(dateEndRaw)) {
+    errors.push({ field: "date_end", message: "Fecha inválida o inexistente en el calendario." });
   }
+
+  const dateStart = dateStartRaw ? validateDate(dateStartRaw) : undefined;
+  const dateEnd = dateEndRaw ? validateDate(dateEndRaw) : undefined;
+
   if (dateStart && dateEnd && dateStart > dateEnd) {
     errors.push({ field: "date_start", message: "date_start must be <= date_end." });
   }
