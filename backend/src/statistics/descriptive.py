@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 
 import polars as pl
 
@@ -118,36 +119,47 @@ def descriptive_stats(series: pl.Series) -> DescriptiveStats:
             outlier_percentage=0.0,
         )
 
-    mean_val = round(float(non_null.mean()), 2)  # type: ignore[arg-type]
-    median_val = round(float(non_null.median()), 2)  # type: ignore[arg-type]
+    # Series is Float64, so mean/median return float | None (cast for pyright)
+    mean_raw = cast("float | None", non_null.mean())
+    mean_val = round(float(mean_raw), 2) if mean_raw is not None else 0.0
+    median_raw = cast("float | None", non_null.median())
+    median_val = round(float(median_raw), 2) if median_raw is not None else 0.0
 
     # Mode: most common value. If multiple modes exist, take the first.
     value_counts = non_null.value_counts().sort("count", descending=True)
     if value_counts.height > 0:
-        top_count = value_counts["count"][0]
+        top_count = int(str(value_counts["count"][0]))
         # Check if mode is unique (only one value has the max count)
         modes_df = value_counts.filter(pl.col("count") == top_count)
         if modes_df.height == 1:
-            mode_val: float | None = round(float(modes_df[non_null.name][0]), 2)
+            # Series is Float64, item is numeric (cast for pyright)
+            mode_val: float | None = round(float(cast(float, modes_df[non_null.name][0])), 2)
         else:
             # Multiple modes — return the smallest for determinism
-            mode_val = round(float(modes_df[non_null.name].sort()[0]), 2)
+            mode_val = round(float(cast(float, modes_df[non_null.name].sort()[0])), 2)
     else:
         mode_val = None
 
-    var_raw = non_null.var()
+    # Series is Float64, so var/std/max return float | None (cast for pyright)
+    var_raw = cast("float | None", non_null.var())
     variance_val = round(float(var_raw), 2) if var_raw is not None else 0.0
-    std_raw = non_null.std()
+    std_raw = cast("float | None", non_null.std())
     std_val = round(float(std_raw), 2) if std_raw is not None else 0.0
 
-    max_raw = non_null.max()
+    max_raw = cast("float | None", non_null.max())
     max_val = round(float(max_raw), 2) if max_raw is not None else 0.0
 
-    q1_val = round(float(non_null.quantile(0.25, interpolation="linear")), 2)  # type: ignore[arg-type]
-    q2_val = round(float(non_null.quantile(0.50, interpolation="linear")), 2)  # type: ignore[arg-type]
-    q3_val = round(float(non_null.quantile(0.75, interpolation="linear")), 2)  # type: ignore[arg-type]
-    p90_val = round(float(non_null.quantile(0.90, interpolation="linear")), 2)  # type: ignore[arg-type]
-    p95_val = round(float(non_null.quantile(0.95, interpolation="linear")), 2)  # type: ignore[arg-type]
+    # Series is Float64, so quantile returns float | None (cast for pyright)
+    q1_raw = cast("float | None", non_null.quantile(0.25, interpolation="linear"))
+    q1_val = round(float(q1_raw), 2) if q1_raw is not None else 0.0
+    q2_raw = cast("float | None", non_null.quantile(0.50, interpolation="linear"))
+    q2_val = round(float(q2_raw), 2) if q2_raw is not None else 0.0
+    q3_raw = cast("float | None", non_null.quantile(0.75, interpolation="linear"))
+    q3_val = round(float(q3_raw), 2) if q3_raw is not None else 0.0
+    p90_raw = cast("float | None", non_null.quantile(0.90, interpolation="linear"))
+    p90_val = round(float(p90_raw), 2) if p90_raw is not None else 0.0
+    p95_raw = cast("float | None", non_null.quantile(0.95, interpolation="linear"))
+    p95_val = round(float(p95_raw), 2) if p95_raw is not None else 0.0
 
     iqr_val = round(q3_val - q1_val, 2)
 

@@ -309,7 +309,7 @@ class PipelineOrchestrator:
 
         try:
             # Attempt full schema validation
-            PQRSchema.validate(df)
+            PQRSchema.validate(df)  # type: ignore[arg-type]
             # If no exception, all records are valid
             return df, 0
         except Exception as schema_error:
@@ -322,7 +322,7 @@ class PipelineOrchestrator:
         for i in range(df.height):
             row_df = df.slice(i, 1)
             try:
-                PQRSchema.validate(row_df)
+                PQRSchema.validate(row_df)  # type: ignore[arg-type]
                 valid_indices.append(i)
             except Exception as e:
                 # Validation errors go directly to quarantine (no retry - Requirement 10.4)

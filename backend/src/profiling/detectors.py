@@ -164,7 +164,7 @@ def detect_outliers_iqr(series: pl.Series, column_name: str | None = None) -> Ou
 
     # Count values strictly below lower_bound or strictly above upper_bound
     outlier_mask = (numeric < lower_bound) | (numeric > upper_bound)
-    outlier_count = outlier_mask.sum()
+    outlier_count = int(outlier_mask.sum())
 
     outlier_percentage = (outlier_count / total_count) * 100.0 if total_count > 0 else 0.0
 

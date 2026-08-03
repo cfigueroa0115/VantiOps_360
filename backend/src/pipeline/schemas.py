@@ -50,7 +50,7 @@ class PQRSchema(pa.DataFrameModel):
     tiempo_gestion_dias: float = pa.Field(ge=0, nullable=True)
     tipo_pqr: str = pa.Field(isin=["peticion", "queja", "reclamo"], nullable=False)
 
-    class Config:
+    class Config(pa.DataFrameModel.Config):
         """Schema configuration."""
 
         strict = False

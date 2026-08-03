@@ -364,7 +364,8 @@ def _query_from_db(
             # Get total count
             count_sql = f"SELECT COUNT(*) FROM audit_events WHERE {where_clause}"
             cur.execute(count_sql, params)
-            total = cur.fetchone()[0]
+            row = cur.fetchone()
+            total = row[0] if row is not None else 0
 
             # Get paginated results
             data_sql = (

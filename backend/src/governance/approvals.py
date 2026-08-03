@@ -456,6 +456,7 @@ def approve_request(
 
     # Reconstruct the updated approval
     updated_record = _find_approval(approval_id)
+    assert updated_record is not None  # Just updated above, must exist
     updated_approval = ApprovalRequest(
         id=updated_record["id"],
         operation=updated_record["operation"],
@@ -575,6 +576,7 @@ def reject_request(
     )
 
     updated_record = _find_approval(approval_id)
+    assert updated_record is not None  # Just updated above, must exist
     updated_approval = ApprovalRequest(
         id=updated_record["id"],
         operation=updated_record["operation"],

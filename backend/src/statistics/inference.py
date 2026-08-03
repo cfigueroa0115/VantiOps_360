@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from statistics.descriptive import MIN_GROUP_SIZE
+from typing import cast
 
 import numpy as np
 import polars as pl
@@ -239,9 +240,13 @@ def chi_square_test(contingency_df: pl.DataFrame) -> TestResult:
 
     observed = contingency_df.select(numeric_cols).to_numpy()
 
-    chi2_stat, p_value, dof, _ = stats.chi2_contingency(observed)
+    chi2_result = stats.chi2_contingency(observed)
+    # chi2_contingency returns (statistic, pvalue, dof, expected_freq)
+    chi2_stat = float(cast(float, chi2_result[0]))
+    p_value = float(cast(float, chi2_result[1]))
+    dof = int(cast(int, chi2_result[2]))
 
-    p_value_rounded = round(float(p_value), 4)
+    p_value_rounded = round(p_value, 4)
     is_significant = p_value_rounded < 0.05
 
     if is_significant:
@@ -259,9 +264,9 @@ def chi_square_test(contingency_df: pl.DataFrame) -> TestResult:
 
     return TestResult(
         test_name="chi_square",
-        statistic=round(float(chi2_stat), 4),
+        statistic=round(chi2_stat, 4),
         p_value=p_value_rounded,
-        degrees_of_freedom=int(dof),
+        degrees_of_freedom=dof,
         is_significant=is_significant,
         description=description,
     )
@@ -382,7 +387,9 @@ def shapiro_wilk_test(data: pl.Series) -> NormalityTestResult:
         )
 
     values = non_null.to_numpy()
-    stat, p_value = stats.shapiro(values)
+    stat_result = stats.shapiro(values)
+    stat = float(stat_result.statistic)
+    p_value = float(stat_result.pvalue)
 
     p_value_rounded = round(float(p_value), 4)
     is_normal = p_value_rounded >= 0.05
