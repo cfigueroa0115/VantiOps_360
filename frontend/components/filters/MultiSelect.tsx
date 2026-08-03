@@ -36,15 +36,20 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [search, setSearch] = useState("");
 
+  // Defensive: ensure selected is always a valid string array
+  const safeSelected = Array.isArray(selected)
+    ? selected.filter((item): item is string => typeof item === "string")
+    : [];
+
   const filteredOptions = options.filter((opt) =>
     opt.toLowerCase().includes(search.toLowerCase()),
   );
 
   function handleToggle(value: string) {
-    if (selected.includes(value)) {
-      onChange(selected.filter((s) => s !== value));
+    if (safeSelected.includes(value)) {
+      onChange(safeSelected.filter((s) => s !== value));
     } else {
-      onChange([...selected, value]);
+      onChange([...safeSelected, value]);
     }
   }
 
@@ -57,11 +62,11 @@ export function MultiSelect({
   }
 
   const displayText =
-    selected.length === 0
+    safeSelected.length === 0
       ? placeholder
-      : selected.length === 1
-        ? selected[0]
-        : `${selected.length} seleccionados`;
+      : safeSelected.length === 1
+        ? safeSelected[0]
+        : `${safeSelected.length} seleccionados`;
 
   return (
     <div className={cn("space-y-1", className)}>
@@ -75,7 +80,7 @@ export function MultiSelect({
                        focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             aria-label={`${label}: ${displayText}`}
           >
-            <span className={cn(selected.length === 0 && "text-gray-400")}>
+            <span className={cn(safeSelected.length === 0 && "text-gray-400")}>
               {displayText}
             </span>
             <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -134,7 +139,7 @@ export function MultiSelect({
                                hover:bg-gray-50"
                   >
                     <Checkbox.Root
-                      checked={selected.includes(option)}
+                      checked={safeSelected.includes(option)}
                       onCheckedChange={() => handleToggle(option)}
                       className="flex h-4 w-4 items-center justify-center rounded border
                                  border-gray-300 data-[state=checked]:border-blue-600

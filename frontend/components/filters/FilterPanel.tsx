@@ -112,7 +112,7 @@ export function FilterPanel({
               <MultiSelect
                 label="Empresa"
                 options={options?.companies ?? []}
-                selected={filters.companies ?? []}
+                selected={Array.isArray(filters.companies) ? filters.companies : []}
                 onChange={(val) => {
                   if (val.length > 0) {
                     onSetFilter("companies", val);
@@ -127,7 +127,7 @@ export function FilterPanel({
               <MultiSelect
                 label="Causa"
                 options={options?.causes ?? []}
-                selected={filters.causes ?? []}
+                selected={Array.isArray(filters.causes) ? filters.causes : []}
                 onChange={(val) => {
                   if (val.length > 0) {
                     onSetFilter("causes", val);
@@ -142,7 +142,7 @@ export function FilterPanel({
               <MultiSelect
                 label="Canal de atención"
                 options={options?.channels ?? []}
-                selected={filters.channels ?? []}
+                selected={Array.isArray(filters.channels) ? filters.channels : []}
                 onChange={(val) => {
                   if (val.length > 0) {
                     onSetFilter("channels", val);
@@ -157,7 +157,7 @@ export function FilterPanel({
               <MultiSelect
                 label="Estado"
                 options={options?.statuses ?? []}
-                selected={filters.statuses ?? []}
+                selected={Array.isArray(filters.statuses) ? filters.statuses : []}
                 onChange={(val) => {
                   if (val.length > 0) {
                     onSetFilter("statuses", val);
@@ -172,7 +172,7 @@ export function FilterPanel({
               <MultiSelect
                 label="Resultado"
                 options={options?.results ?? []}
-                selected={filters.results ?? []}
+                selected={Array.isArray(filters.results) ? filters.results : []}
                 onChange={(val) => {
                   if (val.length > 0) {
                     onSetFilter("results", val);
@@ -187,7 +187,7 @@ export function FilterPanel({
               <MultiSelect
                 label="Unidad responsable"
                 options={options?.responsibleUnits ?? []}
-                selected={filters.responsibleUnits ?? []}
+                selected={Array.isArray(filters.responsibleUnits) ? filters.responsibleUnits : []}
                 onChange={(val) => {
                   if (val.length > 0) {
                     onSetFilter("responsibleUnits", val);
