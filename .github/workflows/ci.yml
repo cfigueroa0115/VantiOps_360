@@ -42,7 +42,7 @@ jobs:
       # ─── Frontend Checks ─────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.18"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -146,20 +146,24 @@ jobs:
 
       # ─── Playwright E2E ──────────────────────────────────────────────
       - name: Install Playwright Chromium
+        if: env.DATABASE_URL != ''
         run: npx playwright install --with-deps chromium
         working-directory: frontend
 
       - name: Start application for E2E
+        if: env.DATABASE_URL != ''
         run: |
           npm run start > /tmp/vantiops.log 2>&1 &
           npx wait-on http://127.0.0.1:3000 --timeout 30000
         working-directory: frontend
 
       - name: Playwright E2E tests
+        if: env.DATABASE_URL != ''
         run: npm run test:e2e
         working-directory: frontend
 
       - name: Visual Regression (compare only)
+        if: env.DATABASE_URL != ''
         run: npx playwright test tests/e2e/visual-regression.spec.ts
         working-directory: frontend
 
@@ -252,7 +256,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.18"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
