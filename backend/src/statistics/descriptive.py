@@ -224,9 +224,7 @@ def conditional_probability(
     condition_mask = target_condition(df_filtered)
 
     # Add condition as a column for grouped aggregation
-    df_with_condition = df_filtered.with_columns(
-        condition_mask.alias("__target_condition__")
-    )
+    df_with_condition = df_filtered.with_columns(condition_mask.alias("__target_condition__"))
 
     # Group by group_col and calculate probability
     grouped = df_with_condition.group_by(group_col).agg(

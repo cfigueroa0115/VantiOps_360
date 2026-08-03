@@ -37,7 +37,9 @@ _EMAIL_REGEX = re.compile(
 )
 
 # Default whitelist path relative to project root
-_DEFAULT_WHITELIST_PATH = Path(__file__).resolve().parents[3] / "data" / "config" / "email_whitelist.json"
+_DEFAULT_WHITELIST_PATH = (
+    Path(__file__).resolve().parents[3] / "data" / "config" / "email_whitelist.json"
+)
 
 
 # ---------------------------------------------------------------------------

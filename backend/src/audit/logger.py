@@ -73,9 +73,7 @@ class AuditEvent:
     correlation_id: str | None = None
     # Auto-generated fields
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def __post_init__(self) -> None:
         """Validate the audit event fields."""
@@ -380,18 +378,20 @@ def _query_from_db(
 
             data = []
             for row in rows:
-                data.append({
-                    "id": str(row[0]),
-                    "timestamp": row[1].isoformat() if row[1] else None,
-                    "userId": row[2],
-                    "action": row[3],
-                    "resource": row[4],
-                    "resourceId": row[5],
-                    "result": row[6],
-                    "ipAddress": str(row[7]) if row[7] else None,
-                    "details": row[8],
-                    "correlationId": str(row[9]) if row[9] else None,
-                })
+                data.append(
+                    {
+                        "id": str(row[0]),
+                        "timestamp": row[1].isoformat() if row[1] else None,
+                        "userId": row[2],
+                        "action": row[3],
+                        "resource": row[4],
+                        "resourceId": row[5],
+                        "result": row[6],
+                        "ipAddress": str(row[7]) if row[7] else None,
+                        "details": row[8],
+                        "correlationId": str(row[9]) if row[9] else None,
+                    }
+                )
     finally:
         conn.close()
 
@@ -446,23 +446,25 @@ def _query_from_file(
     # Paginate
     total = len(filtered)
     offset = (page - 1) * page_size
-    page_data = filtered[offset: offset + page_size]
+    page_data = filtered[offset : offset + page_size]
 
     # Normalize keys for API response (camelCase)
     data = []
     for e in page_data:
-        data.append({
-            "id": e.get("id"),
-            "timestamp": e.get("timestamp"),
-            "userId": e.get("user_id"),
-            "action": e.get("action"),
-            "resource": e.get("resource"),
-            "resourceId": e.get("resource_id"),
-            "result": e.get("result"),
-            "ipAddress": e.get("ip_address"),
-            "details": e.get("details"),
-            "correlationId": e.get("correlation_id"),
-        })
+        data.append(
+            {
+                "id": e.get("id"),
+                "timestamp": e.get("timestamp"),
+                "userId": e.get("user_id"),
+                "action": e.get("action"),
+                "resource": e.get("resource"),
+                "resourceId": e.get("resource_id"),
+                "result": e.get("result"),
+                "ipAddress": e.get("ip_address"),
+                "details": e.get("details"),
+                "correlationId": e.get("correlation_id"),
+            }
+        )
 
     return {
         "data": data,

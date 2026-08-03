@@ -232,7 +232,21 @@ def chi_square_test(contingency_df: pl.DataFrame) -> TestResult:
     """
     # Extract numeric columns only (exclude string label columns)
     numeric_cols = [
-        c for c in contingency_df.columns if contingency_df[c].dtype in (pl.Int64, pl.Int32, pl.Int16, pl.Int8, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64, pl.Float32, pl.Float64)
+        c
+        for c in contingency_df.columns
+        if contingency_df[c].dtype
+        in (
+            pl.Int64,
+            pl.Int32,
+            pl.Int16,
+            pl.Int8,
+            pl.UInt8,
+            pl.UInt16,
+            pl.UInt32,
+            pl.UInt64,
+            pl.Float32,
+            pl.Float64,
+        )
     ]
 
     if not numeric_cols:
@@ -347,7 +361,6 @@ def two_proportion_z_test(n1: int, p1: float, n2: int, p2: float) -> TestResult:
     )
 
 
-
 # ---------------------------------------------------------------------------
 # Shapiro-Wilk Normality Test
 # ---------------------------------------------------------------------------
@@ -422,9 +435,7 @@ def shapiro_wilk_test(data: pl.Series) -> NormalityTestResult:
 # ---------------------------------------------------------------------------
 
 
-def mean_confidence_interval(
-    data: pl.Series, confidence: float = 0.95
-) -> MeanConfidenceInterval:
+def mean_confidence_interval(data: pl.Series, confidence: float = 0.95) -> MeanConfidenceInterval:
     """Compute a confidence interval for the population mean using t-distribution.
 
     Parameters

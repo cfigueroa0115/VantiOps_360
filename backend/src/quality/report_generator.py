@@ -103,17 +103,13 @@ class QualityReportGenerator:
             type_info = infer_types(df)
         except Exception as e:
             # If type inference fails entirely, we cannot produce a report
-            raise QualityReportError(
-                f"Type inference failed for all columns: {e}"
-            ) from e
+            raise QualityReportError(f"Type inference failed for all columns: {e}") from e
 
         # Step 2: Calculate null stats for all columns
         try:
             null_stats = calculate_null_stats(df)
         except Exception as e:
-            raise QualityReportError(
-                f"Null statistics calculation failed: {e}"
-            ) from e
+            raise QualityReportError(f"Null statistics calculation failed: {e}") from e
 
         # Step 3: Detect duplicates
         duplicate_report: DuplicateReport | None = None
@@ -121,23 +117,25 @@ class QualityReportGenerator:
             if self.id_column in df.columns:
                 duplicate_report = find_duplicates(df, self.id_column)
         except Exception as e:
-            errors.append({
-                "column": self.id_column,
-                "reason": f"Duplicate detection failed: {e}",
-            })
+            errors.append(
+                {
+                    "column": self.id_column,
+                    "reason": f"Duplicate detection failed: {e}",
+                }
+            )
 
         # Step 4: Profile each column individually
         for col_name in df.columns:
             try:
-                metric = self._profile_column(
-                    df, col_name, type_info, null_stats
-                )
+                metric = self._profile_column(df, col_name, type_info, null_stats)
                 column_metrics.append(metric)
             except Exception as e:
-                errors.append({
-                    "column": col_name,
-                    "reason": f"Column profiling failed: {e}",
-                })
+                errors.append(
+                    {
+                        "column": col_name,
+                        "reason": f"Column profiling failed: {e}",
+                    }
+                )
 
         # If zero columns profiled successfully, raise error
         if len(column_metrics) == 0:
@@ -153,9 +151,7 @@ class QualityReportGenerator:
         )
 
         # Step 6: Compute quality score (simplified — uses available metrics)
-        quality_score = self._compute_quality_score(
-            dataset_metrics, duplicate_report
-        )
+        quality_score = self._compute_quality_score(dataset_metrics, duplicate_report)
 
         # Step 7: Assemble the report
         report = QualityReport(
@@ -212,17 +208,19 @@ class QualityReportGenerator:
         # Build a DataFrame from column metrics
         rows: list[dict[str, Any]] = []
         for col_metric in report.columns:
-            rows.append({
-                "column_name": col_metric.column_name,
-                "data_type": col_metric.data_type,
-                "null_count": col_metric.null_count,
-                "null_percentage": col_metric.null_percentage,
-                "unique_count": col_metric.unique_count,
-                "outlier_count": col_metric.outlier_count,
-                "invalid_date_count": col_metric.invalid_date_count,
-                "similarity_groups_count": len(col_metric.semantic_similarity_groups),
-                "severity": col_metric.severity.value,
-            })
+            rows.append(
+                {
+                    "column_name": col_metric.column_name,
+                    "data_type": col_metric.data_type,
+                    "null_count": col_metric.null_count,
+                    "null_percentage": col_metric.null_percentage,
+                    "unique_count": col_metric.unique_count,
+                    "outlier_count": col_metric.outlier_count,
+                    "invalid_date_count": col_metric.invalid_date_count,
+                    "similarity_groups_count": len(col_metric.semantic_similarity_groups),
+                    "severity": col_metric.severity.value,
+                }
+            )
 
         if rows:
             df = pl.DataFrame(rows)
@@ -318,18 +316,12 @@ class QualityReportGenerator:
         if data_type == "categorical":
             try:
                 categories = (
-                    df[col_name]
-                    .drop_nulls()
-                    .cast(pl.Utf8, strict=False)
-                    .unique()
-                    .to_list()
+                    df[col_name].drop_nulls().cast(pl.Utf8, strict=False).unique().to_list()
                 )
                 sim_groups = find_semantic_similarities(categories)
                 # Privacy: only include groups with >= MIN_GROUP_SIZE values
                 similarity_groups = [
-                    group.values
-                    for group in sim_groups
-                    if len(group.values) >= MIN_GROUP_SIZE
+                    group.values for group in sim_groups if len(group.values) >= MIN_GROUP_SIZE
                 ]
             except Exception:
                 pass  # Non-critical: report empty groups if similarity fails
@@ -374,35 +366,21 @@ class QualityReportGenerator:
 
         # Completeness: ratio of non-null values to total cells
         total_cells = total_records * total_columns
-        total_nulls = sum(
-            stats.null_count for stats in null_stats.values()
-        )
+        total_nulls = sum(stats.null_count for stats in null_stats.values())
         completeness_pct = (
-            ((total_cells - total_nulls) / total_cells * 100.0)
-            if total_cells > 0
-            else 0.0
+            ((total_cells - total_nulls) / total_cells * 100.0) if total_cells > 0 else 0.0
         )
 
         # Validity: ratio of values conforming to expected type/format
         # Use type inference confidence as a proxy for validity
         if type_info:
-            validity_scores = [
-                info.confidence for info in type_info.values()
-            ]
-            validity_pct = (
-                sum(validity_scores) / len(validity_scores)
-                if validity_scores
-                else 100.0
-            )
+            validity_scores = [info.confidence for info in type_info.values()]
+            validity_pct = sum(validity_scores) / len(validity_scores) if validity_scores else 100.0
         else:
             validity_pct = 100.0
 
         # Duplication rate
-        duplication_rate = (
-            duplicate_report.duplication_rate
-            if duplicate_report
-            else 0.0
-        )
+        duplication_rate = duplicate_report.duplication_rate if duplicate_report else 0.0
 
         return DatasetMetrics(
             total_record_count=total_records,

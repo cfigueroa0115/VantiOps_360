@@ -124,9 +124,7 @@ class RiskModel:
         target = (df_valid["tiempo_gestion_dias"] > p90).cast(pl.Int32)
 
         # Select only creation-time features
-        available_features = [
-            col for col in CREATION_TIME_FEATURES if col in df_valid.columns
-        ]
+        available_features = [col for col in CREATION_TIME_FEATURES if col in df_valid.columns]
 
         features_df = df_valid.select(available_features)
 
@@ -219,7 +217,9 @@ class RiskModel:
         lr_model.fit(X_train, y_train)
 
         # Evaluate logistic regression
-        lr_metrics = self.evaluate(lr_model, X_test_arr, y_test_arr, model_type="logistic_regression")
+        lr_metrics = self.evaluate(
+            lr_model, X_test_arr, y_test_arr, model_type="logistic_regression"
+        )
 
         limitations: list[str] = []
         final_model = lr_model

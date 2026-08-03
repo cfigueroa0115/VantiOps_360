@@ -237,15 +237,11 @@ class PipelineOrchestrator:
                     )
                     time.sleep(wait_time)
                 else:
-                    logger.error(
-                        f"Operation failed after {max_retries + 1} attempts: {e}"
-                    )
+                    logger.error(f"Operation failed after {max_retries + 1} attempts: {e}")
 
         raise last_exception  # type: ignore[misc]
 
-    def quarantine_record(
-        self, record: dict[str, Any], rule_id: str, reason: str
-    ) -> None:
+    def quarantine_record(self, record: dict[str, Any], rule_id: str, reason: str) -> None:
         """Isolate a failed record to the quarantine Parquet file.
 
         Appends the record with rule_id, reason, and quarantine_timestamp to the
@@ -347,7 +343,9 @@ class PipelineOrchestrator:
 
         return valid_df, quarantined_count
 
-    def update_control_table(self, batch: IngestionBatch, stages_completed: list[str] | None = None) -> None:
+    def update_control_table(
+        self, batch: IngestionBatch, stages_completed: list[str] | None = None
+    ) -> None:
         """Append or update batch information in the JSON control table.
 
         Records the batch with the enhanced schema including per-stage tracking:
@@ -384,9 +382,7 @@ class PipelineOrchestrator:
 
         # Build the enhanced batch record
         completed_at = (
-            batch.ingestion_timestamp.isoformat()
-            if batch.status == BatchStatus.COMPLETED
-            else None
+            batch.ingestion_timestamp.isoformat() if batch.status == BatchStatus.COMPLETED else None
         )
         # Calculate started_at from ingestion_timestamp
         started_at = batch.ingestion_timestamp.isoformat()
@@ -509,9 +505,7 @@ class PipelineOrchestrator:
             sheets = _ingest_file()
 
             if not sheets:
-                raise ValueError(
-                    f"No data sheets found in '{source_path.name}'."
-                )
+                raise ValueError(f"No data sheets found in '{source_path.name}'.")
 
             # Combine all sheets into a single DataFrame for processing
             dfs = list(sheets.values())

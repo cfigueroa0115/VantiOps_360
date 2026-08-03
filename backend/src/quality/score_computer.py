@@ -111,9 +111,7 @@ class QualityScoreComputer:
 
         return score, violations
 
-    def _compute_completeness(
-        self, df: pl.DataFrame, violations: list[QualityViolation]
-    ) -> float:
+    def _compute_completeness(self, df: pl.DataFrame, violations: list[QualityViolation]) -> float:
         """Compute completeness: ratio of non-null to total expected values per field.
 
         Score = average of per-field completeness ratios × 100.
@@ -150,9 +148,7 @@ class QualityScoreComputer:
         completeness = (sum(field_scores) / len(field_scores)) * 100.0 if field_scores else 100.0
         return round(completeness, 2)
 
-    def _compute_validity(
-        self, df: pl.DataFrame, violations: list[QualityViolation]
-    ) -> float:
+    def _compute_validity(self, df: pl.DataFrame, violations: list[QualityViolation]) -> float:
         """Compute validity: conformance to Pandera schema rules.
 
         Checks:
@@ -189,8 +185,7 @@ class QualityScoreComputer:
                         violations_percentage=round(pct, 2),
                         severity=SeverityLevel.from_percentage(pct),
                         corrective_action=(
-                            "Correct 'estado' values to match valid domain: "
-                            f"{VALID_ESTADO}."
+                            "Correct 'estado' values to match valid domain: " f"{VALID_ESTADO}."
                         ),
                     )
                 )
@@ -214,8 +209,7 @@ class QualityScoreComputer:
                         violations_percentage=round(pct, 2),
                         severity=SeverityLevel.from_percentage(pct),
                         corrective_action=(
-                            "Correct 'tipo_pqr' values to match valid domain: "
-                            f"{VALID_TIPO_PQR}."
+                            "Correct 'tipo_pqr' values to match valid domain: " f"{VALID_TIPO_PQR}."
                         ),
                     )
                 )
@@ -279,9 +273,7 @@ class QualityScoreComputer:
         validity = (total_conforming / total_checks) * 100.0
         return round(validity, 2)
 
-    def _compute_consistency(
-        self, df: pl.DataFrame, violations: list[QualityViolation]
-    ) -> float:
+    def _compute_consistency(self, df: pl.DataFrame, violations: list[QualityViolation]) -> float:
         """Compute consistency: detect contradictions between related fields.
 
         Checks:
@@ -373,9 +365,7 @@ class QualityScoreComputer:
         consistency = 100.0 - (total_contradictions / total_records * 100.0)
         return round(max(consistency, 0.0), 2)
 
-    def _compute_uniqueness(
-        self, df: pl.DataFrame, violations: list[QualityViolation]
-    ) -> float:
+    def _compute_uniqueness(self, df: pl.DataFrame, violations: list[QualityViolation]) -> float:
         """Compute uniqueness: 100 - duplication_rate on PQR identifier.
 
         Requirements: 10.7
@@ -407,9 +397,7 @@ class QualityScoreComputer:
         uniqueness = 100.0 - duplication_rate
         return round(max(uniqueness, 0.0), 2)
 
-    def _compute_timeliness(
-        self, df: pl.DataFrame, violations: list[QualityViolation]
-    ) -> float:
+    def _compute_timeliness(self, df: pl.DataFrame, violations: list[QualityViolation]) -> float:
         """Compute timeliness: flag dates before 2020-01-01 or after current date.
 
         Score = 100 - (timeliness_violations / total_records × 100)
@@ -429,10 +417,7 @@ class QualityScoreComputer:
         # Filter records with fecha_creacion outside valid range
         timeliness_violations = df.filter(
             pl.col("fecha_creacion").is_not_null()
-            & (
-                (pl.col("fecha_creacion") < min_date)
-                | (pl.col("fecha_creacion") > current_date)
-            )
+            & ((pl.col("fecha_creacion") < min_date) | (pl.col("fecha_creacion") > current_date))
         ).height
 
         if timeliness_violations > 0:
@@ -491,9 +476,7 @@ class QualityScoreComputer:
             total_categorical_values += field_count
 
             # Count values NOT in the valid catalog
-            unmatched_count = non_null_series.filter(
-                ~non_null_series.is_in(valid_values)
-            ).len()
+            unmatched_count = non_null_series.filter(~non_null_series.is_in(valid_values)).len()
             total_unmatched += unmatched_count
 
             if unmatched_count > 0:

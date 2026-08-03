@@ -118,9 +118,7 @@ class RiskModelResponse(BaseModel):
     model_type: str = Field(description="logistic_regression | decision_tree")
     metrics: ModelMetrics
     feature_importance: list[FeatureImportanceItem] = Field(default_factory=list)
-    disclaimer: str = Field(
-        default="Analytical demonstration — not a production-grade model"
-    )
+    disclaimer: str = Field(default="Analytical demonstration — not a production-grade model")
 
 
 class Finding(BaseModel):

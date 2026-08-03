@@ -141,13 +141,10 @@ class ReferencePointValidator:
         failed_names = [c.name for c in report.checks if not c.is_within_tolerance]
 
         if report.all_passed:
-            report.summary = (
-                f"All {total_count} reference point checks passed."
-            )
+            report.summary = f"All {total_count} reference point checks passed."
         else:
             report.summary = (
-                f"{passed_count}/{total_count} checks passed. "
-                f"Failed: {', '.join(failed_names)}"
+                f"{passed_count}/{total_count} checks passed. " f"Failed: {', '.join(failed_names)}"
             )
 
         return report
@@ -301,9 +298,7 @@ class ReferencePointValidator:
             deviation_message=deviation,
         )
 
-    def verify_management_time(
-        self, df: pl.DataFrame, time_col: str
-    ) -> list[ReferenceCheck]:
+    def verify_management_time(self, df: pl.DataFrame, time_col: str) -> list[ReferenceCheck]:
         """Verify management time statistics: mean ≈6.32d (±0.5), median ≈7d (±1), P90 ≈10d (±1).
 
         Returns a list of three ReferenceCheck instances (mean, median, P90).
@@ -407,9 +402,7 @@ class ReferencePointValidator:
 
         return checks
 
-    def verify_channel_distribution(
-        self, df: pl.DataFrame, channel_col: str
-    ) -> ReferenceCheck:
+    def verify_channel_distribution(self, df: pl.DataFrame, channel_col: str) -> ReferenceCheck:
         """Verify that phone + verbal channels together account for >60% of records.
 
         Requirements: 4.6
@@ -455,7 +448,11 @@ class ReferencePointValidator:
         return ReferenceCheck(
             name="channel_distribution",
             expected_description=f"Phone + Verbal > {self.CHANNEL_COMBINED_MIN_SHARE}%",
-            actual_value={"phone_pct": phone_pct, "verbal_pct": verbal_pct, "combined_pct": combined_pct},
+            actual_value={
+                "phone_pct": phone_pct,
+                "verbal_pct": verbal_pct,
+                "combined_pct": combined_pct,
+            },
             is_within_tolerance=within,
             deviation_message=deviation,
         )
@@ -485,7 +482,12 @@ class ReferencePointValidator:
         total = df.height
 
         if total == 0:
-            for field_name in ["closure_reason_null", "marking_invalid", "company_inconsistent", "category_duplicated"]:
+            for field_name in [
+                "closure_reason_null",
+                "marking_invalid",
+                "company_inconsistent",
+                "category_duplicated",
+            ]:
                 checks.append(
                     ReferenceCheck(
                         name=f"quality_{field_name}",

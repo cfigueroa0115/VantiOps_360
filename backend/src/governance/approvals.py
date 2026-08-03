@@ -126,9 +126,7 @@ class ApprovalRequest:
     justification: str
     status: ApprovalStatus = ApprovalStatus.PENDING
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    requested_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    requested_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     expires_at: str = field(default="")
     approved_by: str | None = None
     approved_at: str | None = None
@@ -152,9 +150,7 @@ class ApprovalRequest:
         # Compute expires_at if not set
         if not self.expires_at:
             requested = datetime.fromisoformat(self.requested_at)
-            self.expires_at = (
-                requested + timedelta(hours=APPROVAL_EXPIRATION_HOURS)
-            ).isoformat()
+            self.expires_at = (requested + timedelta(hours=APPROVAL_EXPIRATION_HOURS)).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -434,11 +430,14 @@ def approve_request(
 
     # Approve
     now = datetime.now(timezone.utc).isoformat()
-    _update_approval(approval_id, {
-        "status": ApprovalStatus.APPROVED,
-        "approved_by": approver_id,
-        "approved_at": now,
-    })
+    _update_approval(
+        approval_id,
+        {
+            "status": ApprovalStatus.APPROVED,
+            "approved_by": approver_id,
+            "approved_at": now,
+        },
+    )
 
     # Log audit event
     log_audit_event(
@@ -555,11 +554,14 @@ def reject_request(
 
     # Reject
     now = datetime.now(timezone.utc).isoformat()
-    _update_approval(approval_id, {
-        "status": ApprovalStatus.REJECTED,
-        "approved_by": approver_id,
-        "approved_at": now,
-    })
+    _update_approval(
+        approval_id,
+        {
+            "status": ApprovalStatus.REJECTED,
+            "approved_by": approver_id,
+            "approved_at": now,
+        },
+    )
 
     # Log audit event
     log_audit_event(

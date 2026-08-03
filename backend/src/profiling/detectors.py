@@ -235,7 +235,9 @@ def find_duplicates(df: pl.DataFrame, id_column: str) -> DuplicateReport:
     Requirements: 2.5, 10.7
     """
     if id_column not in df.columns:
-        raise ValueError(f"Column '{id_column}' not found in DataFrame. Available columns: {df.columns}")
+        raise ValueError(
+            f"Column '{id_column}' not found in DataFrame. Available columns: {df.columns}"
+        )
 
     total_records = df.height
 

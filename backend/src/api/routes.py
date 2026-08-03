@@ -173,9 +173,7 @@ async def get_kpis(filters: FilterParams = Depends(parse_filters)) -> KPIRespons
     """
     cause_rows = _execute_query(cause_sql, params)
     total = row["total_pqr"] or 1
-    main_cause_share = round(
-        (cause_rows[0]["cnt"] / total * 100) if cause_rows else 0.0, 1
-    )
+    main_cause_share = round((cause_rows[0]["cnt"] / total * 100) if cause_rows else 0.0, 1)
 
     # Quality issues percentage (records with null motivo_cierre or null marcacion)
     quality_sql = f"""
@@ -305,9 +303,7 @@ async def get_chart_data(
         raise HTTPException(status_code=400, detail=f"Unknown chart type: {chart_type}")
 
     data = handler(base, params)
-    record_count = _execute_scalar(
-        f"SELECT COUNT(*) FROM ({base})", params
-    )
+    record_count = _execute_scalar(f"SELECT COUNT(*) FROM ({base})", params)
 
     return ChartDataResponse(
         chart_type=chart_type.value,
