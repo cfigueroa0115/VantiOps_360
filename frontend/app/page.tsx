@@ -20,15 +20,7 @@ import { P90ByCauseBar } from "@/components/charts/P90ByCauseBar";
 import { OpenCasesHistogram } from "@/components/charts/OpenCasesHistogram";
 import { FindingsTable } from "@/components/charts/FindingsTable";
 import { Database } from "lucide-react";
-import type {
-  ParetoDataPoint,
-  TopCauseDataPoint,
-  CancellationDataPoint,
-  DistributionDataPoint,
-  TemporalDataPoint,
-  P90DataPoint,
-  HistogramDataPoint,
-} from "@/lib/charts/types";
+import { parseParetoData, parseTopCauseData, parseCancellationData, parseDistributionData, parseTemporalData, parseP90Data, parseHistogramData } from "@/lib/charts/parsers";
 
 function QualityScoreCard({
   overallScore,
@@ -138,7 +130,7 @@ export default function DashboardPage() {
           <div className="space-y-6 lg:col-span-3">
             <ErrorBoundary componentName="ParetoChart" onReset={pareto.retry} resetKeys={[pareto.data, filters]}>
               <ParetoChart
-                data={(pareto.data?.data ?? []) as unknown as ParetoDataPoint[]}
+                data={parseParetoData(pareto.data?.data)}
                 loading={pareto.loading}
                 error={pareto.error}
                 onRetry={pareto.retry}
@@ -148,7 +140,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <ErrorBoundary componentName="TopCausesBar" onReset={topCauses.retry} resetKeys={[topCauses.data, filters]}>
                 <TopCausesBar
-                  data={(topCauses.data?.data ?? []) as unknown as TopCauseDataPoint[]}
+                  data={parseTopCauseData(topCauses.data?.data)}
                   loading={topCauses.loading}
                   error={topCauses.error}
                   onRetry={topCauses.retry}
@@ -157,7 +149,7 @@ export default function DashboardPage() {
 
               <ErrorBoundary componentName="CancellationDonut" onReset={donut.retry} resetKeys={[donut.data, filters]}>
                 <CancellationDonut
-                  data={(donut.data?.data ?? []) as unknown as CancellationDataPoint[]}
+                  data={parseCancellationData(donut.data?.data)}
                   loading={donut.loading}
                   error={donut.error}
                   onRetry={donut.retry}
@@ -167,7 +159,7 @@ export default function DashboardPage() {
 
             <ErrorBoundary componentName="TemporalTrend" onReset={trend.retry} resetKeys={[trend.data, filters]}>
               <TemporalTrend
-                data={(trend.data?.data ?? []) as unknown as TemporalDataPoint[]}
+                data={parseTemporalData(trend.data?.data)}
                 loading={trend.loading}
                 error={trend.error}
                 onRetry={trend.retry}
@@ -177,7 +169,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <ErrorBoundary componentName="DistributionBar-Company" onReset={distCompany.retry} resetKeys={[distCompany.data, filters]}>
                 <DistributionBar
-                  data={(distCompany.data?.data ?? []) as unknown as DistributionDataPoint[]}
+                  data={parseDistributionData(distCompany.data?.data)}
                   title="Distribución por Empresa"
                   loading={distCompany.loading}
                   error={distCompany.error}
@@ -186,7 +178,7 @@ export default function DashboardPage() {
               </ErrorBoundary>
               <ErrorBoundary componentName="DistributionBar-Channel" onReset={distChannel.retry} resetKeys={[distChannel.data, filters]}>
                 <DistributionBar
-                  data={(distChannel.data?.data ?? []) as unknown as DistributionDataPoint[]}
+                  data={parseDistributionData(distChannel.data?.data)}
                   title="Distribución por Canal"
                   color="#8b5cf6"
                   loading={distChannel.loading}
@@ -196,7 +188,7 @@ export default function DashboardPage() {
               </ErrorBoundary>
               <ErrorBoundary componentName="DistributionBar-Result" onReset={distResult.retry} resetKeys={[distResult.data, filters]}>
                 <DistributionBar
-                  data={(distResult.data?.data ?? []) as unknown as DistributionDataPoint[]}
+                  data={parseDistributionData(distResult.data?.data)}
                   title="Distribución por Resultado"
                   color="#06b6d4"
                   loading={distResult.loading}
@@ -208,7 +200,7 @@ export default function DashboardPage() {
 
             <ErrorBoundary componentName="P90ByCauseBar" onReset={p90.retry} resetKeys={[p90.data, filters]}>
               <P90ByCauseBar
-                data={(p90.data?.data ?? []) as unknown as P90DataPoint[]}
+                data={parseP90Data(p90.data?.data)}
                 loading={p90.loading}
                 error={p90.error}
                 onRetry={p90.retry}
@@ -218,7 +210,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <ErrorBoundary componentName="OpenCasesHistogram" onReset={histogram.retry} resetKeys={[histogram.data, filters]}>
                 <OpenCasesHistogram
-                  data={(histogram.data?.data ?? []) as unknown as HistogramDataPoint[]}
+                  data={parseHistogramData(histogram.data?.data)}
                   loading={histogram.loading}
                   error={histogram.error}
                   onRetry={histogram.retry}
