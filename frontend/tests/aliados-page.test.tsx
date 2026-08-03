@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import AliadosPage, { ONBOARDING_STATES, TRACEABILITY_LOG } from "@/app/aliados/page";
+import AliadosPage from "@/app/aliados/page";
+import { ONBOARDING_STATES, TRACEABILITY_LOG } from "@/app/aliados/constants";
 
 describe("AliadosPage", () => {
   it("renders the page header", () => {
