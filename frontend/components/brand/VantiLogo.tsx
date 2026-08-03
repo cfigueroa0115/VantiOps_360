@@ -7,8 +7,8 @@ interface VantiLogoProps {
 }
 
 const SIZES = {
-  sm: "max-w-[120px]",
-  md: "max-w-[180px]",
+  sm: "max-w-[140px]",
+  md: "max-w-[190px]",
   lg: "max-w-[210px]",
 };
 

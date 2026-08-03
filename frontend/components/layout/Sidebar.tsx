@@ -84,9 +84,13 @@ export function Sidebar({ className }: SidebarProps) {
       )}
     >
       {/* Brand */}
-      <div className="border-b border-gray-100 px-3 py-4">
-        <VantiLogo size="sm" className="mx-auto" />
-        <p className="text-[10px] text-center text-gray-500 mt-1">VantiOps 360</p>
+      <div className="border-b border-gray-100 px-3 py-5">
+        <div className="flex flex-col items-center">
+          <VantiLogo size="md" className="rounded-xl p-3" />
+          <span className="mt-3 text-center text-xl font-bold tracking-tight text-slate-900">
+            VantiOps 360
+          </span>
+        </div>
       </div>
 
       {/* Navigation links */}
