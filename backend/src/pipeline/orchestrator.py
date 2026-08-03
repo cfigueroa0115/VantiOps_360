@@ -4,7 +4,10 @@ Coordinates the multi-stage data pipeline: ingest → profile → validate →
 enrich → serve. Implements idempotent processing via SHA-256 file hashing,
 exponential backoff retries, record quarantining, and control table tracking.
 
-Requirements: 12.5, 12.7, 12.8, 12.9, 12.10
+The control table (serving/control_table.json) uses a batches-based schema
+that tracks per-stage completion for observability and resume support.
+
+Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
 """
 
 from __future__ import annotations
@@ -14,15 +17,17 @@ import json
 import logging
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 import polars as pl
 
+from core.retry import is_transient_error, retry_policy
 from ingestion.excel_adapter import ExcelIngestionAdapter
 from pipeline.models import BatchStatus, IngestionBatch
+from pipeline.schemas import PQRSchema
 from profiling.detectors import (
     calculate_null_stats,
     detect_outliers_iqr,
@@ -35,6 +40,9 @@ from quality.report_generator import QualityReportGenerator
 from quality.score_computer import QualityScoreComputer
 
 logger = logging.getLogger(__name__)
+
+# Canonical sequential pipeline stages (Requirement 10.2)
+PIPELINE_STAGES: list[str] = ["ingest", "profile", "validate", "enrich", "serve"]
 
 
 @dataclass
@@ -138,7 +146,7 @@ class PipelineOrchestrator:
         """Check the control table for whether a file hash was already processed.
 
         Reads the JSON control table and checks if any batch entry has a
-        matching source_file_hash with a 'completed' status.
+        matching file_hash with a 'completed' status.
 
         Args:
             file_hash: SHA-256 hash string to look up.
@@ -153,18 +161,51 @@ class PipelineOrchestrator:
 
         try:
             with open(control_table_path, "r", encoding="utf-8") as f:
-                entries = json.load(f)
+                data = json.load(f)
         except (json.JSONDecodeError, OSError):
             return False
 
-        for entry in entries:
-            if (
-                entry.get("source_file_hash") == file_hash
-                and entry.get("status") == BatchStatus.COMPLETED.value
-            ):
+        # Support both legacy (list of entries) and new schema ({"batches": [...]})
+        batches = data.get("batches", data) if isinstance(data, dict) else data
+
+        for entry in batches:
+            hash_field = entry.get("file_hash") or entry.get("source_file_hash")
+            if hash_field == file_hash and entry.get("status") == BatchStatus.COMPLETED.value:
                 return True
 
         return False
+
+    def get_completed_batch_entry(self, file_hash: str) -> dict[str, Any] | None:
+        """Retrieve the completed batch entry for a given file hash.
+
+        Used during idempotency checks to return existing results without
+        reprocessing.
+
+        Args:
+            file_hash: SHA-256 hash string to look up.
+
+        Returns:
+            The batch entry dict if found with status "completed", else None.
+        """
+        control_table_path = self.output_dir / self._CONTROL_TABLE_RELATIVE
+
+        if not control_table_path.exists():
+            return None
+
+        try:
+            with open(control_table_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
+
+        batches = data.get("batches", data) if isinstance(data, dict) else data
+
+        for entry in batches:
+            hash_field = entry.get("file_hash") or entry.get("source_file_hash")
+            if hash_field == file_hash and entry.get("status") == BatchStatus.COMPLETED.value:
+                return entry
+
+        return None
 
     def retry_with_backoff(
         self,
@@ -214,8 +255,15 @@ class PipelineOrchestrator:
     ) -> None:
         """Isolate a failed record to the quarantine Parquet file.
 
-        Appends the record with rule_id, reason, and timestamp to the
-        quarantine file. Creates the file if it does not exist.
+        Appends the record with rule_id, reason, and quarantine_timestamp to the
+        quarantine file (staging/quarantine.parquet). Creates the file if it
+        does not exist. Uses the retry policy for transient I/O errors during
+        write operations.
+
+        Fields stored per Requirement 10.3:
+        - rule_id: Identifier of the quality rule that caused quarantine.
+        - reason: Human-readable explanation of why the record was quarantined.
+        - quarantine_timestamp: ISO-8601 UTC timestamp of when the record was quarantined.
 
         Args:
             record: Dictionary representing the failed record data.
@@ -225,9 +273,9 @@ class PipelineOrchestrator:
         quarantine_path = self.output_dir / self._QUARANTINE_RELATIVE
         quarantine_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Build quarantine entry
+        # Build quarantine entry with required fields (Requirement 10.3)
         quarantine_entry = {
-            "quarantine_timestamp": datetime.utcnow().isoformat(),
+            "quarantine_timestamp": datetime.now(timezone.utc).isoformat(),
             "rule_id": rule_id,
             "reason": reason,
             "record_data": json.dumps(record, default=str),
@@ -236,43 +284,130 @@ class PipelineOrchestrator:
         # Create DataFrame for the new entry
         new_row = pl.DataFrame([quarantine_entry])
 
-        # Append to existing or create new quarantine file
-        if quarantine_path.exists():
-            try:
+        @retry_policy(max_retries=3, base_delay=2.0, max_delay=30.0, jitter=0.5)
+        def _write_quarantine() -> None:
+            """Write quarantine entry with retry for transient I/O errors."""
+            if quarantine_path.exists():
                 existing = pl.read_parquet(quarantine_path)
                 combined = pl.concat([existing, new_row], how="diagonal_relaxed")
-            except Exception:
+            else:
                 combined = new_row
-        else:
-            combined = new_row
+            combined.write_parquet(quarantine_path, compression="snappy")
 
-        combined.write_parquet(quarantine_path, compression="snappy")
+        _write_quarantine()
 
-    def update_control_table(self, batch: IngestionBatch) -> None:
-        """Append batch information to the JSON control table.
+    def validate_records(self, df: pl.DataFrame) -> tuple[pl.DataFrame, int]:
+        """Validate records against PQRSchema and quarantine failures.
 
-        Records timestamp, file hash, record counts (ingested, validated,
-        quarantined, rejected), processing duration, and status.
+        Validates each record against the PQR schema. Records that fail
+        validation are sent directly to quarantine (no retry — validation
+        errors are non-transient per Requirement 10.4). Records that pass
+        are returned for downstream processing.
 
         Args:
-            batch: IngestionBatch instance with completed batch metrics.
+            df: DataFrame to validate.
+
+        Returns:
+            Tuple of (valid_df, quarantined_count) where valid_df contains only
+            records that passed validation, and quarantined_count is the number
+            of records sent to quarantine.
+        """
+        quarantined_count = 0
+
+        try:
+            # Attempt full schema validation
+            PQRSchema.validate(df)
+            # If no exception, all records are valid
+            return df, 0
+        except Exception as schema_error:
+            # Schema validation failed — identify and quarantine invalid records
+            logger.warning(f"Schema validation found issues: {schema_error}")
+
+        # Row-by-row validation for granular quarantine
+        valid_indices: list[int] = []
+
+        for i in range(df.height):
+            row_df = df.slice(i, 1)
+            try:
+                PQRSchema.validate(row_df)
+                valid_indices.append(i)
+            except Exception as e:
+                # Validation errors go directly to quarantine (no retry - Requirement 10.4)
+                record_data = row_df.to_dicts()[0]
+                rule_id = "SCHEMA_VALIDATION"
+                reason = str(e)[:500]  # Truncate long error messages
+                try:
+                    self.quarantine_record(record_data, rule_id, reason)
+                    quarantined_count += 1
+                    logger.info(
+                        f"Record {i} quarantined: rule_id={rule_id}, reason={reason[:100]}..."
+                    )
+                except Exception as quarantine_err:
+                    # If quarantine write itself fails after retries, log and count
+                    logger.error(f"Failed to quarantine record {i}: {quarantine_err}")
+                    quarantined_count += 1
+
+        if valid_indices:
+            valid_df = df[valid_indices]
+        else:
+            valid_df = df.clear()
+
+        return valid_df, quarantined_count
+
+    def update_control_table(self, batch: IngestionBatch, stages_completed: list[str] | None = None) -> None:
+        """Append or update batch information in the JSON control table.
+
+        Records the batch with the enhanced schema including per-stage tracking:
+        file_hash, file_name, status, stages_completed, records_processed,
+        started_at, and completed_at.
+
+        The control table uses the schema:
+        { "batches": [{ "file_hash": str, "file_name": str, "status": str,
+          "stages_completed": list[str], "records_processed": int,
+          "started_at": str, "completed_at": str|null, ... }] }
+
+        Args:
+            batch: IngestionBatch instance with batch metrics.
+            stages_completed: List of stage names completed so far.
         """
         control_table_path = self.output_dir / self._CONTROL_TABLE_RELATIVE
         control_table_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Load existing entries
-        entries: list[dict[str, Any]] = []
+        # Load existing control table
+        control_data: dict[str, Any] = {"batches": []}
         if control_table_path.exists():
             try:
                 with open(control_table_path, "r", encoding="utf-8") as f:
-                    entries = json.load(f)
+                    raw = json.load(f)
+                # Support legacy format (plain list) and new format ({"batches": [...]})
+                if isinstance(raw, list):
+                    control_data = {"batches": raw}
+                elif isinstance(raw, dict) and "batches" in raw:
+                    control_data = raw
+                else:
+                    control_data = {"batches": []}
             except (json.JSONDecodeError, OSError):
-                entries = []
+                control_data = {"batches": []}
 
-        # Serialize batch to dict
-        batch_record = {
+        # Build the enhanced batch record
+        completed_at = (
+            batch.ingestion_timestamp.isoformat()
+            if batch.status == BatchStatus.COMPLETED
+            else None
+        )
+        # Calculate started_at from ingestion_timestamp
+        started_at = batch.ingestion_timestamp.isoformat()
+
+        batch_record: dict[str, Any] = {
             "batch_id": batch.batch_id,
-            "ingestion_timestamp": batch.ingestion_timestamp.isoformat(),
+            "file_hash": batch.source_file_hash,
+            "file_name": batch.source_file_path.name if batch.source_file_path else "",
+            "status": batch.status.value,
+            "stages_completed": stages_completed or [],
+            "records_processed": batch.records_ingested,
+            "started_at": started_at,
+            "completed_at": completed_at,
+            # Preserve extended fields for backward compatibility
             "source_file_path": str(batch.source_file_path),
             "source_file_hash": batch.source_file_hash,
             "records_ingested": batch.records_ingested,
@@ -280,27 +415,42 @@ class PipelineOrchestrator:
             "records_quarantined": batch.records_quarantined,
             "records_rejected": batch.records_rejected,
             "processing_duration_seconds": batch.processing_duration_seconds,
-            "status": batch.status.value,
         }
 
-        entries.append(batch_record)
+        # Check if this batch_id already exists (update in place)
+        existing_idx = None
+        for idx, entry in enumerate(control_data["batches"]):
+            if entry.get("batch_id") == batch.batch_id:
+                existing_idx = idx
+                break
 
-        # Write back
+        if existing_idx is not None:
+            control_data["batches"][existing_idx] = batch_record
+        else:
+            control_data["batches"].append(batch_record)
+
+        # Write back the control table
         with open(control_table_path, "w", encoding="utf-8") as f:
-            json.dump(entries, f, indent=2, ensure_ascii=False)
+            json.dump(control_data, f, indent=2, ensure_ascii=False)
 
     def run(self, source: Path | str, config: PipelineConfig | None = None) -> PipelineResult:
         """Execute the full data pipeline: ingest → profile → validate → enrich → serve.
 
-        Pipeline stages:
-        1. Compute file hash and check idempotency
-        2. Read Excel via ExcelIngestionAdapter
-        3. Profile data (type inference, null stats, outliers, duplicates, dates, similarity)
-        4. Generate quality report
-        5. Compute quality score
-        6. Store curated data as Parquet (snappy compression) in data/curated/
-        7. Update control table
-        8. Return PipelineResult
+        Enforces sequential stage execution (Requirement 10.2):
+        1. ingest: Read Excel via ExcelIngestionAdapter
+        2. profile: Type inference, null stats, outliers, duplicates, dates, similarity
+        3. validate: Generate quality report
+        4. enrich: Compute quality score
+        5. serve: Store curated data as Parquet and update control table
+
+        Idempotency (Requirement 10.1):
+        - Computes SHA-256 hash of input file at the start
+        - Checks control table for matching hash with status "completed"
+        - If found: skips reprocessing and returns existing result
+        - If not found or status != "completed": proceeds with pipeline
+
+        Control table is updated after each stage completion for observability
+        (Requirement 10.6, 10.7).
 
         Args:
             source: Path to the source Excel file.
@@ -312,6 +462,7 @@ class PipelineOrchestrator:
         source_path = Path(source)
         start_time = time.time()
         errors: list[str] = []
+        stages_completed: list[str] = []
 
         if config is None:
             config = PipelineConfig(source_path=source_path, output_dir=self.output_dir)
@@ -319,22 +470,27 @@ class PipelineOrchestrator:
         # Initialize batch tracking
         batch = IngestionBatch(
             batch_id=str(uuid.uuid4()),
-            ingestion_timestamp=datetime.utcnow(),
+            ingestion_timestamp=datetime.now(timezone.utc),
             source_file_path=source_path,
             source_file_hash="",
             status=BatchStatus.IN_PROGRESS,
         )
 
         try:
-            # Stage 1: Compute file hash and check idempotency
-            logger.info(f"Computing file hash for '{source_path}'...")
+            # --- Pre-processing: Compute file hash and check idempotency ---
+            logger.info(f"Computing SHA-256 hash for '{source_path}'...")
             file_hash = self.compute_file_hash(source_path)
             batch.source_file_hash = file_hash
 
+            # Idempotency check (Requirement 10.1): skip if already completed
             if not config.force_reprocess and self.is_already_processed(file_hash):
                 elapsed = time.time() - start_time
                 batch.processing_duration_seconds = round(elapsed, 2)
                 batch.status = BatchStatus.COMPLETED
+                logger.info(
+                    f"File '{source_path.name}' already processed "
+                    f"(hash: {file_hash[:12]}...). Skipping reprocessing."
+                )
                 return PipelineResult(
                     success=True,
                     batch=batch,
@@ -347,11 +503,17 @@ class PipelineOrchestrator:
                     ),
                 )
 
-            # Stage 2: Ingest — Read Excel via adapter
-            logger.info(f"Ingesting '{source_path.name}'...")
-            sheets = self.retry_with_backoff(
-                lambda: self._adapter.read(source_path)
-            )
+            # Register initial "running" entry in control table
+            self.update_control_table(batch, stages_completed)
+
+            # --- Stage 1: INGEST — Read Excel via adapter ---
+            logger.info(f"[Stage: ingest] Ingesting '{source_path.name}'...")
+
+            @retry_policy(max_retries=3, base_delay=2.0, max_delay=30.0, jitter=0.5)
+            def _ingest_file() -> dict:
+                return self._adapter.read(source_path)
+
+            sheets = _ingest_file()
 
             if not sheets:
                 raise ValueError(
@@ -359,56 +521,80 @@ class PipelineOrchestrator:
                 )
 
             # Combine all sheets into a single DataFrame for processing
-            # Use the first sheet with data, or concatenate if multiple
             dfs = list(sheets.values())
             if len(dfs) == 1:
                 df = dfs[0]
             else:
-                # Concatenate sheets with compatible schemas
                 try:
                     df = pl.concat(dfs, how="diagonal_relaxed")
                 except Exception:
-                    # If concat fails, use the largest sheet
                     df = max(dfs, key=lambda d: d.height)
 
             batch.records_ingested = df.height
+            stages_completed.append("ingest")
+            self.update_control_table(batch, stages_completed)
             logger.info(
-                f"Ingested {df.height} records from {len(sheets)} sheet(s)."
+                f"[Stage: ingest] Completed. {df.height} records from {len(sheets)} sheet(s)."
             )
 
-            # Stage 3: Profile data
-            logger.info("Profiling data...")
+            # --- Stage 2: PROFILE — Data profiling ---
+            logger.info("[Stage: profile] Profiling data...")
             quality_report = self._report_generator.generate_report(df)
+            stages_completed.append("profile")
+            self.update_control_table(batch, stages_completed)
+            logger.info("[Stage: profile] Completed.")
 
-            # Stage 4: Compute quality score
-            logger.info("Computing quality score...")
+            # --- Stage 3: VALIDATE — Schema validation with quarantine ---
+            logger.info("[Stage: validate] Validating data...")
+            # Validate records against PQRSchema; quarantine failures (Requirement 10.3, 10.4)
+            valid_df, quarantined_count = self.validate_records(df)
+            batch.records_validated = valid_df.height
+            batch.records_quarantined = quarantined_count
+            # Update df to only include valid records for downstream stages
+            df = valid_df
+            stages_completed.append("validate")
+            self.update_control_table(batch, stages_completed)
+            logger.info(
+                f"[Stage: validate] Completed. "
+                f"{batch.records_validated} valid, {quarantined_count} quarantined."
+            )
+
+            # --- Stage 4: ENRICH — Compute quality score ---
+            logger.info("[Stage: enrich] Computing quality score...")
             quality_score, violations = self._score_computer.compute(df)
+            stages_completed.append("enrich")
+            self.update_control_table(batch, stages_completed)
+            logger.info("[Stage: enrich] Completed.")
 
-            # Track validated records (all minus quarantined)
-            batch.records_validated = df.height
-            batch.records_quarantined = 0
-
-            # Stage 5: Store curated data as Parquet with snappy compression
-            logger.info("Storing curated data...")
+            # --- Stage 5: SERVE — Store curated data and finalize ---
+            logger.info("[Stage: serve] Storing curated data...")
             curated_dir = config.output_dir / self._CURATED_RELATIVE
             curated_dir.mkdir(parents=True, exist_ok=True)
 
             curated_filename = f"{source_path.stem}_curated.parquet"
             curated_path = curated_dir / curated_filename
-            df.write_parquet(curated_path, compression="snappy")
-            logger.info(f"Curated data written to '{curated_path}'.")
 
-            # Stage 6: Finalize batch and update control table
+            @retry_policy(max_retries=3, base_delay=2.0, max_delay=30.0, jitter=0.5)
+            def _write_curated() -> None:
+                """Write curated Parquet with snappy compression (Requirement 10.5)."""
+                df.write_parquet(curated_path, compression="snappy")
+
+            _write_curated()
+            stages_completed.append("serve")
+            logger.info(f"[Stage: serve] Curated data written to '{curated_path}'.")
+
+            # --- Finalize batch ---
             elapsed = time.time() - start_time
             batch.processing_duration_seconds = round(elapsed, 2)
             batch.status = BatchStatus.COMPLETED
 
-            self.update_control_table(batch)
+            self.update_control_table(batch, stages_completed)
             logger.info(
                 f"Pipeline completed in {elapsed:.2f}s. "
                 f"Records: {batch.records_ingested} ingested, "
                 f"{batch.records_validated} validated, "
-                f"{batch.records_quarantined} quarantined."
+                f"{batch.records_quarantined} quarantined. "
+                f"Stages completed: {stages_completed}"
             )
 
             return PipelineResult(
@@ -431,7 +617,7 @@ class PipelineOrchestrator:
             error_msg = f"Source file not found: {e}"
             errors.append(error_msg)
             logger.error(error_msg)
-            self.update_control_table(batch)
+            self.update_control_table(batch, stages_completed)
 
             return PipelineResult(
                 success=False,
@@ -449,7 +635,7 @@ class PipelineOrchestrator:
             error_msg = f"Pipeline failed: {e}"
             errors.append(error_msg)
             logger.error(error_msg, exc_info=True)
-            self.update_control_table(batch)
+            self.update_control_table(batch, stages_completed)
 
             return PipelineResult(
                 success=False,

@@ -2,6 +2,7 @@
 
 Tests descriptive_stats() and conditional_probability() functions
 including edge cases, null handling, and low confidence flagging.
+Also tests MIN_GROUP_SIZE enforcement and grouped_descriptive_stats.
 """
 
 from __future__ import annotations
@@ -12,8 +13,11 @@ import pytest
 from statistics.descriptive import (
     ConditionalProbResult,
     DescriptiveStats,
+    MIN_GROUP_SIZE,
     conditional_probability,
     descriptive_stats,
+    descriptive_stats_tiempo_gestion,
+    grouped_descriptive_stats,
 )
 
 
@@ -21,7 +25,7 @@ class TestDescriptiveStats:
     """Tests for descriptive_stats function."""
 
     def test_basic_statistics(self):
-        """Verify mean, median, mode, variance, std for a known series."""
+        """Verify mean, median, mode, variance, std, max for a known series."""
         # Values: 1, 2, 3, 4, 5, 5
         series = pl.Series("values", [1.0, 2.0, 3.0, 4.0, 5.0, 5.0])
         result = descriptive_stats(series)
@@ -34,6 +38,8 @@ class TestDescriptiveStats:
         assert result.median == pytest.approx(3.5, abs=0.01)
         # mode = 5 (appears twice)
         assert result.mode == 5.0
+        # max = 5.0
+        assert result.max_val == 5.0
 
     def test_quartiles_and_percentiles(self):
         """Verify Q1, Q2, Q3, P90, P95, IQR computation."""
@@ -91,6 +97,7 @@ class TestDescriptiveStats:
         assert result.mode is None
         assert result.variance == 0.0
         assert result.std == 0.0
+        assert result.max_val == 0.0
         assert result.outlier_count == 0
 
     def test_all_null_series(self):
@@ -110,6 +117,7 @@ class TestDescriptiveStats:
         assert result.mean == 42.0
         assert result.median == 42.0
         assert result.mode == 42.0
+        assert result.max_val == 42.0
         assert result.variance == 0.0
         assert result.std == 0.0
         assert result.iqr == 0.0
@@ -283,3 +291,87 @@ class TestConditionalProbability:
         assert results["A"].probability == 1.0
         # No time>10 for B → P=0.0
         assert results["B"].probability == 0.0
+
+
+
+class TestDescriptiveStatsTiempoGestion:
+    """Tests for descriptive_stats_tiempo_gestion convenience function (Req 9.1)."""
+
+    def test_computes_all_required_stats(self):
+        """Verifies mean, median, P90, P95, max, stddev for tiempo_gestion_dias."""
+        df = pl.DataFrame({
+            "tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        })
+        result = descriptive_stats_tiempo_gestion(df)
+
+        assert result.mean == pytest.approx(5.5, abs=0.01)
+        assert result.median == pytest.approx(5.5, abs=0.01)
+        assert result.max_val == 10.0
+        assert result.p90 == pytest.approx(9.1, abs=0.5)
+        assert result.p95 == pytest.approx(9.55, abs=0.5)
+        assert result.std > 0.0
+        assert result.count == 10
+
+    def test_raises_if_column_missing(self):
+        """Raises ValueError if tiempo_gestion_dias column is absent."""
+        df = pl.DataFrame({"other_col": [1.0, 2.0, 3.0]})
+        with pytest.raises(ValueError, match="tiempo_gestion_dias"):
+            descriptive_stats_tiempo_gestion(df)
+
+
+class TestGroupedDescriptiveStats:
+    """Tests for grouped_descriptive_stats with MIN_GROUP_SIZE enforcement (Req 9.3)."""
+
+    def test_excludes_groups_below_min_group_size(self):
+        """Groups with fewer than 5 records are excluded for privacy."""
+        df = pl.DataFrame({
+            "tiempo_gestion_dias": [5.0] * 10 + [3.0] * 3,
+            "causa": ["A"] * 10 + ["B"] * 3,
+        })
+        results = grouped_descriptive_stats(df, "tiempo_gestion_dias", "causa")
+
+        # Group A has 10 records → included
+        assert "A" in results
+        # Group B has 3 records → excluded (< MIN_GROUP_SIZE=5)
+        assert "B" not in results
+
+    def test_includes_groups_at_min_group_size(self):
+        """Groups with exactly MIN_GROUP_SIZE records are included."""
+        df = pl.DataFrame({
+            "tiempo_gestion_dias": [2.0] * 5 + [7.0] * 5,
+            "causa": ["X"] * 5 + ["Y"] * 5,
+        })
+        results = grouped_descriptive_stats(df, "tiempo_gestion_dias", "causa")
+
+        assert "X" in results
+        assert "Y" in results
+        assert results["X"].mean == 2.0
+        assert results["Y"].mean == 7.0
+
+    def test_min_group_size_constant_is_five(self):
+        """MIN_GROUP_SIZE constant must be 5 per Requirement 9.3."""
+        assert MIN_GROUP_SIZE == 5
+
+    def test_grouped_stats_correctness(self):
+        """Verify stats are computed correctly per group."""
+        df = pl.DataFrame({
+            "value": [10.0, 20.0, 30.0, 40.0, 50.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            "group": ["A"] * 5 + ["B"] * 5,
+        })
+        results = grouped_descriptive_stats(df, "value", "group")
+
+        assert results["A"].mean == 30.0
+        assert results["A"].max_val == 50.0
+        assert results["B"].mean == 3.0
+        assert results["B"].max_val == 5.0
+
+    def test_null_group_values_excluded(self):
+        """Records with null group values are excluded from all groups."""
+        df = pl.DataFrame({
+            "value": [1.0, 2.0, 3.0, 4.0, 5.0, 99.0, 99.0],
+            "group": ["A", "A", "A", "A", "A", None, None],
+        })
+        results = grouped_descriptive_stats(df, "value", "group")
+
+        assert "A" in results
+        assert results["A"].count == 5

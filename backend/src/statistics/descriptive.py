@@ -1,10 +1,10 @@
 """Descriptive statistics and conditional probability calculations.
 
 Implements descriptive statistics for numeric series (mean, median, mode,
-variance, std, quartiles, percentiles, IQR) and conditional probability
+variance, std, quartiles, percentiles, IQR, max) and conditional probability
 computation with null exclusion and low-confidence flagging.
 
-Requirements: 8.1, 8.2, 8.3, 8.4, 8.9
+Requirements: 8.1, 8.2, 8.3, 8.4, 8.9, 9.1, 9.3
 """
 
 from __future__ import annotations
@@ -19,6 +19,10 @@ from profiling.detectors import detect_outliers_iqr
 
 LOW_CONFIDENCE_THRESHOLD = 30
 
+# Minimum group size for privacy protection (Requirement 9.3).
+# Groups with fewer than MIN_GROUP_SIZE records are excluded from reports.
+MIN_GROUP_SIZE = 5
+
 
 @dataclass(frozen=True, slots=True)
 class DescriptiveStats:
@@ -30,6 +34,7 @@ class DescriptiveStats:
         mode: Mode value rounded to 2 decimal places, or None if no unique mode.
         variance: Population variance rounded to 2 decimal places.
         std: Standard deviation rounded to 2 decimal places.
+        max_val: Maximum value rounded to 2 decimal places.
         q1: 25th percentile rounded to 2 decimal places.
         q2: 50th percentile (same as median) rounded to 2 decimal places.
         q3: 75th percentile rounded to 2 decimal places.
@@ -46,6 +51,7 @@ class DescriptiveStats:
     mode: float | None
     variance: float
     std: float
+    max_val: float
     q1: float
     q2: float
     q3: float
@@ -101,6 +107,7 @@ def descriptive_stats(series: pl.Series) -> DescriptiveStats:
             mode=None,
             variance=0.0,
             std=0.0,
+            max_val=0.0,
             q1=0.0,
             q2=0.0,
             q3=0.0,
@@ -134,6 +141,9 @@ def descriptive_stats(series: pl.Series) -> DescriptiveStats:
     std_raw = non_null.std()
     std_val = round(float(std_raw), 2) if std_raw is not None else 0.0
 
+    max_raw = non_null.max()
+    max_val = round(float(max_raw), 2) if max_raw is not None else 0.0
+
     q1_val = round(float(non_null.quantile(0.25, interpolation="linear")), 2)  # type: ignore[arg-type]
     q2_val = round(float(non_null.quantile(0.50, interpolation="linear")), 2)  # type: ignore[arg-type]
     q3_val = round(float(non_null.quantile(0.75, interpolation="linear")), 2)  # type: ignore[arg-type]
@@ -153,6 +163,7 @@ def descriptive_stats(series: pl.Series) -> DescriptiveStats:
         mode=mode_val,
         variance=variance_val,
         std=std_val,
+        max_val=max_val,
         q1=q1_val,
         q2=q2_val,
         q3=q3_val,
@@ -229,5 +240,70 @@ def conditional_probability(
             is_low_confidence=is_low_confidence,
             excluded_null_count=total_null_count,
         )
+
+    return results
+
+
+def descriptive_stats_tiempo_gestion(df: pl.DataFrame) -> DescriptiveStats:
+    """Calculate descriptive statistics specifically for tiempo_gestion_dias.
+
+    Convenience wrapper that extracts the `tiempo_gestion_dias` column
+    from a DataFrame and computes full descriptive statistics.
+
+    Args:
+        df: Polars DataFrame containing a `tiempo_gestion_dias` column.
+
+    Returns:
+        DescriptiveStats dataclass with all computed metrics for the field.
+
+    Requirements: 9.1
+    """
+    if "tiempo_gestion_dias" not in df.columns:
+        raise ValueError("DataFrame must contain 'tiempo_gestion_dias' column")
+    return descriptive_stats(df["tiempo_gestion_dias"])
+
+
+def grouped_descriptive_stats(
+    df: pl.DataFrame,
+    value_col: str,
+    group_col: str,
+    min_group_size: int = MIN_GROUP_SIZE,
+) -> dict[str, DescriptiveStats]:
+    """Calculate descriptive statistics per group, excluding groups below MIN_GROUP_SIZE.
+
+    Groups with fewer than `min_group_size` records are excluded from the
+    results for privacy protection (Requirement 9.3).
+
+    Args:
+        df: Polars DataFrame containing value and group columns.
+        value_col: Name of the numeric column to compute stats for.
+        group_col: Name of the column to group by.
+        min_group_size: Minimum number of records required per group (default 5).
+
+    Returns:
+        Dictionary mapping group values (as strings) to DescriptiveStats.
+        Groups with fewer than min_group_size records are excluded.
+
+    Requirements: 9.1, 9.3
+    """
+    results: dict[str, DescriptiveStats] = {}
+
+    # Exclude nulls in group column
+    df_filtered = df.filter(pl.col(group_col).is_not_null())
+
+    # Get group sizes
+    group_counts = df_filtered.group_by(group_col).agg(pl.len().alias("__count__"))
+
+    for row in group_counts.iter_rows(named=True):
+        group_value = str(row[group_col])
+        group_size = int(row["__count__"])
+
+        # Enforce MIN_GROUP_SIZE exclusion (Requirement 9.3)
+        if group_size < min_group_size:
+            continue
+
+        group_df = df_filtered.filter(pl.col(group_col) == row[group_col])
+        stats = descriptive_stats(group_df[value_col])
+        results[group_value] = stats
 
     return results

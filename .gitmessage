@@ -1,0 +1,31 @@
+# <tipo>(<alcance>): <descripción breve>
+#
+# [cuerpo opcional — explica qué y por qué]
+#
+# [pie opcional]
+# Refs: #VOPS-xxx
+# Requirement: REQ-xx
+# BREAKING CHANGE: <descripción si aplica>
+#
+# === Tipos permitidos ===
+# feat     — Nueva funcionalidad
+# fix      — Corrección de bug
+# docs     — Solo documentación
+# style    — Formato (sin cambio lógico)
+# refactor — Refactorización (sin cambio funcional)
+# perf     — Mejora de rendimiento
+# test     — Adición o corrección de tests
+# ci       — Cambios en CI/CD
+# chore    — Mantenimiento general
+# revert   — Revertir un commit previo
+#
+# === Alcances (scopes) ===
+# frontend, backend, api, rbac, audit, etl, pareto, risk,
+# annulations, migration, capacity, ci, db, docs, auth
+#
+# === Reglas ===
+# - Descripción: imperativo, minúscula, sin punto final, ≤ 72 chars
+# - Cuerpo: wrap a 72 chars, explica motivación
+# - Breaking change: agregar ! después del tipo o BREAKING CHANGE: en pie
+# - Referenciar ticket: Refs: #VOPS-xxx
+# - Referenciar requisito: Requirement: REQ-xx

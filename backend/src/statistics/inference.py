@@ -3,11 +3,15 @@
 Implements:
 - Pareto analysis: minimum set of categories accounting for ≥80% volume
 - Wilson confidence interval: proportion estimates at 95% confidence
+- Mean confidence interval: 95% CI for continuous variables (t-based)
 - Chi-square test: comparing >2 groups
 - Two-proportion z-test: comparing exactly 2 groups
+- Shapiro-Wilk normality test: testing distribution normality
 
 All statistical finding descriptions use "association" or "correlation" terminology,
 never "causes", "leads to", or "results in".
+
+Requirements: 9.2, 9.3
 """
 
 from __future__ import annotations
@@ -17,6 +21,8 @@ from dataclasses import dataclass, field
 import numpy as np
 import polars as pl
 from scipy import stats
+
+from statistics.descriptive import MIN_GROUP_SIZE
 
 
 # ---------------------------------------------------------------------------
@@ -45,6 +51,38 @@ class TestResult:
     degrees_of_freedom: int | None
     is_significant: bool  # True if p_value < 0.05
     description: str  # uses "association" terminology, never "causes"
+
+
+@dataclass
+class NormalityTestResult:
+    """Result of a Shapiro-Wilk normality test.
+
+    Requirements: 9.2
+    """
+
+    test_name: str = "shapiro_wilk"
+    statistic: float = 0.0
+    p_value: float = 0.0
+    is_normal: bool = False  # True if p_value >= 0.05 (fail to reject H0)
+    sample_size: int = 0
+    description: str = ""
+
+
+@dataclass
+class MeanConfidenceInterval:
+    """Result of a confidence interval estimation for a population mean.
+
+    Uses t-distribution for CI calculation at the specified confidence level.
+
+    Requirements: 9.2
+    """
+
+    mean: float = 0.0
+    lower: float = 0.0
+    upper: float = 0.0
+    confidence_level: float = 0.95
+    std_error: float = 0.0
+    sample_size: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -304,3 +342,237 @@ def two_proportion_z_test(n1: int, p1: float, n2: int, p2: float) -> TestResult:
         is_significant=is_significant,
         description=description,
     )
+
+
+
+# ---------------------------------------------------------------------------
+# Shapiro-Wilk Normality Test
+# ---------------------------------------------------------------------------
+
+
+def shapiro_wilk_test(data: pl.Series) -> NormalityTestResult:
+    """Perform Shapiro-Wilk normality test on a numeric series.
+
+    Tests the null hypothesis that the data was drawn from a normal distribution.
+    If p_value >= 0.05, we fail to reject H0 (data is consistent with normality).
+
+    Parameters
+    ----------
+    data : pl.Series
+        Numeric series to test. Null values are excluded.
+        Requires at least MIN_GROUP_SIZE (5) non-null values.
+
+    Returns
+    -------
+    NormalityTestResult
+        Test result with statistic, p-value, normality flag, and description.
+
+    Raises
+    ------
+    ValueError
+        If fewer than MIN_GROUP_SIZE non-null values are present.
+
+    Requirements: 9.2, 9.3
+    """
+    non_null = data.drop_nulls().cast(pl.Float64, strict=False)
+    n = len(non_null)
+
+    if n < MIN_GROUP_SIZE:
+        raise ValueError(
+            f"Shapiro-Wilk test requires at least {MIN_GROUP_SIZE} non-null values, "
+            f"got {n}. Group excluded for privacy protection."
+        )
+
+    values = non_null.to_numpy()
+    stat, p_value = stats.shapiro(values)
+
+    p_value_rounded = round(float(p_value), 4)
+    is_normal = p_value_rounded >= 0.05
+
+    if is_normal:
+        description = (
+            f"The data appears consistent with a normal distribution "
+            f"(Shapiro-Wilk W = {stat:.4f}, p = {p_value_rounded}). "
+            f"We fail to reject the null hypothesis of normality at α = 0.05."
+        )
+    else:
+        description = (
+            f"The data deviates significantly from a normal distribution "
+            f"(Shapiro-Wilk W = {stat:.4f}, p = {p_value_rounded}). "
+            f"The null hypothesis of normality is rejected at α = 0.05."
+        )
+
+    return NormalityTestResult(
+        test_name="shapiro_wilk",
+        statistic=round(float(stat), 4),
+        p_value=p_value_rounded,
+        is_normal=is_normal,
+        sample_size=n,
+        description=description,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Mean Confidence Interval (95% CI, t-based)
+# ---------------------------------------------------------------------------
+
+
+def mean_confidence_interval(
+    data: pl.Series, confidence: float = 0.95
+) -> MeanConfidenceInterval:
+    """Compute a confidence interval for the population mean using t-distribution.
+
+    Parameters
+    ----------
+    data : pl.Series
+        Numeric series. Null values are excluded.
+        Requires at least MIN_GROUP_SIZE (5) non-null values.
+    confidence : float
+        Confidence level (default 0.95 for 95% CI).
+
+    Returns
+    -------
+    MeanConfidenceInterval
+        Mean, lower bound, upper bound, std error, and sample size.
+
+    Raises
+    ------
+    ValueError
+        If fewer than MIN_GROUP_SIZE non-null values or fewer than 2 for CI computation.
+
+    Requirements: 9.2, 9.3
+    """
+    non_null = data.drop_nulls().cast(pl.Float64, strict=False)
+    n = len(non_null)
+
+    if n < MIN_GROUP_SIZE:
+        raise ValueError(
+            f"Confidence interval requires at least {MIN_GROUP_SIZE} non-null values, "
+            f"got {n}. Group excluded for privacy protection."
+        )
+
+    values = non_null.to_numpy()
+    sample_mean = float(np.mean(values))
+    sample_std = float(np.std(values, ddof=1))  # sample std with Bessel correction
+    std_error = sample_std / np.sqrt(n)
+
+    # t critical value for (1 - alpha/2) and n-1 degrees of freedom
+    alpha = 1 - confidence
+    t_crit = float(stats.t.ppf(1 - alpha / 2, df=n - 1))
+
+    margin = t_crit * std_error
+    lower = sample_mean - margin
+    upper = sample_mean + margin
+
+    return MeanConfidenceInterval(
+        mean=round(sample_mean, 2),
+        lower=round(lower, 2),
+        upper=round(upper, 2),
+        confidence_level=confidence,
+        std_error=round(std_error, 4),
+        sample_size=n,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Grouped inference with MIN_GROUP_SIZE enforcement
+# ---------------------------------------------------------------------------
+
+
+def grouped_shapiro_wilk(
+    df: pl.DataFrame,
+    value_col: str,
+    group_col: str,
+    min_group_size: int = MIN_GROUP_SIZE,
+) -> dict[str, NormalityTestResult]:
+    """Perform Shapiro-Wilk test per group, excluding small groups.
+
+    Groups with fewer than `min_group_size` records are excluded
+    for privacy protection (Requirement 9.3).
+
+    Parameters
+    ----------
+    df : pl.DataFrame
+        Input DataFrame.
+    value_col : str
+        Numeric column to test for normality.
+    group_col : str
+        Column to group by.
+    min_group_size : int
+        Minimum group size (default MIN_GROUP_SIZE = 5).
+
+    Returns
+    -------
+    dict[str, NormalityTestResult]
+        Results per group. Small groups are excluded.
+
+    Requirements: 9.2, 9.3
+    """
+    results: dict[str, NormalityTestResult] = {}
+    df_filtered = df.filter(pl.col(group_col).is_not_null())
+
+    group_counts = df_filtered.group_by(group_col).agg(pl.len().alias("__count__"))
+
+    for row in group_counts.iter_rows(named=True):
+        group_value = str(row[group_col])
+        group_size = int(row["__count__"])
+
+        if group_size < min_group_size:
+            continue
+
+        group_df = df_filtered.filter(pl.col(group_col) == row[group_col])
+        result = shapiro_wilk_test(group_df[value_col])
+        results[group_value] = result
+
+    return results
+
+
+def grouped_mean_ci(
+    df: pl.DataFrame,
+    value_col: str,
+    group_col: str,
+    confidence: float = 0.95,
+    min_group_size: int = MIN_GROUP_SIZE,
+) -> dict[str, MeanConfidenceInterval]:
+    """Compute mean confidence intervals per group, excluding small groups.
+
+    Groups with fewer than `min_group_size` records are excluded
+    for privacy protection (Requirement 9.3).
+
+    Parameters
+    ----------
+    df : pl.DataFrame
+        Input DataFrame.
+    value_col : str
+        Numeric column to compute CI for.
+    group_col : str
+        Column to group by.
+    confidence : float
+        Confidence level (default 0.95).
+    min_group_size : int
+        Minimum group size (default MIN_GROUP_SIZE = 5).
+
+    Returns
+    -------
+    dict[str, MeanConfidenceInterval]
+        CI results per group. Small groups are excluded.
+
+    Requirements: 9.2, 9.3
+    """
+    results: dict[str, MeanConfidenceInterval] = {}
+    df_filtered = df.filter(pl.col(group_col).is_not_null())
+
+    group_counts = df_filtered.group_by(group_col).agg(pl.len().alias("__count__"))
+
+    for row in group_counts.iter_rows(named=True):
+        group_value = str(row[group_col])
+        group_size = int(row["__count__"])
+
+        if group_size < min_group_size:
+            continue
+
+        group_df = df_filtered.filter(pl.col(group_col) == row[group_col])
+        result = mean_confidence_interval(group_df[value_col], confidence=confidence)
+        results[group_value] = result
+
+    return results

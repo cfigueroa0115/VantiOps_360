@@ -1,0 +1,10 @@
+[
+  {
+    "email": "auditor.externo@kpmg.com",
+    "expires_at": "2025-12-31T23:59:59Z"
+  },
+  {
+    "domain": "@partner-gas.com",
+    "expires_at": null
+  }
+]

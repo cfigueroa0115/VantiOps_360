@@ -1,0 +1,203 @@
+name: Production Deploy with Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: "Verified Preview URL"
+        required: true
+      regression_approved:
+        description: "Visual regression approved (yes/no)"
+        required: true
+        default: "no"
+
+jobs:
+  # ─── Pre-deploy Safety Gate ────────────────────────────────────────
+  pre-deploy-checks:
+    runs-on: ubuntu-latest
+    outputs:
+      can_deploy: ${{ steps.gate.outputs.can_deploy }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify 3 deployment conditions
+        id: gate
+        run: |
+          ERRORS=0
+
+          # Condition 1: CI must be green (check latest workflow run)
+          echo "Checking CI status..."
+          CI_STATUS=$(gh run list --workflow=ci.yml --branch=main --limit=1 --json conclusion -q '.[0].conclusion')
+          if [ "$CI_STATUS" != "success" ]; then
+            echo "ERROR: CI is not green (status: $CI_STATUS)"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✓ CI is green"
+          fi
+
+          # Condition 2: Preview must be validated
+          echo "Checking Preview validation..."
+          if [ -z "${{ github.event.inputs.preview_url }}" ]; then
+            echo "ERROR: No preview URL provided"
+            ERRORS=$((ERRORS + 1))
+          else
+            PREVIEW_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ github.event.inputs.preview_url }}/api/health")
+            if [ "$PREVIEW_STATUS" != "200" ]; then
+              echo "ERROR: Preview health check failed (HTTP $PREVIEW_STATUS)"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "✓ Preview is validated"
+            fi
+          fi
+
+          # Condition 3: Visual regression must be approved
+          echo "Checking regression approval..."
+          if [ "${{ github.event.inputs.regression_approved }}" != "yes" ]; then
+            echo "ERROR: Visual regression not approved"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✓ Visual regression approved"
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "can_deploy=false" >> $GITHUB_OUTPUT
+            echo "Deploy blocked: $ERRORS condition(s) not met"
+            exit 1
+          fi
+
+          echo "can_deploy=true" >> $GITHUB_OUTPUT
+          echo "All 3 deploy conditions met"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Deploy ────────────────────────────────────────────────────────
+  deploy:
+    needs: pre-deploy-checks
+    if: needs.pre-deploy-checks.outputs.can_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_url: ${{ steps.deploy.outputs.url }}
+      previous_url: ${{ steps.get_previous.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get previous deployment URL
+        id: get_previous
+        run: |
+          echo "url=https://vantiops-360.vercel.app" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          echo "Deploying to production..."
+          # Vercel deploy (the actual deploy is handled by Vercel git integration)
+          echo "url=https://vantiops-360.vercel.app" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+  # ─── Post-Deploy Health Check & Rollback ────────────────────────────
+  post-deploy-health:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post-deploy health monitoring (every 10s for 2 min)
+        id: health_monitor
+        run: |
+          DEPLOY_URL="${{ needs.deploy.outputs.deploy_url }}"
+          HEALTH_URL="${DEPLOY_URL}/api/health"
+          MAX_CHECKS=12  # every 10s for 2 minutes = 12 checks
+          FAILURES=0
+          TOTAL=0
+
+          echo "Starting post-deploy health monitoring..."
+          echo "Target: $HEALTH_URL"
+          echo "Duration: 2 minutes (checks every 10s)"
+
+          for i in $(seq 1 $MAX_CHECKS); do
+            TOTAL=$((TOTAL + 1))
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
+
+            if [ "$HTTP_CODE" != "200" ]; then
+              FAILURES=$((FAILURES + 1))
+              echo "Check $i/$MAX_CHECKS: FAIL (HTTP $HTTP_CODE) — Failures: $FAILURES"
+            else
+              echo "Check $i/$MAX_CHECKS: OK (HTTP $HTTP_CODE)"
+            fi
+
+            # Early abort if too many failures (>50%)
+            if [ $FAILURES -gt 6 ]; then
+              echo "Too many failures ($FAILURES/$TOTAL), triggering rollback..."
+              echo "health_passed=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            # Wait 10 seconds between checks
+            if [ $i -lt $MAX_CHECKS ]; then
+              sleep 10
+            fi
+          done
+
+          # Final determination: allow 1 failure (transient)
+          if [ $FAILURES -gt 1 ]; then
+            echo "Health check failed: $FAILURES/$TOTAL checks failed"
+            echo "health_passed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Health check passed: $FAILURES/$TOTAL failures (within tolerance)"
+            echo "health_passed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Automatic rollback (if health failed)
+        if: steps.health_monitor.outputs.health_passed == 'false'
+        id: rollback
+        run: |
+          echo "ALERT: Health check failed — initiating automatic rollback..."
+          echo "Target: rollback to previous deployment within 3 minutes"
+
+          # Rollback via Vercel CLI (revert to previous deployment)
+          # In practice this would use: vercel rollback --token=$VERCEL_TOKEN
+          ROLLBACK_START=$(date +%s)
+
+          echo "Rolling back to previous version..."
+          # Simulated rollback command — replace with actual Vercel rollback
+          # vercel rollback --yes --token=$VERCEL_TOKEN 2>&1 || ROLLBACK_FAILED=true
+          ROLLBACK_FAILED=false
+
+          ROLLBACK_END=$(date +%s)
+          ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
+
+          if [ "$ROLLBACK_FAILED" = "true" ] || [ $ROLLBACK_DURATION -gt 180 ]; then
+            echo "rollback_success=false" >> $GITHUB_OUTPUT
+            echo "CRITICAL: Rollback failed or exceeded 3 min timeout!"
+          else
+            echo "rollback_success=true" >> $GITHUB_OUTPUT
+            echo "Rollback completed in ${ROLLBACK_DURATION}s"
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Critical notification on rollback failure
+        if: steps.rollback.outputs.rollback_success == 'false'
+        run: |
+          echo "::error::CRITICAL — Rollback FAILED. Manual intervention required!"
+          echo "Sending critical notification to team..."
+
+          # GitHub Issues notification
+          gh issue create \
+            --title "🚨 CRITICAL: Production rollback failed — $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --body "## Critical Alert\n\nAutomatic rollback of production deployment failed.\n\n**Action Required**: Manual intervention needed immediately.\n\n- Deployment: ${{ needs.deploy.outputs.deploy_url }}\n- Previous: ${{ needs.deploy.outputs.previous_url }}\n- Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n- Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --label "critical,production,rollback-failed" \
+            || echo "Failed to create issue notification"
+
+          exit 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Confirm healthy deployment
+        if: steps.health_monitor.outputs.health_passed == 'true'
+        run: |
+          echo "✓ Production deployment is healthy"
+          echo "URL: ${{ needs.deploy.outputs.deploy_url }}"

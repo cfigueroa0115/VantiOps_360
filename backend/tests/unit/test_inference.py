@@ -10,13 +10,20 @@ import polars as pl
 import pytest
 
 from statistics.inference import (
+    MeanConfidenceInterval,
+    NormalityTestResult,
     ParetoResult,
     TestResult,
     chi_square_test,
+    grouped_mean_ci,
+    grouped_shapiro_wilk,
+    mean_confidence_interval,
     pareto_analysis,
+    shapiro_wilk_test,
     two_proportion_z_test,
     wilson_confidence_interval,
 )
+from statistics.descriptive import MIN_GROUP_SIZE
 
 
 # ---------------------------------------------------------------------------
@@ -385,6 +392,175 @@ class TestStatisticalFindingLabeling:
             assert "association" in text or "correlation" in text, (
                 f"Description must contain 'association' or 'correlation': {result.description}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Shapiro-Wilk Normality Test Tests
+# ---------------------------------------------------------------------------
+
+
+class TestShapiroWilkTest:
+    """Tests for shapiro_wilk_test() (Requirement 9.2)."""
+
+    def test_normal_distribution_passes(self):
+        """Data from a normal distribution should not reject normality."""
+        # Use a known normal sample (large enough to be stable)
+        np_rng = __import__("numpy").random.default_rng(42)
+        normal_data = np_rng.normal(loc=10.0, scale=2.0, size=50)
+        series = pl.Series("time", normal_data.tolist())
+
+        result = shapiro_wilk_test(series)
+
+        assert isinstance(result, NormalityTestResult)
+        assert result.test_name == "shapiro_wilk"
+        assert result.is_normal is True
+        assert result.p_value >= 0.05
+        assert result.sample_size == 50
+
+    def test_non_normal_distribution_rejects(self):
+        """Strongly non-normal data (e.g., exponential) should reject normality."""
+        np_rng = __import__("numpy").random.default_rng(42)
+        exp_data = np_rng.exponential(scale=5.0, size=100)
+        series = pl.Series("time", exp_data.tolist())
+
+        result = shapiro_wilk_test(series)
+
+        assert result.is_normal is False
+        assert result.p_value < 0.05
+
+    def test_min_group_size_enforced(self):
+        """Raises ValueError when fewer than MIN_GROUP_SIZE values."""
+        series = pl.Series("time", [1.0, 2.0, 3.0, 4.0])  # 4 < 5
+        with pytest.raises(ValueError, match="at least"):
+            shapiro_wilk_test(series)
+
+    def test_exactly_min_group_size(self):
+        """Exactly MIN_GROUP_SIZE values should be accepted."""
+        series = pl.Series("time", [1.0, 2.0, 3.0, 4.0, 5.0])
+        result = shapiro_wilk_test(series)
+        assert result.sample_size == 5
+
+    def test_null_values_excluded(self):
+        """Null values are excluded before testing."""
+        series = pl.Series("time", [1.0, 2.0, 3.0, None, 4.0, 5.0, None])
+        result = shapiro_wilk_test(series)
+        assert result.sample_size == 5
+
+    def test_p_value_rounded_to_4_decimals(self):
+        """p-value is rounded to 4 decimal places."""
+        series = pl.Series("time", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+        result = shapiro_wilk_test(series)
+        assert result.p_value == round(result.p_value, 4)
+
+
+# ---------------------------------------------------------------------------
+# Mean Confidence Interval Tests
+# ---------------------------------------------------------------------------
+
+
+class TestMeanConfidenceInterval:
+    """Tests for mean_confidence_interval() (Requirement 9.2)."""
+
+    def test_basic_ci(self):
+        """CI contains the sample mean and bounds are ordered."""
+        series = pl.Series("time", [10.0, 12.0, 14.0, 16.0, 18.0, 20.0])
+        result = mean_confidence_interval(series)
+
+        assert isinstance(result, MeanConfidenceInterval)
+        assert result.lower <= result.mean <= result.upper
+        assert result.confidence_level == 0.95
+        assert result.sample_size == 6
+        assert result.mean == pytest.approx(15.0, abs=0.01)
+
+    def test_larger_sample_narrower_ci(self):
+        """Larger sample size produces narrower CI."""
+        small = pl.Series("t", [5.0, 10.0, 15.0, 20.0, 25.0])
+        large = pl.Series("t", [5.0, 10.0, 15.0, 20.0, 25.0] * 10)
+
+        ci_small = mean_confidence_interval(small)
+        ci_large = mean_confidence_interval(large)
+
+        width_small = ci_small.upper - ci_small.lower
+        width_large = ci_large.upper - ci_large.lower
+        assert width_large < width_small
+
+    def test_min_group_size_enforced(self):
+        """Raises ValueError when fewer than MIN_GROUP_SIZE values."""
+        series = pl.Series("time", [1.0, 2.0, 3.0])  # 3 < 5
+        with pytest.raises(ValueError, match="at least"):
+            mean_confidence_interval(series)
+
+    def test_null_values_excluded(self):
+        """Null values are excluded before computing CI."""
+        series = pl.Series("time", [1.0, None, 3.0, 4.0, 5.0, 6.0, None])
+        result = mean_confidence_interval(series)
+        assert result.sample_size == 5
+
+    def test_constant_series_zero_width(self):
+        """Constant values produce a zero-width CI (lower == upper == mean)."""
+        series = pl.Series("time", [7.0] * 10)
+        result = mean_confidence_interval(series)
+        assert result.lower == result.mean == result.upper == 7.0
+
+    def test_custom_confidence_level(self):
+        """99% CI is wider than 95% CI."""
+        series = pl.Series("time", [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+        ci_95 = mean_confidence_interval(series, confidence=0.95)
+        ci_99 = mean_confidence_interval(series, confidence=0.99)
+
+        width_95 = ci_95.upper - ci_95.lower
+        width_99 = ci_99.upper - ci_99.lower
+        assert width_99 > width_95
+
+
+# ---------------------------------------------------------------------------
+# Grouped Inference with MIN_GROUP_SIZE Tests
+# ---------------------------------------------------------------------------
+
+
+class TestGroupedInference:
+    """Tests for grouped_shapiro_wilk and grouped_mean_ci (Req 9.2, 9.3)."""
+
+    def test_grouped_shapiro_excludes_small_groups(self):
+        """Groups below MIN_GROUP_SIZE are excluded from Shapiro-Wilk results."""
+        df = pl.DataFrame({
+            "time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 1.0, 2.0, 3.0],
+            "cause": ["A"] * 10 + ["B"] * 3,
+        })
+        results = grouped_shapiro_wilk(df, "time", "cause")
+
+        assert "A" in results
+        assert "B" not in results  # only 3 records
+
+    def test_grouped_mean_ci_excludes_small_groups(self):
+        """Groups below MIN_GROUP_SIZE are excluded from CI results."""
+        df = pl.DataFrame({
+            "time": [5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 1.0, 2.0],
+            "cause": ["X"] * 6 + ["Y"] * 2,
+        })
+        results = grouped_mean_ci(df, "time", "cause")
+
+        assert "X" in results
+        assert "Y" not in results  # only 2 records
+
+    def test_grouped_shapiro_at_boundary(self):
+        """Groups with exactly MIN_GROUP_SIZE records are included."""
+        df = pl.DataFrame({
+            "time": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "cause": ["A"] * 5,
+        })
+        results = grouped_shapiro_wilk(df, "time", "cause")
+        assert "A" in results
+
+    def test_grouped_mean_ci_at_boundary(self):
+        """Groups with exactly MIN_GROUP_SIZE records are included in CI."""
+        df = pl.DataFrame({
+            "time": [10.0, 20.0, 30.0, 40.0, 50.0],
+            "cause": ["Z"] * 5,
+        })
+        results = grouped_mean_ci(df, "time", "cause")
+        assert "Z" in results
+        assert results["Z"].mean == 30.0
 
 
 # ---------------------------------------------------------------------------

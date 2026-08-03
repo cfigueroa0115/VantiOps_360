@@ -3,12 +3,13 @@
 All endpoints serve pre-aggregated data from curated Parquet files via DuckDB.
 No individual record values are exposed (minimum group size >= 5).
 
-Requirements: 5.4, 12.1, 13.2, 14.2
+Requirements: 5.4, 5.5, 5.6, 5.7, 12.1, 13.2, 14.2
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -33,6 +34,7 @@ from api.models import (
     RCAResponse,
     RiskModelResponse,
 )
+from core.retry import retry_policy
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,12 @@ DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "curated"
 CURATED_FILE = DATA_DIR / "pqr_curated.parquet"
 
 MIN_GROUP_SIZE = 5
+
+# Configurable high concentration threshold (REQ-05.5)
+# Default: 0.40 (40%) — the top cause is flagged when its share exceeds this value
+PARETO_HIGH_CONCENTRATION_THRESHOLD = float(
+    os.environ.get("PARETO_HIGH_CONCENTRATION_THRESHOLD", "0.40")
+)
 
 
 class ChartType(str, Enum):
@@ -316,8 +324,15 @@ async def get_chart_data(
 # ---------------------------------------------------------------------------
 
 
+@retry_policy(max_retries=3, base_delay=2.0, max_delay=30.0)
 def _chart_pareto(base: str, params: list) -> list[dict]:
-    """Pareto: causes sorted by frequency with cumulative percentage."""
+    """Pareto: causes sorted by frequency with cumulative percentage.
+
+    Extended with high concentration fields per REQ-05.5, REQ-05.6:
+    - high_concentration: boolean, true when top cause share > threshold
+    - concentration_pct: float, percentage of top cause
+    - analysis_level: enum indicating the analytical depth level
+    """
     sql = f"""
     WITH filtered AS ({base}),
     counts AS (
@@ -337,7 +352,24 @@ def _chart_pareto(base: str, params: list) -> list[dict]:
     FROM counts, total
     ORDER BY count DESC
     """
-    return _execute_query(sql, params)
+    rows = _execute_query(sql, params)
+
+    # Enrich with high concentration fields (REQ-05.5, REQ-05.6)
+    if rows:
+        top_cause_pct = rows[0]["percentage"] / 100.0  # Convert to fraction for comparison
+        threshold = PARETO_HIGH_CONCENTRATION_THRESHOLD
+
+        for i, row in enumerate(rows):
+            cause_pct = row["percentage"] / 100.0
+            # high_concentration: true only for the top cause when it exceeds threshold
+            is_high_concentration = (i == 0) and (top_cause_pct > threshold)
+            row["high_concentration"] = is_high_concentration
+            row["concentration_pct"] = row["percentage"]
+            # analysis_level: statistical_concentration by default
+            # (causal_hypothesis requires triangulation; validated_root_cause requires expert validation)
+            row["analysis_level"] = "statistical_concentration"
+
+    return rows
 
 
 def _chart_top_causes(base: str, params: list) -> list[dict]:
