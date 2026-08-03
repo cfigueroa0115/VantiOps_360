@@ -254,6 +254,9 @@ export default function DashboardPage() {
                 loading={false}
                 error={null}
               />
+              <p className="text-[10px] text-gray-400 mt-2 px-1 italic">
+                Conclusiones analíticas del ejercicio, derivadas de la base suministrada para la prueba técnica.
+              </p>
             </ErrorBoundary>
           </div>
         </div>
