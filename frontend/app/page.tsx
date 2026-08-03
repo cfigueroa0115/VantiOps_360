@@ -21,6 +21,8 @@ import { OpenCasesHistogram } from "@/components/charts/OpenCasesHistogram";
 import { FindingsTable } from "@/components/charts/FindingsTable";
 import { Database } from "lucide-react";
 import { parseParetoData, parseTopCauseData, parseCancellationData, parseDistributionData, parseTemporalData, parseP90Data, parseHistogramData } from "@/lib/charts/parsers";
+import { parseQualityReport } from "@/lib/quality/parse-quality-report";
+import { formatMetric } from "@/lib/charts/number-format";
 
 function QualityScoreCard({
   overallScore,
@@ -38,11 +40,6 @@ function QualityScoreCard({
   const score = overallScore ?? 0;
   const color = score >= 90 ? "text-green-600" : score >= 70 ? "text-amber-600" : "text-red-600";
   const barColor = score >= 90 ? "bg-green-500" : score >= 70 ? "bg-amber-500" : "bg-red-500";
-  
-  const fmt = (v: unknown) => {
-    const n = typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" ? Number(v) : 0;
-    return Number.isFinite(n) ? n.toFixed(1) + "%" : "—";
-  };
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -59,7 +56,7 @@ function QualityScoreCard({
       {overallScore !== null ? (
         <>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className={`text-3xl font-bold ${color}`}>{fmt(score)}</span>
+            <span className={`text-3xl font-bold ${color}`}>{formatMetric(score)}</span>
             <span className="text-xs text-gray-400">score compuesto</span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
@@ -67,12 +64,12 @@ function QualityScoreCard({
           </div>
           {dimensions && (
             <div className="grid grid-cols-3 gap-2 text-xs">
-              <div><span className="text-gray-500">Completitud:</span> <span className="font-medium">{fmt(dimensions.completeness)}</span></div>
-              <div><span className="text-gray-500">Validez:</span> <span className="font-medium">{fmt(dimensions.validity)}</span></div>
-              <div><span className="text-gray-500">Consistencia:</span> <span className="font-medium">{fmt(dimensions.consistency)}</span></div>
-              <div><span className="text-gray-500">Unicidad:</span> <span className="font-medium">{fmt(dimensions.uniqueness)}</span></div>
-              <div><span className="text-gray-500">Oportunidad:</span> <span className="font-medium">{fmt(dimensions.timeliness)}</span></div>
-              <div><span className="text-gray-500">Dominio:</span> <span className="font-medium">{fmt(dimensions.domainConformity)}</span></div>
+              <div><span className="text-gray-500">Completitud:</span> <span className="font-medium">{formatMetric(dimensions.completeness)}</span></div>
+              <div><span className="text-gray-500">Validez:</span> <span className="font-medium">{formatMetric(dimensions.validity)}</span></div>
+              <div><span className="text-gray-500">Consistencia:</span> <span className="font-medium">{formatMetric(dimensions.consistency)}</span></div>
+              <div><span className="text-gray-500">Unicidad:</span> <span className="font-medium">{formatMetric(dimensions.uniqueness)}</span></div>
+              <div><span className="text-gray-500">Oportunidad:</span> <span className="font-medium">{formatMetric(dimensions.timeliness)}</span></div>
+              <div><span className="text-gray-500">Dominio:</span> <span className="font-medium">{formatMetric(dimensions.domainConformity)}</span></div>
             </div>
           )}
         </>
@@ -99,12 +96,24 @@ export default function DashboardPage() {
   const histogram = useChartData("open_cases_histogram", filters);
   const quality = useQualityReport(filters);
 
+  const paretoData = useMemo(() => parseParetoData(pareto.data?.data), [pareto.data?.data]);
+  const topCausesData = useMemo(() => parseTopCauseData(topCauses.data?.data), [topCauses.data?.data]);
+  const cancellationData = useMemo(() => parseCancellationData(donut.data?.data), [donut.data?.data]);
+  const temporalData = useMemo(() => parseTemporalData(trend.data?.data), [trend.data?.data]);
+  const companyDistributionData = useMemo(() => parseDistributionData(distCompany.data?.data), [distCompany.data?.data]);
+  const channelDistributionData = useMemo(() => parseDistributionData(distChannel.data?.data), [distChannel.data?.data]);
+  const resultDistributionData = useMemo(() => parseDistributionData(distResult.data?.data), [distResult.data?.data]);
+  const p90Data = useMemo(() => parseP90Data(p90.data?.data), [p90.data?.data]);
+  const histogramData = useMemo(() => parseHistogramData(histogram.data?.data), [histogram.data?.data]);
+
+  const qualityParsed = useMemo(() => parseQualityReport(quality.data), [quality.data]);
+
   const lastUpdated = kpiData
     ? new Date().toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
     : undefined;
 
   return (
-    <div className="flex flex-col h-full">
+    <div data-testid="dashboard-root" className="flex flex-col h-full">
       <Header activeFilterCount={activeCount} lastUpdated={lastUpdated} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -115,7 +124,7 @@ export default function DashboardPage() {
           recordCount={kpiData?.totalPqr}
         />
 
-        <section aria-label="Indicadores clave de rendimiento">
+        <section data-testid="kpi-section" aria-label="Indicadores clave de rendimiento">
           <KPIGrid data={kpiData} loading={kpiLoading} error={kpiError} onRetry={kpiRetry} />
         </section>
 
@@ -133,19 +142,21 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6 lg:col-span-3">
-            <ErrorBoundary componentName="ParetoChart" onReset={pareto.retry} resetKeys={[pareto.data, filters]}>
-              <ParetoChart
-                data={parseParetoData(pareto.data?.data)}
-                loading={pareto.loading}
-                error={pareto.error}
-                onRetry={pareto.retry}
-              />
-            </ErrorBoundary>
+            <div data-testid="pareto-chart">
+              <ErrorBoundary componentName="ParetoChart" onReset={pareto.retry} resetKeys={[pareto.data, filters]}>
+                <ParetoChart
+                  data={paretoData}
+                  loading={pareto.loading}
+                  error={pareto.error}
+                  onRetry={pareto.retry}
+                />
+              </ErrorBoundary>
+            </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <ErrorBoundary componentName="TopCausesBar" onReset={topCauses.retry} resetKeys={[topCauses.data, filters]}>
                 <TopCausesBar
-                  data={parseTopCauseData(topCauses.data?.data)}
+                  data={topCausesData}
                   loading={topCauses.loading}
                   error={topCauses.error}
                   onRetry={topCauses.retry}
@@ -154,7 +165,7 @@ export default function DashboardPage() {
 
               <ErrorBoundary componentName="CancellationDonut" onReset={donut.retry} resetKeys={[donut.data, filters]}>
                 <CancellationDonut
-                  data={parseCancellationData(donut.data?.data)}
+                  data={cancellationData}
                   loading={donut.loading}
                   error={donut.error}
                   onRetry={donut.retry}
@@ -164,7 +175,7 @@ export default function DashboardPage() {
 
             <ErrorBoundary componentName="TemporalTrend" onReset={trend.retry} resetKeys={[trend.data, filters]}>
               <TemporalTrend
-                data={parseTemporalData(trend.data?.data)}
+                data={temporalData}
                 loading={trend.loading}
                 error={trend.error}
                 onRetry={trend.retry}
@@ -174,7 +185,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <ErrorBoundary componentName="DistributionBar-Company" onReset={distCompany.retry} resetKeys={[distCompany.data, filters]}>
                 <DistributionBar
-                  data={parseDistributionData(distCompany.data?.data)}
+                  data={companyDistributionData}
                   title="Distribución por Empresa"
                   loading={distCompany.loading}
                   error={distCompany.error}
@@ -183,7 +194,7 @@ export default function DashboardPage() {
               </ErrorBoundary>
               <ErrorBoundary componentName="DistributionBar-Channel" onReset={distChannel.retry} resetKeys={[distChannel.data, filters]}>
                 <DistributionBar
-                  data={parseDistributionData(distChannel.data?.data)}
+                  data={channelDistributionData}
                   title="Distribución por Canal"
                   color="#8b5cf6"
                   loading={distChannel.loading}
@@ -193,7 +204,7 @@ export default function DashboardPage() {
               </ErrorBoundary>
               <ErrorBoundary componentName="DistributionBar-Result" onReset={distResult.retry} resetKeys={[distResult.data, filters]}>
                 <DistributionBar
-                  data={parseDistributionData(distResult.data?.data)}
+                  data={resultDistributionData}
                   title="Distribución por Resultado"
                   color="#06b6d4"
                   loading={distResult.loading}
@@ -205,7 +216,7 @@ export default function DashboardPage() {
 
             <ErrorBoundary componentName="P90ByCauseBar" onReset={p90.retry} resetKeys={[p90.data, filters]}>
               <P90ByCauseBar
-                data={parseP90Data(p90.data?.data)}
+                data={p90Data}
                 loading={p90.loading}
                 error={p90.error}
                 onRetry={p90.retry}
@@ -215,7 +226,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <ErrorBoundary componentName="OpenCasesHistogram" onReset={histogram.retry} resetKeys={[histogram.data, filters]}>
                 <OpenCasesHistogram
-                  data={parseHistogramData(histogram.data?.data)}
+                  data={histogramData}
                   loading={histogram.loading}
                   error={histogram.error}
                   onRetry={histogram.retry}
@@ -223,8 +234,8 @@ export default function DashboardPage() {
               </ErrorBoundary>
               <ErrorBoundary componentName="QualityScoreCard" onReset={quality.retry} resetKeys={[quality.data, filters]}>
                 <QualityScoreCard
-                  overallScore={quality.data?.overallScore ?? null}
-                  dimensions={quality.data?.dimensions ? (quality.data.dimensions as unknown as Record<string, number>) : null}
+                  overallScore={qualityParsed.ok ? qualityParsed.data.overallScore : null}
+                  dimensions={qualityParsed.ok ? qualityParsed.data.dimensions : null}
                   loading={quality.loading}
                   error={quality.error}
                   onRetry={quality.retry}

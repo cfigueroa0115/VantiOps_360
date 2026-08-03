@@ -14,7 +14,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
+    <div data-testid="page-error-view" className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
       <h2 className="text-xl font-bold text-gray-900 mb-2">
         Se presentó un error inesperado
       </h2>
