@@ -65,7 +65,7 @@ export default function ProveedoresPage() {
         <div className="flex items-center gap-3">
           <Award size={24} className="text-green-600" />
           <div>
-            <p className="text-sm text-green-700 font-medium">Recomendación</p>
+            <p className="text-sm text-green-700 font-medium">Resultado del ejercicio simulado</p>
             <p className="text-xl font-bold text-green-800">{winner.name}</p>
           </div>
           <div className="ml-auto text-right">
@@ -182,6 +182,11 @@ export default function ProveedoresPage() {
           <li>• Score final = Σ (calificación × peso) para cada proveedor</li>
         </ul>
       </div>
+
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-500 italic text-center">
+        Los nombres, calificaciones y resultado corresponden a una simulación metodológica y no constituyen una recomendación contractual real.
+      </p>
     </div>
   );
 }

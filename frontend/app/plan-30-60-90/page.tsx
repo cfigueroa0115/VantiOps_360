@@ -126,7 +126,7 @@ export default function Plan306090Page() {
         {/* Current position indicator */}
         <div className="mt-2 flex">
           <div className="w-1/3 flex justify-center">
-            <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full">← Fase actual</span>
+            <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full">← Secuencia recomendada</span>
           </div>
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function Plan306090Page() {
                 <p className="text-sm text-gray-600">{phase.days}</p>
               </div>
               <span className={`ml-auto text-xs font-medium px-3 py-1 rounded-full border ${phase.borderColor} ${phase.color}`}>
-                {phase.deliverables.filter((d) => d.done).length}/{phase.deliverables.length} completados
+                {phase.deliverables.filter((d) => d.done).length}/{phase.deliverables.length} entregables propuestos
               </span>
             </div>
             <p className="text-sm text-gray-700 mb-4 italic">&ldquo;{phase.objective}&rdquo;</p>
