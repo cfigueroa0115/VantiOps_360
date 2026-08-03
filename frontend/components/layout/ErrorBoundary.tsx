@@ -2,10 +2,11 @@ import React from "react";
 import { AlertTriangle } from "lucide-react";
 
 export interface ErrorBoundaryProps {
-  /** Child components to render */
   children: React.ReactNode;
-  /** Optional fallback UI to render on error (overrides default) */
   fallback?: React.ReactNode;
+  onReset?: () => void;
+  resetKeys?: unknown[];
+  componentName?: string;
 }
 
 interface ErrorBoundaryState {
@@ -14,17 +15,17 @@ interface ErrorBoundaryState {
 }
 
 /**
- * React error boundary that catches rendering errors from child chart components
- * and shows a fallback UI with the error message and a "Reintentar" button.
- * (Req 5.5 / 14.8: Graceful error handling for chart render failures)
+ * React error boundary with retry support.
+ * When resetKeys change, the error state is cleared automatically.
+ * The Reintentar button calls onReset (which should re-fetch data).
  */
-export class ErrorBoundary extends React.Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private prevResetKeys: unknown[] | undefined;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
+    this.prevResetKeys = props.resetKeys;
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -32,36 +33,48 @@ export class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    // Log error for debugging; in production this could report to a monitoring service
-    console.error("[ErrorBoundary] Chart render failure:", error, errorInfo);
+    console.error(`[ErrorBoundary${this.props.componentName ? ` - ${this.props.componentName}` : ""}]`, error.message);
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    // Clear error when resetKeys change (e.g., new data arrives or filters change)
+    if (this.state.hasError && this.props.resetKeys) {
+      const keysChanged = !prevProps.resetKeys ||
+        prevProps.resetKeys.length !== this.props.resetKeys.length ||
+        prevProps.resetKeys.some((k, i) => k !== this.props.resetKeys![i]);
+
+      if (keysChanged) {
+        this.setState({ hasError: false, error: null });
+      }
+    }
   }
 
   handleRetry = (): void => {
     this.setState({ hasError: false, error: null });
+    // Call onReset to trigger data re-fetch
+    this.props.onReset?.();
   };
 
   render(): React.ReactNode {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+      if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div
-          className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 p-6 text-center"
-          role="alert"
-        >
+        <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 p-6 text-center" role="alert">
           <AlertTriangle className="mb-3 h-8 w-8 text-red-500" />
           <h3 className="text-sm font-semibold text-red-800">
-            Error al renderizar el componente
+            No fue posible representar este gráfico
           </h3>
           <p className="mt-1 text-xs text-red-600">
-            {this.state.error?.message ?? "Ha ocurrido un error inesperado"}
+            Se detectó una incompatibilidad en los datos recibidos.
           </p>
+          {this.props.componentName && (
+            <p className="mt-1 text-[10px] text-red-400">Componente: {this.props.componentName}</p>
+          )}
           <button
             type="button"
             onClick={this.handleRetry}
-            className="mt-4 inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+            className="mt-4 inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
           >
             Reintentar
           </button>
