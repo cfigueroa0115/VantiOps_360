@@ -4,24 +4,21 @@ import React, { useState } from "react";
 import { FileX2, ArrowRight, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 const STATES = [
-  { key: "RECEIVED", label: "Recibida", color: "bg-gray-500" },
-  { key: "VALIDATING_SENDER", label: "Validando Remitente", color: "bg-blue-500" },
-  { key: "AUTHORIZED", label: "Autorizada", color: "bg-green-500" },
-  { key: "UNAUTHORIZED", label: "No Autorizada", color: "bg-red-500" },
-  { key: "REGISTERED", label: "Registrada", color: "bg-indigo-500" },
-  { key: "UNDER_REVIEW", label: "En Revisión", color: "bg-amber-500" },
-  { key: "APPROVED", label: "Aprobada", color: "bg-emerald-500" },
-  { key: "EXECUTED", label: "Ejecutada", color: "bg-teal-500" },
-  { key: "CLOSED", label: "Cerrada", color: "bg-slate-500" },
+  { key: "SOLICITADA", label: "Solicitada", color: "bg-gray-500" },
+  { key: "EN_REVISION", label: "En Revisión", color: "bg-amber-500" },
+  { key: "APROBADA", label: "Aprobada", color: "bg-emerald-500" },
+  { key: "RECHAZADA", label: "Rechazada", color: "bg-red-500" },
+  { key: "EN_EJECUCION", label: "En Ejecución", color: "bg-teal-500" },
+  { key: "CERRADA", label: "Cerrada", color: "bg-slate-500" },
 ];
 
 const DEMO_CASES = [
-  { id: "ANU-2024-001", client: "María García", service: "Servihogar Plus", currentState: "CLOSED", date: "2024-10-15" },
-  { id: "ANU-2024-002", client: "Carlos Rodríguez", service: "Gas Natural Residencial", currentState: "EXECUTED", date: "2024-11-02" },
-  { id: "ANU-2024-003", client: "Ana Martínez", service: "Servihogar Básico", currentState: "UNDER_REVIEW", date: "2024-11-20" },
-  { id: "ANU-2024-004", client: "Juan López", service: "Revisión Técnica", currentState: "AUTHORIZED", date: "2024-12-01" },
-  { id: "ANU-2024-005", client: "Laura Sánchez", service: "Servihogar Plus", currentState: "VALIDATING_SENDER", date: "2024-12-10" },
-  { id: "ANU-2024-006", client: "Pedro Ramírez", service: "Gas Comercial", currentState: "UNAUTHORIZED", date: "2024-12-12" },
+  { id: "ANU-2024-001", client: "María García", service: "Servihogar Plus", currentState: "CERRADA", date: "2024-10-15" },
+  { id: "ANU-2024-002", client: "Carlos Rodríguez", service: "Gas Natural Residencial", currentState: "EN_EJECUCION", date: "2024-11-02" },
+  { id: "ANU-2024-003", client: "Ana Martínez", service: "Servihogar Básico", currentState: "EN_REVISION", date: "2024-11-20" },
+  { id: "ANU-2024-004", client: "Juan López", service: "Revisión Técnica", currentState: "APROBADA", date: "2024-12-01" },
+  { id: "ANU-2024-005", client: "Laura Sánchez", service: "Servihogar Plus", currentState: "SOLICITADA", date: "2024-12-10" },
+  { id: "ANU-2024-006", client: "Pedro Ramírez", service: "Gas Comercial", currentState: "RECHAZADA", date: "2024-12-12" },
 ];
 
 function StateMachineViz() {
@@ -29,25 +26,19 @@ function StateMachineViz() {
     <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 overflow-x-auto">
       <div className="flex items-center gap-1 min-w-[800px] justify-center flex-wrap">
         {/* Main flow */}
-        <StateNode label="RECEIVED" color="bg-gray-500" />
+        <StateNode label="SOLICITADA" color="bg-gray-500" />
         <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="VALIDATING_SENDER" color="bg-blue-500" />
+        <StateNode label="EN_REVISION" color="bg-amber-500" />
         <ArrowRight size={16} className="text-gray-400 shrink-0" />
         <div className="flex flex-col items-center gap-1">
-          <StateNode label="AUTHORIZED" color="bg-green-500" />
+          <StateNode label="APROBADA" color="bg-emerald-500" />
           <span className="text-[9px] text-gray-400">ó</span>
-          <StateNode label="UNAUTHORIZED" color="bg-red-500" />
+          <StateNode label="RECHAZADA" color="bg-red-500" />
         </div>
         <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="REGISTERED" color="bg-indigo-500" />
+        <StateNode label="EN_EJECUCION" color="bg-teal-500" />
         <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="UNDER_REVIEW" color="bg-amber-500" />
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="APPROVED" color="bg-emerald-500" />
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="EXECUTED" color="bg-teal-500" />
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="CLOSED" color="bg-slate-500" />
+        <StateNode label="CERRADA" color="bg-slate-500" />
       </div>
     </div>
   );
@@ -204,6 +195,11 @@ export default function AnulacionesPage() {
           </table>
         </div>
       </div>
+
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-500 italic text-center">
+        Demostración conceptual del flujo. La lógica backend contiene validación de transiciones, roles y auditoría; esta interfaz no está conectada a sistemas productivos de Vanti.
+      </p>
     </div>
   );
 }
