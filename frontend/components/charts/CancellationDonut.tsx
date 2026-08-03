@@ -53,7 +53,7 @@ export function CancellationDonut({
               nameKey="category"
               paddingAngle={2}
               label={({ category, percentage }: CancellationDataPoint) =>
-                `${category}: ${percentage.toFixed(1)}%`
+                `${category}: ${Number(percentage).toFixed(1)}%`
               }
               labelLine={{ stroke: "#9ca3af" }}
             >
