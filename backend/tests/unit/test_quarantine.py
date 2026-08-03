@@ -72,7 +72,9 @@ class TestQuarantineRecord:
     ):
         """rule_id field is stored with the correct value."""
         record = {"id_pqr": 1}
-        orchestrator.quarantine_record(record, rule_id="NULL_CHECK", reason="Missing required field")
+        orchestrator.quarantine_record(
+            record, rule_id="NULL_CHECK", reason="Missing required field"
+        )
 
         quarantine_path = tmp_output_dir / "staging" / "quarantine.parquet"
         df = pl.read_parquet(quarantine_path)
@@ -135,9 +137,7 @@ class TestQuarantineRecord:
         assert record_data["id_pqr"] == 99
         assert record_data["estado"] == "invalid"
 
-    def test_quarantine_creates_staging_directory_if_missing(
-        self, tmp_path: Path
-    ):
+    def test_quarantine_creates_staging_directory_if_missing(self, tmp_path: Path):
         """Creates staging directory if it doesn't exist."""
         # Use a fresh path without pre-created dirs
         orch = PipelineOrchestrator(output_dir=tmp_path / "fresh_output")
@@ -154,45 +154,49 @@ class TestValidateRecords:
         """Create a valid PQR DataFrame for testing."""
         from datetime import date
 
-        return pl.DataFrame({
-            "id_pqr": list(range(1, n + 1)),
-            "fecha_creacion": [date(2023, 1, 1)] * n,
-            "fecha_cierre": [None] * n,
-            "estado": ["abierto"] * n,
-            "causa": ["causa_test"] * n,
-            "canal_atencion": ["canal_test"] * n,
-            "empresa": ["empresa_test"] * n,
-            "resultado": [None] * n,
-            "unidad_responsable": [None] * n,
-            "marcacion": [None] * n,
-            "motivo_cierre": [None] * n,
-            "tiempo_gestion_dias": [5.0] * n,
-            "tipo_pqr": ["peticion"] * n,
-        })
+        return pl.DataFrame(
+            {
+                "id_pqr": list(range(1, n + 1)),
+                "fecha_creacion": [date(2023, 1, 1)] * n,
+                "fecha_cierre": [None] * n,
+                "estado": ["abierto"] * n,
+                "causa": ["causa_test"] * n,
+                "canal_atencion": ["canal_test"] * n,
+                "empresa": ["empresa_test"] * n,
+                "resultado": [None] * n,
+                "unidad_responsable": [None] * n,
+                "marcacion": [None] * n,
+                "motivo_cierre": [None] * n,
+                "tiempo_gestion_dias": [5.0] * n,
+                "tipo_pqr": ["peticion"] * n,
+            }
+        )
 
     def _make_invalid_df(self) -> pl.DataFrame:
         """Create a DataFrame with invalid records for testing."""
         from datetime import date
 
-        return pl.DataFrame({
-            "id_pqr": [100],
-            "fecha_creacion": [date(2023, 6, 15)],
-            "fecha_cierre": [None],
-            "estado": ["INVALID_STATE"],  # Invalid — not in ["cerrado", "en_proceso", "abierto"]
-            "causa": ["test_causa"],
-            "canal_atencion": ["canal"],
-            "empresa": ["empresa"],
-            "resultado": [None],
-            "unidad_responsable": [None],
-            "marcacion": [None],
-            "motivo_cierre": [None],
-            "tiempo_gestion_dias": [3.0],
-            "tipo_pqr": ["INVALID_TIPO"],  # Invalid — not in ["peticion", "queja", "reclamo"]
-        })
+        return pl.DataFrame(
+            {
+                "id_pqr": [100],
+                "fecha_creacion": [date(2023, 6, 15)],
+                "fecha_cierre": [None],
+                "estado": [
+                    "INVALID_STATE"
+                ],  # Invalid — not in ["cerrado", "en_proceso", "abierto"]
+                "causa": ["test_causa"],
+                "canal_atencion": ["canal"],
+                "empresa": ["empresa"],
+                "resultado": [None],
+                "unidad_responsable": [None],
+                "marcacion": [None],
+                "motivo_cierre": [None],
+                "tiempo_gestion_dias": [3.0],
+                "tipo_pqr": ["INVALID_TIPO"],  # Invalid — not in ["peticion", "queja", "reclamo"]
+            }
+        )
 
-    def test_all_valid_records_pass_through(
-        self, orchestrator: PipelineOrchestrator
-    ):
+    def test_all_valid_records_pass_through(self, orchestrator: PipelineOrchestrator):
         """All valid records are returned with zero quarantined."""
         df = self._make_valid_df(5)
         valid_df, quarantined = orchestrator.validate_records(df)
@@ -221,21 +225,23 @@ class TestValidateRecords:
         from datetime import date
 
         valid_part = self._make_valid_df(2)
-        invalid_part = pl.DataFrame({
-            "id_pqr": [999],
-            "fecha_creacion": [date(2023, 1, 1)],
-            "fecha_cierre": [None],
-            "estado": ["BOGUS"],
-            "causa": ["test"],
-            "canal_atencion": ["canal"],
-            "empresa": ["emp"],
-            "resultado": [None],
-            "unidad_responsable": [None],
-            "marcacion": [None],
-            "motivo_cierre": [None],
-            "tiempo_gestion_dias": [1.0],
-            "tipo_pqr": ["BAD_TYPE"],
-        })
+        invalid_part = pl.DataFrame(
+            {
+                "id_pqr": [999],
+                "fecha_creacion": [date(2023, 1, 1)],
+                "fecha_cierre": [None],
+                "estado": ["BOGUS"],
+                "causa": ["test"],
+                "canal_atencion": ["canal"],
+                "empresa": ["emp"],
+                "resultado": [None],
+                "unidad_responsable": [None],
+                "marcacion": [None],
+                "motivo_cierre": [None],
+                "tiempo_gestion_dias": [1.0],
+                "tipo_pqr": ["BAD_TYPE"],
+            }
+        )
 
         mixed = pl.concat([valid_part, invalid_part], how="diagonal_relaxed")
         valid_df, quarantined = orchestrator.validate_records(mixed)
@@ -267,6 +273,7 @@ class TestValidateRecords:
 
         # If this completes quickly without sleeping, it confirms no retry happened
         import time
+
         start = time.time()
         orchestrator.validate_records(invalid_df)
         elapsed = time.time() - start

@@ -56,14 +56,28 @@ class TestPermissionEnum:
     def test_has_all_permission_categories(self):
         """All permission codes from the spec are present."""
         expected_permissions = {
-            "READ_DASHBOARD", "READ_CHARTS", "READ_KPIS", "READ_FILTERS",
-            "READ_RCA", "READ_QUALITY", "READ_RISK", "READ_STATISTICS",
-            "READ_REPORTS", "EXPORT_DATA",
-            "READ_ANNULATIONS", "CREATE_ANNULATION", "APPROVE_ANNULATION",
-            "READ_CAPACITY", "MANAGE_CAPACITY",
-            "READ_AUDIT", "READ_EVIDENCE",
-            "APPROVE_LEGAL", "APPROVE_VP",
-            "MANAGE_USERS", "MANAGE_ROLES", "MANAGE_CONFIG",
+            "READ_DASHBOARD",
+            "READ_CHARTS",
+            "READ_KPIS",
+            "READ_FILTERS",
+            "READ_RCA",
+            "READ_QUALITY",
+            "READ_RISK",
+            "READ_STATISTICS",
+            "READ_REPORTS",
+            "EXPORT_DATA",
+            "READ_ANNULATIONS",
+            "CREATE_ANNULATION",
+            "APPROVE_ANNULATION",
+            "READ_CAPACITY",
+            "MANAGE_CAPACITY",
+            "READ_AUDIT",
+            "READ_EVIDENCE",
+            "APPROVE_LEGAL",
+            "APPROVE_VP",
+            "MANAGE_USERS",
+            "MANAGE_ROLES",
+            "MANAGE_CONFIG",
             "INGEST_DATA",
             "MANAGE_OWN_PARTNER",
         }
@@ -165,9 +179,7 @@ class TestPermissionMatrix:
         }
         for role in Role:
             role_perms = PERMISSIONS[role]
-            assert basic_read.issubset(role_perms), (
-                f"Role {role} missing basic read permissions"
-            )
+            assert basic_read.issubset(role_perms), f"Role {role} missing basic read permissions"
 
 
 class TestValidateRole:
@@ -299,6 +311,6 @@ class TestValidateSingleRoleAssignment:
 
     def test_multiple_valid_roles_invalid(self):
         """Multiple valid roles are rejected."""
-        assert validate_single_role_assignment(
-            ["SYSTEM_ADMIN", "OPERATIONS_LEAD", "ANALYST"]
-        ) is False
+        assert (
+            validate_single_role_assignment(["SYSTEM_ADMIN", "OPERATIONS_LEAD", "ANALYST"]) is False
+        )

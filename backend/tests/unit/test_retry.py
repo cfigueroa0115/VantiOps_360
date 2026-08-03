@@ -191,7 +191,9 @@ class TestRetryPolicy:
     def test_custom_config(self):
         call_count = 0
 
-        @retry_policy(max_retries=5, base_delay=1.0, max_delay=10.0, jitter=0.0, sleep_func=lambda _: None)
+        @retry_policy(
+            max_retries=5, base_delay=1.0, max_delay=10.0, jitter=0.0, sleep_func=lambda _: None
+        )
         def fail_four_times():
             nonlocal call_count
             call_count += 1

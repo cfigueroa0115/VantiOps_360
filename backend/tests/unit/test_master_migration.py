@@ -36,21 +36,28 @@ from migration.master_records import (
 
 def _make_valid_df(n: int = 10) -> pl.DataFrame:
     """Create a valid PQR DataFrame with n records."""
-    return pl.DataFrame({
-        "id_pqr": list(range(1, n + 1)),
-        "fecha_creacion": [date(2023, 1, i % 28 + 1) for i in range(n)],
-        "fecha_cierre": [date(2023, 2, i % 28 + 1) for i in range(n)],
-        "estado": ["cerrado" if i % 3 == 0 else "en_proceso" if i % 3 == 1 else "abierto" for i in range(n)],
-        "causa": [f"causa_{i}" for i in range(n)],
-        "canal_atencion": [f"canal_{i}" for i in range(n)],
-        "empresa": [f"empresa_{i}" for i in range(n)],
-        "resultado": [f"resultado_{i}" for i in range(n)],
-        "unidad_responsable": [f"unidad_{i}" for i in range(n)],
-        "marcacion": [f"marcacion_{i}" for i in range(n)],
-        "motivo_cierre": [f"motivo_{i}" for i in range(n)],
-        "tiempo_gestion_dias": [float(i * 2) for i in range(n)],
-        "tipo_pqr": ["peticion" if i % 3 == 0 else "queja" if i % 3 == 1 else "reclamo" for i in range(n)],
-    })
+    return pl.DataFrame(
+        {
+            "id_pqr": list(range(1, n + 1)),
+            "fecha_creacion": [date(2023, 1, i % 28 + 1) for i in range(n)],
+            "fecha_cierre": [date(2023, 2, i % 28 + 1) for i in range(n)],
+            "estado": [
+                "cerrado" if i % 3 == 0 else "en_proceso" if i % 3 == 1 else "abierto"
+                for i in range(n)
+            ],
+            "causa": [f"causa_{i}" for i in range(n)],
+            "canal_atencion": [f"canal_{i}" for i in range(n)],
+            "empresa": [f"empresa_{i}" for i in range(n)],
+            "resultado": [f"resultado_{i}" for i in range(n)],
+            "unidad_responsable": [f"unidad_{i}" for i in range(n)],
+            "marcacion": [f"marcacion_{i}" for i in range(n)],
+            "motivo_cierre": [f"motivo_{i}" for i in range(n)],
+            "tiempo_gestion_dias": [float(i * 2) for i in range(n)],
+            "tipo_pqr": [
+                "peticion" if i % 3 == 0 else "queja" if i % 3 == 1 else "reclamo" for i in range(n)
+            ],
+        }
+    )
 
 
 def _make_mock_db(success: bool = True) -> MagicMock:
@@ -60,11 +67,13 @@ def _make_mock_db(success: bool = True) -> MagicMock:
     def mock_upsert(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         results = []
         for record in records:
-            results.append({
-                "source_record_id": str(record.get("id_pqr", "unknown")),
-                "status": "migrated" if success else "failed",
-                "error": None if success else "simulated failure",
-            })
+            results.append(
+                {
+                    "source_record_id": str(record.get("id_pqr", "unknown")),
+                    "status": "migrated" if success else "failed",
+                    "error": None if success else "simulated failure",
+                }
+            )
         return results
 
     mock_db.execute_upsert.side_effect = mock_upsert
@@ -127,7 +136,9 @@ class TestProfile:
         with pytest.raises(FileNotFoundError, match="Source file not found"):
             pipeline.profile(missing_path)
 
-    def test_profile_returns_all_columns(self, pipeline: MasterMigrationPipeline, source_parquet: Path):
+    def test_profile_returns_all_columns(
+        self, pipeline: MasterMigrationPipeline, source_parquet: Path
+    ):
         """Profile returns DataFrame with all expected PQR columns."""
         df = pipeline.profile(source_parquet)
         expected_cols = {"id_pqr", "estado", "causa", "canal_atencion", "empresa", "tipo_pqr"}
@@ -142,40 +153,46 @@ class TestClean:
 
     def test_clean_lowercases_estado(self, pipeline: MasterMigrationPipeline):
         """Clean stage lowercases the estado field."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "estado": ["CERRADO", "En_Proceso", "ABIERTO"],
-            "tipo_pqr": ["peticion", "queja", "reclamo"],
-            "causa": ["c1", "c2", "c3"],
-            "canal_atencion": ["canal1", "canal2", "canal3"],
-            "empresa": ["emp1", "emp2", "emp3"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "estado": ["CERRADO", "En_Proceso", "ABIERTO"],
+                "tipo_pqr": ["peticion", "queja", "reclamo"],
+                "causa": ["c1", "c2", "c3"],
+                "canal_atencion": ["canal1", "canal2", "canal3"],
+                "empresa": ["emp1", "emp2", "emp3"],
+            }
+        )
         cleaned = pipeline.clean(df)
         assert cleaned["estado"].to_list() == ["cerrado", "en_proceso", "abierto"]
 
     def test_clean_lowercases_tipo_pqr(self, pipeline: MasterMigrationPipeline):
         """Clean stage lowercases the tipo_pqr field."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "estado": ["cerrado", "abierto"],
-            "tipo_pqr": ["PETICION", "Queja"],
-            "causa": ["c1", "c2"],
-            "canal_atencion": ["canal1", "canal2"],
-            "empresa": ["emp1", "emp2"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "estado": ["cerrado", "abierto"],
+                "tipo_pqr": ["PETICION", "Queja"],
+                "causa": ["c1", "c2"],
+                "canal_atencion": ["canal1", "canal2"],
+                "empresa": ["emp1", "emp2"],
+            }
+        )
         cleaned = pipeline.clean(df)
         assert cleaned["tipo_pqr"].to_list() == ["peticion", "queja"]
 
     def test_clean_trims_whitespace(self, pipeline: MasterMigrationPipeline):
         """Clean stage trims whitespace from string columns."""
-        df = pl.DataFrame({
-            "id_pqr": [1],
-            "estado": ["  cerrado  "],
-            "tipo_pqr": [" peticion "],
-            "causa": ["  causa1  "],
-            "canal_atencion": [" canal1 "],
-            "empresa": [" empresa1 "],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1],
+                "estado": ["  cerrado  "],
+                "tipo_pqr": [" peticion "],
+                "causa": ["  causa1  "],
+                "canal_atencion": [" canal1 "],
+                "empresa": [" empresa1 "],
+            }
+        )
         cleaned = pipeline.clean(df)
         assert cleaned["causa"][0] == "causa1"
         assert cleaned["canal_atencion"][0] == "canal1"
@@ -198,15 +215,17 @@ class TestValidate:
 
     def test_validate_quarantines_invalid_estado(self, pipeline: MasterMigrationPipeline):
         """Records with invalid estado are quarantined."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "estado": ["cerrado", "invalido"],
-            "tipo_pqr": ["peticion", "queja"],
-            "causa": ["c1", "c2"],
-            "canal_atencion": ["canal1", "canal2"],
-            "empresa": ["emp1", "emp2"],
-            "tiempo_gestion_dias": [1.0, 2.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "estado": ["cerrado", "invalido"],
+                "tipo_pqr": ["peticion", "queja"],
+                "causa": ["c1", "c2"],
+                "canal_atencion": ["canal1", "canal2"],
+                "empresa": ["emp1", "emp2"],
+                "tiempo_gestion_dias": [1.0, 2.0],
+            }
+        )
         valid_df, quarantined = pipeline.validate(df)
         assert valid_df.height == 1
         assert len(quarantined) == 1
@@ -215,60 +234,68 @@ class TestValidate:
 
     def test_validate_quarantines_null_id_pqr(self, pipeline: MasterMigrationPipeline):
         """Records with null id_pqr are quarantined."""
-        df = pl.DataFrame({
-            "id_pqr": [None, 2],
-            "estado": ["cerrado", "abierto"],
-            "tipo_pqr": ["peticion", "queja"],
-            "causa": ["c1", "c2"],
-            "canal_atencion": ["canal1", "canal2"],
-            "empresa": ["emp1", "emp2"],
-            "tiempo_gestion_dias": [1.0, 2.0],
-        }).cast({"id_pqr": pl.Int64})
+        df = pl.DataFrame(
+            {
+                "id_pqr": [None, 2],
+                "estado": ["cerrado", "abierto"],
+                "tipo_pqr": ["peticion", "queja"],
+                "causa": ["c1", "c2"],
+                "canal_atencion": ["canal1", "canal2"],
+                "empresa": ["emp1", "emp2"],
+                "tiempo_gestion_dias": [1.0, 2.0],
+            }
+        ).cast({"id_pqr": pl.Int64})
         valid_df, quarantined = pipeline.validate(df)
         assert valid_df.height == 1
         assert any(q.failed_field == "id_pqr" for q in quarantined)
 
     def test_validate_quarantines_empty_causa(self, pipeline: MasterMigrationPipeline):
         """Records with empty causa are quarantined."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "estado": ["cerrado", "abierto"],
-            "tipo_pqr": ["peticion", "queja"],
-            "causa": ["valid_causa", ""],
-            "canal_atencion": ["canal1", "canal2"],
-            "empresa": ["emp1", "emp2"],
-            "tiempo_gestion_dias": [1.0, 2.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "estado": ["cerrado", "abierto"],
+                "tipo_pqr": ["peticion", "queja"],
+                "causa": ["valid_causa", ""],
+                "canal_atencion": ["canal1", "canal2"],
+                "empresa": ["emp1", "emp2"],
+                "tiempo_gestion_dias": [1.0, 2.0],
+            }
+        )
         valid_df, quarantined = pipeline.validate(df)
         assert valid_df.height == 1
         assert any(q.failed_field == "causa" for q in quarantined)
 
     def test_validate_quarantines_negative_tiempo(self, pipeline: MasterMigrationPipeline):
         """Records with negative tiempo_gestion_dias are quarantined."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "estado": ["cerrado", "abierto"],
-            "tipo_pqr": ["peticion", "queja"],
-            "causa": ["c1", "c2"],
-            "canal_atencion": ["canal1", "canal2"],
-            "empresa": ["emp1", "emp2"],
-            "tiempo_gestion_dias": [5.0, -1.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "estado": ["cerrado", "abierto"],
+                "tipo_pqr": ["peticion", "queja"],
+                "causa": ["c1", "c2"],
+                "canal_atencion": ["canal1", "canal2"],
+                "empresa": ["emp1", "emp2"],
+                "tiempo_gestion_dias": [5.0, -1.0],
+            }
+        )
         valid_df, quarantined = pipeline.validate(df)
         assert valid_df.height == 1
         assert any(q.failed_field == "tiempo_gestion_dias" for q in quarantined)
 
     def test_validate_quarantines_invalid_tipo_pqr(self, pipeline: MasterMigrationPipeline):
         """Records with invalid tipo_pqr are quarantined."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "estado": ["cerrado", "abierto"],
-            "tipo_pqr": ["peticion", "invalido_tipo"],
-            "causa": ["c1", "c2"],
-            "canal_atencion": ["canal1", "canal2"],
-            "empresa": ["emp1", "emp2"],
-            "tiempo_gestion_dias": [1.0, 2.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "estado": ["cerrado", "abierto"],
+                "tipo_pqr": ["peticion", "invalido_tipo"],
+                "causa": ["c1", "c2"],
+                "canal_atencion": ["canal1", "canal2"],
+                "empresa": ["emp1", "emp2"],
+                "tiempo_gestion_dias": [1.0, 2.0],
+            }
+        )
         valid_df, quarantined = pipeline.validate(df)
         assert valid_df.height == 1
         assert any(q.failed_field == "tipo_pqr" for q in quarantined)
@@ -361,9 +388,15 @@ class TestReconcile:
         pipeline = MasterMigrationPipeline(db=db, config=config)
         # Simulate 3 quarantined records
         pipeline._quarantined = [
-            QuarantinedRecord(record_id="1", failed_field="f", rule_violated="r", rejected_value="v"),
-            QuarantinedRecord(record_id="2", failed_field="f", rule_violated="r", rejected_value="v"),
-            QuarantinedRecord(record_id="3", failed_field="f", rule_violated="r", rejected_value="v"),
+            QuarantinedRecord(
+                record_id="1", failed_field="f", rule_violated="r", rejected_value="v"
+            ),
+            QuarantinedRecord(
+                record_id="2", failed_field="f", rule_violated="r", rejected_value="v"
+            ),
+            QuarantinedRecord(
+                record_id="3", failed_field="f", rule_violated="r", rejected_value="v"
+            ),
         ]
         result = pipeline.reconcile(source_count=10, success_count=7)
         assert result["quarantined_count"] == 3
@@ -388,9 +421,17 @@ class TestReport:
         )
         report_dict = report.to_dict()
         required_keys = {
-            "batch_id", "total_records", "success_count", "failed_count",
-            "quarantined_count", "success_rate", "duration_seconds",
-            "started_at", "completed_at", "status", "quarantined_records",
+            "batch_id",
+            "total_records",
+            "success_count",
+            "failed_count",
+            "quarantined_count",
+            "success_rate",
+            "duration_seconds",
+            "started_at",
+            "completed_at",
+            "status",
+            "quarantined_records",
             "reconciliation_status",
         }
         assert required_keys.issubset(set(report_dict.keys()))
@@ -422,7 +463,9 @@ class TestReport:
         assert report.is_successful is False
         assert report.status == "failed"
 
-    def test_report_save_creates_json(self, pipeline: MasterMigrationPipeline, config: MigrationConfig):
+    def test_report_save_creates_json(
+        self, pipeline: MasterMigrationPipeline, config: MigrationConfig
+    ):
         """save_report writes a valid JSON file."""
         report = pipeline.generate_report(
             total_records=100,
@@ -518,15 +561,17 @@ class TestFullPipeline:
     def test_full_pipeline_with_invalid_records(self, config: MigrationConfig, tmp_dir: Path):
         """Full pipeline handles mix of valid and invalid records."""
         # Create source with some invalid records
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4, 5],
-            "estado": ["cerrado", "invalido", "abierto", "en_proceso", "cerrado"],
-            "tipo_pqr": ["peticion", "queja", "reclamo", "peticion", "queja"],
-            "causa": ["c1", "c2", "c3", "c4", "c5"],
-            "canal_atencion": ["ch1", "ch2", "ch3", "ch4", "ch5"],
-            "empresa": ["e1", "e2", "e3", "e4", "e5"],
-            "tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4, 5],
+                "estado": ["cerrado", "invalido", "abierto", "en_proceso", "cerrado"],
+                "tipo_pqr": ["peticion", "queja", "reclamo", "peticion", "queja"],
+                "causa": ["c1", "c2", "c3", "c4", "c5"],
+                "canal_atencion": ["ch1", "ch2", "ch3", "ch4", "ch5"],
+                "empresa": ["e1", "e2", "e3", "e4", "e5"],
+                "tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0],
+            }
+        )
         source_path = tmp_dir / "data" / "curated" / "mixed.parquet"
         df.write_parquet(source_path)
 
@@ -539,7 +584,9 @@ class TestFullPipeline:
         assert report.success_count == 4
         assert report.quarantined_count == 1
 
-    def test_full_pipeline_generates_report_file(self, config: MigrationConfig, source_parquet: Path):
+    def test_full_pipeline_generates_report_file(
+        self, config: MigrationConfig, source_parquet: Path
+    ):
         """Full pipeline creates report JSON file."""
         db = _make_mock_db(success=True)
         pipeline = MasterMigrationPipeline(db=db, config=config)
@@ -590,7 +637,10 @@ class TestRetryAndAbort:
             call_count += 1
             if call_count == 1:
                 # First batch succeeds
-                return [{"source_record_id": str(r.get("id_pqr")), "status": "migrated", "error": None} for r in records]
+                return [
+                    {"source_record_id": str(r.get("id_pqr")), "status": "migrated", "error": None}
+                    for r in records
+                ]
             # Second batch raises connection error (simulating retries exhausted)
             raise ConnectionError("Neon PostgreSQL connection lost")
 
@@ -663,15 +713,17 @@ class TestRetryAndAbort:
         pipeline = MasterMigrationPipeline(db=db, config=config)
 
         # Create data with an invalid record
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "estado": ["cerrado", "invalido_state", "abierto"],
-            "tipo_pqr": ["peticion", "queja", "reclamo"],
-            "causa": ["c1", "c2", "c3"],
-            "canal_atencion": ["ch1", "ch2", "ch3"],
-            "empresa": ["e1", "e2", "e3"],
-            "tiempo_gestion_dias": [1.0, 2.0, 3.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "estado": ["cerrado", "invalido_state", "abierto"],
+                "tipo_pqr": ["peticion", "queja", "reclamo"],
+                "causa": ["c1", "c2", "c3"],
+                "canal_atencion": ["ch1", "ch2", "ch3"],
+                "empresa": ["e1", "e2", "e3"],
+                "tiempo_gestion_dias": [1.0, 2.0, 3.0],
+            }
+        )
 
         # Validate to quarantine invalid records
         valid_df, quarantined = pipeline.validate(df)
@@ -726,15 +778,17 @@ class TestRetryAndAbort:
         db.execute_upsert.side_effect = ConnectionError("Neon down")
 
         # Create source with a mix of valid and invalid records
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4, 5],
-            "estado": ["cerrado", "invalido", "abierto", "en_proceso", "cerrado"],
-            "tipo_pqr": ["peticion", "queja", "reclamo", "peticion", "queja"],
-            "causa": ["c1", "c2", "c3", "c4", "c5"],
-            "canal_atencion": ["ch1", "ch2", "ch3", "ch4", "ch5"],
-            "empresa": ["e1", "e2", "e3", "e4", "e5"],
-            "tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4, 5],
+                "estado": ["cerrado", "invalido", "abierto", "en_proceso", "cerrado"],
+                "tipo_pqr": ["peticion", "queja", "reclamo", "peticion", "queja"],
+                "causa": ["c1", "c2", "c3", "c4", "c5"],
+                "canal_atencion": ["ch1", "ch2", "ch3", "ch4", "ch5"],
+                "empresa": ["e1", "e2", "e3", "e4", "e5"],
+                "tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0],
+            }
+        )
         source_path = config.source_path
         source_path.parent.mkdir(parents=True, exist_ok=True)
         df.write_parquet(source_path)

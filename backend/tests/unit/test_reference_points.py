@@ -291,27 +291,33 @@ class TestVerifyQualityIssues:
 
     def test_null_closure_reason(self, validator: ReferencePointValidator) -> None:
         """Reports percentage of null/blank closure reasons."""
-        df = pl.DataFrame({
-            "motivo_cierre": ["resolved", None, "", "resolved", None],
-        })
+        df = pl.DataFrame(
+            {
+                "motivo_cierre": ["resolved", None, "", "resolved", None],
+            }
+        )
         results = validator.verify_quality_issues(df, closure_reason_col="motivo_cierre")
         closure_check = next(r for r in results if r.name == "quality_closure_reason_null")
         assert closure_check.actual_value == 60.0  # 3 out of 5
 
     def test_invalid_marking(self, validator: ReferencePointValidator) -> None:
         """Reports percentage of null/blank marking values."""
-        df = pl.DataFrame({
-            "marcacion": ["valid", None, "valid", None, None],
-        })
+        df = pl.DataFrame(
+            {
+                "marcacion": ["valid", None, "valid", None, None],
+            }
+        )
         results = validator.verify_quality_issues(df, marking_col="marcacion")
         marking_check = next(r for r in results if r.name == "quality_marking_invalid")
         assert marking_check.actual_value == 60.0  # 3 out of 5
 
     def test_inconsistent_companies(self, validator: ReferencePointValidator) -> None:
         """Reports percentage of records with inconsistent/null company names."""
-        df = pl.DataFrame({
-            "empresa": ["Vanti", " Vanti ", "Vanti", None, "Vanti"],
-        })
+        df = pl.DataFrame(
+            {
+                "empresa": ["Vanti", " Vanti ", "Vanti", None, "Vanti"],
+            }
+        )
         results = validator.verify_quality_issues(df, company_col="empresa")
         company_check = next(r for r in results if r.name == "quality_company_inconsistent")
         # 1 whitespace issue + 1 null = 2 out of 5 = 40%
@@ -319,9 +325,11 @@ class TestVerifyQualityIssues:
 
     def test_duplicated_categories(self, validator: ReferencePointValidator) -> None:
         """Reports percentage of records with semantically duplicated categories."""
-        df = pl.DataFrame({
-            "causa": ["Cancel", "cancel", "CANCEL", "Other", "Other"],
-        })
+        df = pl.DataFrame(
+            {
+                "causa": ["Cancel", "cancel", "CANCEL", "Other", "Other"],
+            }
+        )
         results = validator.verify_quality_issues(df, category_col="causa")
         cat_check = next(r for r in results if r.name == "quality_category_duplicated")
         # "Cancel", "cancel", "CANCEL" are duplicates → 3 records affected out of 5 = 60%
@@ -329,24 +337,28 @@ class TestVerifyQualityIssues:
 
     def test_no_quality_issues(self, validator: ReferencePointValidator) -> None:
         """Clean data reports 0% issues."""
-        df = pl.DataFrame({
-            "motivo_cierre": ["resolved", "closed", "done"],
-            "marcacion": ["A", "B", "C"],
-            "empresa": ["Vanti", "Vanti", "Vanti"],
-            "causa": ["cancel", "queja", "peticion"],
-        })
+        df = pl.DataFrame(
+            {
+                "motivo_cierre": ["resolved", "closed", "done"],
+                "marcacion": ["A", "B", "C"],
+                "empresa": ["Vanti", "Vanti", "Vanti"],
+                "causa": ["cancel", "queja", "peticion"],
+            }
+        )
         results = validator.verify_quality_issues(df)
         for check in results:
             assert check.actual_value == 0.0
 
     def test_quality_checks_always_pass(self, validator: ReferencePointValidator) -> None:
         """Quality checks are informational — always is_within_tolerance=True."""
-        df = pl.DataFrame({
-            "motivo_cierre": [None, None, None],
-            "marcacion": [None, None, None],
-            "empresa": [None, None, None],
-            "causa": [None, None, None],
-        })
+        df = pl.DataFrame(
+            {
+                "motivo_cierre": [None, None, None],
+                "marcacion": [None, None, None],
+                "empresa": [None, None, None],
+                "causa": [None, None, None],
+            }
+        )
         results = validator.verify_quality_issues(df)
         for check in results:
             assert check.is_within_tolerance is True
@@ -363,7 +375,11 @@ class TestValidateAll:
         # Build a DataFrame that satisfies all reference points
         n = 51_008
         causes = ["main_cause"] * (n // 2) + ["other"] * (n - n // 2)
-        channels = ["Telefonico"] * (n * 40 // 100) + ["Verbal"] * (n * 30 // 100) + ["Email"] * (n - n * 40 // 100 - n * 30 // 100)
+        channels = (
+            ["Telefonico"] * (n * 40 // 100)
+            + ["Verbal"] * (n * 30 // 100)
+            + ["Email"] * (n - n * 40 // 100 - n * 30 // 100)
+        )
         times = [6.32] * n  # mean=6.32, median=6.32
 
         # Need 29 columns

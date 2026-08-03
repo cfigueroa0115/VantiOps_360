@@ -20,9 +20,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "database" / "migrations"
-MIGRATION_FILES = sorted(
-    [f for f in MIGRATIONS_DIR.glob("*.sql") if re.match(r"^\d{3}_", f.name)]
-)
+MIGRATION_FILES = sorted([f for f in MIGRATIONS_DIR.glob("*.sql") if re.match(r"^\d{3}_", f.name)])
 EXPECTED_COUNT = 13
 
 # Tables created per migration (manually mapped from file content)
@@ -116,15 +114,11 @@ class TestMigrationStructure:
 
     def test_contains_up_section(self, migration_file: Path, migration_content: str):
         """Each migration file contains a '-- UP' section marker."""
-        assert "-- UP" in migration_content, (
-            f"{migration_file.name} is missing '-- UP' section"
-        )
+        assert "-- UP" in migration_content, f"{migration_file.name} is missing '-- UP' section"
 
     def test_contains_down_section(self, migration_file: Path, migration_content: str):
         """Each migration file contains a '-- DOWN' section marker."""
-        assert "-- DOWN" in migration_content, (
-            f"{migration_file.name} is missing '-- DOWN' section"
-        )
+        assert "-- DOWN" in migration_content, f"{migration_file.name} is missing '-- DOWN' section"
 
     def test_up_uses_create_if_not_exists(self, migration_file: Path, up_section: str):
         """UP section uses CREATE TABLE IF NOT EXISTS or CREATE INDEX IF NOT EXISTS."""
@@ -132,9 +126,9 @@ class TestMigrationStructure:
         create_table_stmts = re.findall(
             r"CREATE\s+TABLE\s+(?!IF\s+NOT\s+EXISTS)", up_section, re.IGNORECASE
         )
-        assert len(create_table_stmts) == 0, (
-            f"{migration_file.name} UP section has CREATE TABLE without IF NOT EXISTS"
-        )
+        assert (
+            len(create_table_stmts) == 0
+        ), f"{migration_file.name} UP section has CREATE TABLE without IF NOT EXISTS"
 
         # Find all CREATE INDEX statements (excluding CREATE OR REPLACE RULE)
         create_index_stmts = re.findall(
@@ -142,9 +136,9 @@ class TestMigrationStructure:
             up_section,
             re.IGNORECASE,
         )
-        assert len(create_index_stmts) == 0, (
-            f"{migration_file.name} UP section has CREATE INDEX without IF NOT EXISTS"
-        )
+        assert (
+            len(create_index_stmts) == 0
+        ), f"{migration_file.name} UP section has CREATE INDEX without IF NOT EXISTS"
 
     def test_down_uses_drop_if_exists(self, migration_file: Path, down_section: str):
         """DOWN section uses DROP TABLE IF EXISTS or DROP RULE IF EXISTS."""
@@ -152,39 +146,35 @@ class TestMigrationStructure:
         drop_table_no_if = re.findall(
             r"DROP\s+TABLE\s+(?!IF\s+EXISTS)", down_section, re.IGNORECASE
         )
-        assert len(drop_table_no_if) == 0, (
-            f"{migration_file.name} DOWN section has DROP TABLE without IF EXISTS"
-        )
+        assert (
+            len(drop_table_no_if) == 0
+        ), f"{migration_file.name} DOWN section has DROP TABLE without IF EXISTS"
 
         # All DROP RULE statements must use IF EXISTS
-        drop_rule_no_if = re.findall(
-            r"DROP\s+RULE\s+(?!IF\s+EXISTS)", down_section, re.IGNORECASE
-        )
-        assert len(drop_rule_no_if) == 0, (
-            f"{migration_file.name} DOWN section has DROP RULE without IF EXISTS"
-        )
+        drop_rule_no_if = re.findall(r"DROP\s+RULE\s+(?!IF\s+EXISTS)", down_section, re.IGNORECASE)
+        assert (
+            len(drop_rule_no_if) == 0
+        ), f"{migration_file.name} DOWN section has DROP RULE without IF EXISTS"
 
     def test_no_destructive_operations_in_up(self, migration_file: Path, up_section: str):
         """UP section does not contain destructive operations (DROP TABLE, TRUNCATE, DELETE without WHERE)."""
         # No DROP TABLE in UP section
         drop_tables = re.findall(r"\bDROP\s+TABLE\b", up_section, re.IGNORECASE)
-        assert len(drop_tables) == 0, (
-            f"{migration_file.name} UP section contains DROP TABLE (destructive)"
-        )
+        assert (
+            len(drop_tables) == 0
+        ), f"{migration_file.name} UP section contains DROP TABLE (destructive)"
 
         # No TRUNCATE in UP section
         truncates = re.findall(r"\bTRUNCATE\b", up_section, re.IGNORECASE)
-        assert len(truncates) == 0, (
-            f"{migration_file.name} UP section contains TRUNCATE (destructive)"
-        )
+        assert (
+            len(truncates) == 0
+        ), f"{migration_file.name} UP section contains TRUNCATE (destructive)"
 
         # No DELETE without WHERE in UP section
-        delete_stmts = re.findall(
-            r"\bDELETE\s+FROM\s+\w+\s*;", up_section, re.IGNORECASE
-        )
-        assert len(delete_stmts) == 0, (
-            f"{migration_file.name} UP section contains DELETE without WHERE clause (destructive)"
-        )
+        delete_stmts = re.findall(r"\bDELETE\s+FROM\s+\w+\s*;", up_section, re.IGNORECASE)
+        assert (
+            len(delete_stmts) == 0
+        ), f"{migration_file.name} UP section contains DELETE without WHERE clause (destructive)"
 
 
 # ===========================================================================
@@ -198,9 +188,7 @@ class TestIdempotency:
     def test_all_create_table_uses_if_not_exists(self, migration_file: Path, up_section: str):
         """Every CREATE TABLE in UP must include IF NOT EXISTS for idempotency."""
         all_creates = re.findall(r"CREATE\s+TABLE\s+", up_section, re.IGNORECASE)
-        safe_creates = re.findall(
-            r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", up_section, re.IGNORECASE
-        )
+        safe_creates = re.findall(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", up_section, re.IGNORECASE)
         assert len(all_creates) == len(safe_creates), (
             f"{migration_file.name}: {len(all_creates)} CREATE TABLE statements but only "
             f"{len(safe_creates)} use IF NOT EXISTS"
@@ -212,9 +200,7 @@ class TestIdempotency:
         if not insert_stmts:
             pytest.skip(f"{migration_file.name} has no INSERT statements")
 
-        on_conflict_stmts = re.findall(
-            r"\bON\s+CONFLICT\b", up_section, re.IGNORECASE
-        )
+        on_conflict_stmts = re.findall(r"\bON\s+CONFLICT\b", up_section, re.IGNORECASE)
         assert len(on_conflict_stmts) >= len(insert_stmts), (
             f"{migration_file.name}: {len(insert_stmts)} INSERT statements but only "
             f"{len(on_conflict_stmts)} ON CONFLICT clauses (all inserts must be idempotent)"
@@ -242,9 +228,9 @@ class TestIdempotency:
 
         # All created tables must be dropped in DOWN
         for table in created_tables:
-            assert table in dropped_tables, (
-                f"{migration_file.name}: table '{table}' created in UP but not dropped in DOWN"
-            )
+            assert (
+                table in dropped_tables
+            ), f"{migration_file.name}: table '{table}' created in UP but not dropped in DOWN"
 
 
 # ===========================================================================
@@ -301,9 +287,9 @@ class TestMigrationOrdering:
         """No gaps in migration file numbering."""
         numbers = [_get_migration_number(f) for f in MIGRATION_FILES]
         for i in range(1, len(numbers)):
-            assert numbers[i] == numbers[i - 1] + 1, (
-                f"Gap in migration numbering between {numbers[i-1]:03d} and {numbers[i]:03d}"
-            )
+            assert (
+                numbers[i] == numbers[i - 1] + 1
+            ), f"Gap in migration numbering between {numbers[i-1]:03d} and {numbers[i]:03d}"
 
 
 # ===========================================================================
@@ -319,9 +305,9 @@ class TestRollbackScenario:
         # Remove comments and whitespace
         stripped = re.sub(r"--.*$", "", down_section, flags=re.MULTILINE).strip()
         stripped = re.sub(r"=+", "", stripped).strip()
-        assert len(stripped) > 0, (
-            f"{migration_file.name} has empty DOWN section — rollback impossible"
-        )
+        assert (
+            len(stripped) > 0
+        ), f"{migration_file.name} has empty DOWN section — rollback impossible"
 
     def test_down_uses_cascade_for_referenced_tables(
         self, migration_file: Path, down_section: str, up_section: str
@@ -365,16 +351,12 @@ class TestRollbackScenario:
         content = _read_migration(migration_file)
         up, _ = _split_up_down(content)
 
-        rule_creates = re.findall(
-            r"CREATE\s+OR\s+REPLACE\s+RULE\s+(\w+)", up, re.IGNORECASE
-        )
+        rule_creates = re.findall(r"CREATE\s+OR\s+REPLACE\s+RULE\s+(\w+)", up, re.IGNORECASE)
         if not rule_creates:
             pytest.skip(f"{migration_file.name} creates no rules")
 
         # Verify rules are dropped in DOWN
-        rule_drops = re.findall(
-            r"DROP\s+RULE\s+IF\s+EXISTS\s+(\w+)", down_section, re.IGNORECASE
-        )
+        rule_drops = re.findall(r"DROP\s+RULE\s+IF\s+EXISTS\s+(\w+)", down_section, re.IGNORECASE)
         for rule_name in rule_creates:
             assert rule_name in rule_drops, (
                 f"{migration_file.name}: rule '{rule_name}' created in UP "
@@ -385,6 +367,6 @@ class TestRollbackScenario:
         first_rule_drop = down_section.lower().find("drop rule")
         first_table_drop = down_section.lower().find("drop table")
         if first_rule_drop >= 0 and first_table_drop >= 0:
-            assert first_rule_drop < first_table_drop, (
-                f"{migration_file.name}: rules should be dropped before tables in DOWN"
-            )
+            assert (
+                first_rule_drop < first_table_drop
+            ), f"{migration_file.name}: rules should be dropped before tables in DOWN"

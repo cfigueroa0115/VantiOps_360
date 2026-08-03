@@ -75,9 +75,9 @@ class TestNetCapacityFormula:
         result = calculate_net_capacity(hours, factor)
         expected = hours * factor
 
-        assert math.isclose(result, expected, rel_tol=1e-9), (
-            f"calculate_net_capacity({hours}, {factor}) = {result}, expected {expected}"
-        )
+        assert math.isclose(
+            result, expected, rel_tol=1e-9
+        ), f"calculate_net_capacity({hours}, {factor}) = {result}, expected {expected}"
 
     @given(hours=hours_strategy, factor=productivity_factor_strategy)
     @settings(max_examples=100)
@@ -85,9 +85,9 @@ class TestNetCapacityFormula:
         """Net capacity must always be non-negative for valid inputs."""
         result = calculate_net_capacity(hours, factor)
 
-        assert result >= 0.0, (
-            f"Net capacity is negative: calculate_net_capacity({hours}, {factor}) = {result}"
-        )
+        assert (
+            result >= 0.0
+        ), f"Net capacity is negative: calculate_net_capacity({hours}, {factor}) = {result}"
 
 
 class TestUtilizationFormula:
@@ -95,16 +95,14 @@ class TestUtilizationFormula:
 
     @given(load=load_strategy, capacity=positive_capacity_strategy)
     @settings(max_examples=200)
-    def test_utilization_equals_load_over_capacity_times_100(
-        self, load: float, capacity: float
-    ):
+    def test_utilization_equals_load_over_capacity_times_100(self, load: float, capacity: float):
         """Utilization must always equal (currentLoad / netCapacity) × 100."""
         result = calculate_utilization(load, capacity)
         expected = (load / capacity) * 100.0
 
-        assert math.isclose(result, expected, rel_tol=1e-9), (
-            f"calculate_utilization({load}, {capacity}) = {result}, expected {expected}"
-        )
+        assert math.isclose(
+            result, expected, rel_tol=1e-9
+        ), f"calculate_utilization({load}, {capacity}) = {result}, expected {expected}"
 
     @given(load=load_strategy, capacity=positive_capacity_strategy)
     @settings(max_examples=100)
@@ -112,9 +110,9 @@ class TestUtilizationFormula:
         """Utilization must always be non-negative for valid inputs."""
         result = calculate_utilization(load, capacity)
 
-        assert result >= 0.0, (
-            f"Utilization is negative: calculate_utilization({load}, {capacity}) = {result}"
-        )
+        assert (
+            result >= 0.0
+        ), f"Utilization is negative: calculate_utilization({load}, {capacity}) = {result}"
 
     @given(capacity=positive_capacity_strategy)
     @settings(max_examples=50)
@@ -122,9 +120,7 @@ class TestUtilizationFormula:
         """Zero load must always produce zero utilization."""
         result = calculate_utilization(0.0, capacity)
 
-        assert result == 0.0, (
-            f"Zero load produced non-zero utilization: {result}"
-        )
+        assert result == 0.0, f"Zero load produced non-zero utilization: {result}"
 
 
 class TestAlertLevelMonotonicity:
@@ -142,9 +138,9 @@ class TestAlertLevelMonotonicity:
         level_a = get_alert_level(u1)
         level_b = get_alert_level(u2)
 
-        assert ALERT_LEVEL_ORDER[level_a] <= ALERT_LEVEL_ORDER[level_b], (
-            f"Monotonicity violated: utilization {u1} → '{level_a}' but utilization {u2} → '{level_b}'"
-        )
+        assert (
+            ALERT_LEVEL_ORDER[level_a] <= ALERT_LEVEL_ORDER[level_b]
+        ), f"Monotonicity violated: utilization {u1} → '{level_a}' but utilization {u2} → '{level_b}'"
 
     @given(utilization=utilization_strategy)
     @settings(max_examples=100)
@@ -152,9 +148,12 @@ class TestAlertLevelMonotonicity:
         """Alert level must always be one of green, yellow, orange, or red."""
         level = get_alert_level(utilization)
 
-        assert level in {"green", "yellow", "orange", "red"}, (
-            f"Invalid alert level '{level}' for utilization {utilization}"
-        )
+        assert level in {
+            "green",
+            "yellow",
+            "orange",
+            "red",
+        }, f"Invalid alert level '{level}' for utilization {utilization}"
 
 
 class TestAlertThresholdBoundaries:
@@ -162,8 +161,10 @@ class TestAlertThresholdBoundaries:
 
     @given(
         utilization=st.floats(
-            min_value=0.0, max_value=ALERT_THRESHOLD_GREEN_MAX,
-            allow_nan=False, allow_infinity=False
+            min_value=0.0,
+            max_value=ALERT_THRESHOLD_GREEN_MAX,
+            allow_nan=False,
+            allow_infinity=False,
         )
     )
     @settings(max_examples=100)
@@ -171,15 +172,16 @@ class TestAlertThresholdBoundaries:
         """Utilization ≤ 60% must always produce green alert level."""
         level = get_alert_level(utilization)
 
-        assert level == "green", (
-            f"Utilization {utilization}% (≤ {ALERT_THRESHOLD_GREEN_MAX}%) should be 'green', got '{level}'"
-        )
+        assert (
+            level == "green"
+        ), f"Utilization {utilization}% (≤ {ALERT_THRESHOLD_GREEN_MAX}%) should be 'green', got '{level}'"
 
     @given(
         utilization=st.floats(
             min_value=ALERT_THRESHOLD_GREEN_MAX + 0.001,
             max_value=ALERT_THRESHOLD_YELLOW_MAX,
-            allow_nan=False, allow_infinity=False,
+            allow_nan=False,
+            allow_infinity=False,
         )
     )
     @settings(max_examples=100)
@@ -198,7 +200,8 @@ class TestAlertThresholdBoundaries:
         utilization=st.floats(
             min_value=ALERT_THRESHOLD_YELLOW_MAX + 0.001,
             max_value=ALERT_THRESHOLD_ORANGE_MAX,
-            allow_nan=False, allow_infinity=False,
+            allow_nan=False,
+            allow_infinity=False,
         )
     )
     @settings(max_examples=100)
@@ -217,7 +220,8 @@ class TestAlertThresholdBoundaries:
         utilization=st.floats(
             min_value=ALERT_THRESHOLD_ORANGE_MAX + 0.001,
             max_value=500.0,
-            allow_nan=False, allow_infinity=False,
+            allow_nan=False,
+            allow_infinity=False,
         )
     )
     @settings(max_examples=100)
@@ -277,21 +281,21 @@ class TestCapacitySummaryConsistency:
 
         # Verify net_capacity = available_hours × factor
         expected_available = analysts * monthly_hours * pqr_dedication
-        assert math.isclose(summary.available_hours, expected_available, rel_tol=1e-9), (
-            f"available_hours {summary.available_hours} != expected {expected_available}"
-        )
+        assert math.isclose(
+            summary.available_hours, expected_available, rel_tol=1e-9
+        ), f"available_hours {summary.available_hours} != expected {expected_available}"
 
         expected_net = expected_available * factor
-        assert math.isclose(summary.net_capacity, expected_net, rel_tol=1e-9), (
-            f"net_capacity {summary.net_capacity} != expected {expected_net}"
-        )
+        assert math.isclose(
+            summary.net_capacity, expected_net, rel_tol=1e-9
+        ), f"net_capacity {summary.net_capacity} != expected {expected_net}"
 
         # Verify utilization = (load / net_capacity) × 100
         if summary.net_capacity > 0:
             expected_util = (load / summary.net_capacity) * 100.0
-            assert math.isclose(summary.utilization, expected_util, rel_tol=1e-9), (
-                f"utilization {summary.utilization} != expected {expected_util}"
-            )
+            assert math.isclose(
+                summary.utilization, expected_util, rel_tol=1e-9
+            ), f"utilization {summary.utilization} != expected {expected_util}"
 
         # Verify alert level consistency with utilization
         expected_alert = get_alert_level(summary.utilization)
@@ -327,6 +331,6 @@ class TestCapacitySummaryConsistency:
 
         summary = get_capacity_summary(config)
 
-        assert summary.data_provenance == "DERIVED_DATA", (
-            f"data_provenance '{summary.data_provenance}' != 'DERIVED_DATA'"
-        )
+        assert (
+            summary.data_provenance == "DERIVED_DATA"
+        ), f"data_provenance '{summary.data_provenance}' != 'DERIVED_DATA'"

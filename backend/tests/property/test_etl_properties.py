@@ -39,12 +39,14 @@ batch_ids = st.uuids().map(str)
 completed_status = st.just(BatchStatus.COMPLETED.value)
 
 # Status values that should NOT trigger idempotency skip
-non_completed_statuses = st.sampled_from([
-    BatchStatus.FAILED.value,
-    BatchStatus.IN_PROGRESS.value,
-    BatchStatus.PENDING.value,
-    BatchStatus.PARTIALLY_COMPLETED.value,
-])
+non_completed_statuses = st.sampled_from(
+    [
+        BatchStatus.FAILED.value,
+        BatchStatus.IN_PROGRESS.value,
+        BatchStatus.PENDING.value,
+        BatchStatus.PARTIALLY_COMPLETED.value,
+    ]
+)
 
 # Random file content bytes for hash determinism testing
 file_content_bytes = st.binary(min_size=1, max_size=10_000)
@@ -81,27 +83,28 @@ class TestCompletedHashReturnsTrue:
         file_name=file_names,
     )
     @settings(max_examples=200)
-    def test_completed_hash_detected(
-        self, file_hash: str, batch_id: str, file_name: str
-    ):
+    def test_completed_hash_detected(self, file_hash: str, batch_id: str, file_name: str):
         """A hash present with 'completed' status is recognized as already processed."""
         with tempfile.TemporaryDirectory() as tmp:
             output_dir = Path(tmp)
             orchestrator = PipelineOrchestrator(output_dir=output_dir)
 
             # Create control table with a completed entry for the given hash
-            _create_control_table(output_dir, [
-                {
-                    "batch_id": batch_id,
-                    "file_hash": file_hash,
-                    "file_name": file_name,
-                    "status": BatchStatus.COMPLETED.value,
-                    "stages_completed": ["ingest", "profile", "validate", "enrich", "serve"],
-                    "records_processed": 100,
-                    "started_at": "2024-01-01T00:00:00Z",
-                    "completed_at": "2024-01-01T00:01:00Z",
-                }
-            ])
+            _create_control_table(
+                output_dir,
+                [
+                    {
+                        "batch_id": batch_id,
+                        "file_hash": file_hash,
+                        "file_name": file_name,
+                        "status": BatchStatus.COMPLETED.value,
+                        "stages_completed": ["ingest", "profile", "validate", "enrich", "serve"],
+                        "records_processed": 100,
+                        "started_at": "2024-01-01T00:00:00Z",
+                        "completed_at": "2024-01-01T00:01:00Z",
+                    }
+                ],
+            )
 
             result = orchestrator.is_already_processed(file_hash)
 
@@ -121,9 +124,7 @@ class TestMissingHashReturnsFalse:
         batch_id=batch_ids,
     )
     @settings(max_examples=200)
-    def test_missing_hash_not_detected(
-        self, lookup_hash: str, existing_hash: str, batch_id: str
-    ):
+    def test_missing_hash_not_detected(self, lookup_hash: str, existing_hash: str, batch_id: str):
         """A hash NOT in the control table should return False."""
         # Ensure the two hashes are different
         if lookup_hash == existing_hash:
@@ -134,18 +135,21 @@ class TestMissingHashReturnsFalse:
             orchestrator = PipelineOrchestrator(output_dir=output_dir)
 
             # Create control table with a DIFFERENT completed hash
-            _create_control_table(output_dir, [
-                {
-                    "batch_id": batch_id,
-                    "file_hash": existing_hash,
-                    "file_name": "other_file.xlsx",
-                    "status": BatchStatus.COMPLETED.value,
-                    "stages_completed": ["ingest", "profile", "validate", "enrich", "serve"],
-                    "records_processed": 50,
-                    "started_at": "2024-01-01T00:00:00Z",
-                    "completed_at": "2024-01-01T00:01:00Z",
-                }
-            ])
+            _create_control_table(
+                output_dir,
+                [
+                    {
+                        "batch_id": batch_id,
+                        "file_hash": existing_hash,
+                        "file_name": "other_file.xlsx",
+                        "status": BatchStatus.COMPLETED.value,
+                        "stages_completed": ["ingest", "profile", "validate", "enrich", "serve"],
+                        "records_processed": 50,
+                        "started_at": "2024-01-01T00:00:00Z",
+                        "completed_at": "2024-01-01T00:01:00Z",
+                    }
+                ],
+            )
 
             result = orchestrator.is_already_processed(lookup_hash)
 
@@ -167,9 +171,9 @@ class TestMissingHashReturnsFalse:
 
             result = orchestrator.is_already_processed(lookup_hash)
 
-            assert result is False, (
-                f"Hash '{lookup_hash[:16]}...' should not be found in empty control table"
-            )
+            assert (
+                result is False
+            ), f"Hash '{lookup_hash[:16]}...' should not be found in empty control table"
 
     @given(lookup_hash=sha256_hashes)
     @settings(max_examples=100)
@@ -182,9 +186,9 @@ class TestMissingHashReturnsFalse:
             # No control table file created at all
             result = orchestrator.is_already_processed(lookup_hash)
 
-            assert result is False, (
-                f"Hash '{lookup_hash[:16]}...' should not be found when no control table exists"
-            )
+            assert (
+                result is False
+            ), f"Hash '{lookup_hash[:16]}...' should not be found when no control table exists"
 
 
 class TestNonCompletedStatusReturnsFalse:
@@ -207,18 +211,21 @@ class TestNonCompletedStatusReturnsFalse:
             orchestrator = PipelineOrchestrator(output_dir=output_dir)
 
             # Create control table with the hash but non-completed status
-            _create_control_table(output_dir, [
-                {
-                    "batch_id": batch_id,
-                    "file_hash": file_hash,
-                    "file_name": file_name,
-                    "status": status,
-                    "stages_completed": [],
-                    "records_processed": 0,
-                    "started_at": "2024-01-01T00:00:00Z",
-                    "completed_at": None,
-                }
-            ])
+            _create_control_table(
+                output_dir,
+                [
+                    {
+                        "batch_id": batch_id,
+                        "file_hash": file_hash,
+                        "file_name": file_name,
+                        "status": status,
+                        "stages_completed": [],
+                        "records_processed": 0,
+                        "started_at": "2024-01-01T00:00:00Z",
+                        "completed_at": None,
+                    }
+                ],
+            )
 
             result = orchestrator.is_already_processed(file_hash)
 
@@ -246,9 +253,9 @@ class TestHashDeterminism:
             hash_1 = orchestrator.compute_file_hash(file_path)
             hash_2 = orchestrator.compute_file_hash(file_path)
 
-            assert hash_1 == hash_2, (
-                f"Hash is not deterministic: first={hash_1[:16]}..., second={hash_2[:16]}..."
-            )
+            assert (
+                hash_1 == hash_2
+            ), f"Hash is not deterministic: first={hash_1[:16]}..., second={hash_2[:16]}..."
 
     @given(content=file_content_bytes)
     @settings(max_examples=200)
@@ -263,12 +270,10 @@ class TestHashDeterminism:
 
             file_hash = orchestrator.compute_file_hash(file_path)
 
-            assert len(file_hash) == 64, (
-                f"Hash length is {len(file_hash)}, expected 64 for SHA-256"
-            )
-            assert all(c in "0123456789abcdef" for c in file_hash), (
-                f"Hash contains invalid characters: {file_hash}"
-            )
+            assert len(file_hash) == 64, f"Hash length is {len(file_hash)}, expected 64 for SHA-256"
+            assert all(
+                c in "0123456789abcdef" for c in file_hash
+            ), f"Hash contains invalid characters: {file_hash}"
 
     @given(content_a=file_content_bytes, content_b=file_content_bytes)
     @settings(max_examples=200)

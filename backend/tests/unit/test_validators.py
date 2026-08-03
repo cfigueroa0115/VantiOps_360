@@ -261,7 +261,10 @@ class TestFindSemanticSimilarities:
         assert len(result) >= 1
         found = False
         for group in result:
-            if "Cancelación Servihogar" in group.values and "Cancelacion Servihogar" in group.values:
+            if (
+                "Cancelación Servihogar" in group.values
+                and "Cancelacion Servihogar" in group.values
+            ):
                 found = True
                 assert "Otra causa diferente" not in group.values
                 assert group.similarity_score >= 0.85
@@ -273,8 +276,8 @@ class TestFindSemanticSimilarities:
         # but A and C might not be directly similar
         categories = [
             "cancelar servicio",
-            "cancelar servicos",   # similar to first (1 char difference)
-            "cancelar servico",    # similar to second (1 char difference)
+            "cancelar servicos",  # similar to first (1 char difference)
+            "cancelar servico",  # similar to second (1 char difference)
         ]
         result = find_semantic_similarities(categories)
 
@@ -335,10 +338,7 @@ class TestFindSemanticSimilarities:
 
         # The two cancelación variants should be grouped (case-insensitive → identical)
         if result:
-            found = any(
-                "Cancelación" in g.values and "cancelación" in g.values
-                for g in result
-            )
+            found = any("Cancelación" in g.values and "cancelación" in g.values for g in result)
             assert found
 
     def test_similarity_score_in_valid_range(self) -> None:
@@ -370,9 +370,7 @@ class TestFindSemanticSimilarities:
         assert len(result) >= 2
 
         # Check the cancela group
-        cancela_group = next(
-            (g for g in result if any("Cancela" in v for v in g.values)), None
-        )
+        cancela_group = next((g for g in result if any("Cancela" in v for v in g.values)), None)
         assert cancela_group is not None
         assert len(cancela_group.values) == 3
 

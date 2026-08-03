@@ -241,7 +241,12 @@ class TestProcessExpirations:
         future = datetime.now(timezone.utc) + timedelta(days=30)
         users = [
             {"user_id": "u1", "role": "INTERN_READONLY", "is_active": True, "expires_at": past},
-            {"user_id": "u2", "role": "CONTRACTOR_OPERATOR", "is_active": True, "expires_at": future},
+            {
+                "user_id": "u2",
+                "role": "CONTRACTOR_OPERATOR",
+                "is_active": True,
+                "expires_at": future,
+            },
             {"user_id": "u3", "role": "BUSINESS_OWNER", "is_active": True, "expires_at": None},
             {"user_id": "u4", "role": "CONTRACTOR_OPERATOR", "is_active": True, "expires_at": past},
             {"user_id": "u5", "role": "INTERN_READONLY", "is_active": False, "expires_at": past},
@@ -321,42 +326,52 @@ class TestProcessExpirations:
         users = []
         # 12 INTERN_READONLY (6 expired, 6 active)
         for i in range(6):
-            users.append({
-                "user_id": f"intern-expired-{i}",
-                "role": "INTERN_READONLY",
-                "is_active": True,
-                "expires_at": past,
-            })
+            users.append(
+                {
+                    "user_id": f"intern-expired-{i}",
+                    "role": "INTERN_READONLY",
+                    "is_active": True,
+                    "expires_at": past,
+                }
+            )
         for i in range(6):
-            users.append({
-                "user_id": f"intern-active-{i}",
-                "role": "INTERN_READONLY",
-                "is_active": True,
-                "expires_at": future,
-            })
+            users.append(
+                {
+                    "user_id": f"intern-active-{i}",
+                    "role": "INTERN_READONLY",
+                    "is_active": True,
+                    "expires_at": future,
+                }
+            )
         # 20 CONTRACTOR_OPERATOR (10 expired, 10 active)
         for i in range(10):
-            users.append({
-                "user_id": f"contractor-expired-{i}",
-                "role": "CONTRACTOR_OPERATOR",
-                "is_active": True,
-                "expires_at": past,
-            })
+            users.append(
+                {
+                    "user_id": f"contractor-expired-{i}",
+                    "role": "CONTRACTOR_OPERATOR",
+                    "is_active": True,
+                    "expires_at": past,
+                }
+            )
         for i in range(10):
-            users.append({
-                "user_id": f"contractor-active-{i}",
-                "role": "CONTRACTOR_OPERATOR",
-                "is_active": True,
-                "expires_at": future,
-            })
+            users.append(
+                {
+                    "user_id": f"contractor-active-{i}",
+                    "role": "CONTRACTOR_OPERATOR",
+                    "is_active": True,
+                    "expires_at": future,
+                }
+            )
         # 10 BUSINESS_OWNER (no expiration)
         for i in range(10):
-            users.append({
-                "user_id": f"business-{i}",
-                "role": "BUSINESS_OWNER",
-                "is_active": True,
-                "expires_at": None,
-            })
+            users.append(
+                {
+                    "user_id": f"business-{i}",
+                    "role": "BUSINESS_OWNER",
+                    "is_active": True,
+                    "expires_at": None,
+                }
+            )
 
         assert len(users) == 42
 

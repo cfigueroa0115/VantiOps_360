@@ -39,7 +39,11 @@ non_transient_errors = st.one_of(
     st.just(ValueError("bad value")),
     st.just(TypeError("wrong type")),
     st.just(PermissionError("access denied")),
-    st.builds(NonTransientHTTPError, status_code=st.sampled_from([400, 401, 403, 404, 422]), message=st.text(min_size=1, max_size=20)),
+    st.builds(
+        NonTransientHTTPError,
+        status_code=st.sampled_from([400, 401, 403, 404, 422]),
+        message=st.text(min_size=1, max_size=20),
+    ),
 )
 
 # Transient error instances
@@ -48,7 +52,11 @@ transient_errors = st.one_of(
     st.just(TimeoutError("timed out")),
     st.just(IOError("io failure")),
     st.just(OSError("network error")),
-    st.builds(TransientHTTPError, status_code=st.sampled_from([500, 502, 503, 429]), message=st.text(min_size=1, max_size=20)),
+    st.builds(
+        TransientHTTPError,
+        status_code=st.sampled_from([500, 502, 503, 429]),
+        message=st.text(min_size=1, max_size=20),
+    ),
 )
 
 
@@ -60,16 +68,18 @@ class TestRetryDelayBounds:
 
     @given(attempt=attempts, base_delay=base_delays, max_delay=max_delays, jitter=jitters)
     @settings(max_examples=200)
-    def test_delay_within_bounds(self, attempt: int, base_delay: float, max_delay: float, jitter: float):
+    def test_delay_within_bounds(
+        self, attempt: int, base_delay: float, max_delay: float, jitter: float
+    ):
         """compute_delay always returns a value in [0, max_delay + jitter]."""
         assume(base_delay <= max_delay)
 
         delay = compute_delay(attempt, base_delay, max_delay, jitter)
 
         assert delay >= 0.0, f"Delay {delay} is negative"
-        assert delay <= max_delay + jitter, (
-            f"Delay {delay} exceeds max_delay ({max_delay}) + jitter ({jitter}) = {max_delay + jitter}"
-        )
+        assert (
+            delay <= max_delay + jitter
+        ), f"Delay {delay} exceeds max_delay ({max_delay}) + jitter ({jitter}) = {max_delay + jitter}"
 
 
 class TestNonTransientErrorClassification:
@@ -81,9 +91,9 @@ class TestNonTransientErrorClassification:
         """Non-transient errors must never be classified as transient (zero retries enforced)."""
         result = is_transient_error(error)
 
-        assert result is False, (
-            f"Error {type(error).__name__}('{error}') was classified as transient but should NOT be retried"
-        )
+        assert (
+            result is False
+        ), f"Error {type(error).__name__}('{error}') was classified as transient but should NOT be retried"
 
 
 class TestTransientErrorClassification:
@@ -95,9 +105,9 @@ class TestTransientErrorClassification:
         """Transient errors must be classified as transient (eligible for retry)."""
         result = is_transient_error(error)
 
-        assert result is True, (
-            f"Error {type(error).__name__}('{error}') was NOT classified as transient but SHOULD be retried"
-        )
+        assert (
+            result is True
+        ), f"Error {type(error).__name__}('{error}') was NOT classified as transient but SHOULD be retried"
 
 
 class TestExponentialGrowthWithCap:
@@ -113,9 +123,9 @@ class TestExponentialGrowthWithCap:
 
         for attempt in range(11):
             delay = compute_delay(attempt, base_delay, max_delay, jitter)
-            assert delay <= upper_bound, (
-                f"At attempt {attempt}, delay {delay} exceeds upper bound {upper_bound}"
-            )
+            assert (
+                delay <= upper_bound
+            ), f"At attempt {attempt}, delay {delay} exceeds upper bound {upper_bound}"
             assert delay >= 0.0, f"At attempt {attempt}, delay {delay} is negative"
 
     @given(base_delay=base_delays, max_delay=max_delays)
@@ -130,14 +140,14 @@ class TestExponentialGrowthWithCap:
             delay = compute_delay(attempt, base_delay, max_delay, jitter=0.0)
 
             # Expected: min(base_delay * 2^attempt, max_delay)
-            expected_base = min(base_delay * (2 ** attempt), max_delay)
-            assert delay == expected_base, (
-                f"At attempt {attempt}, delay {delay} != expected {expected_base}"
-            )
+            expected_base = min(base_delay * (2**attempt), max_delay)
+            assert (
+                delay == expected_base
+            ), f"At attempt {attempt}, delay {delay} != expected {expected_base}"
 
             # Verify monotonic growth until cap
             if previous_delay is not None:
-                assert delay >= previous_delay, (
-                    f"Delay decreased from {previous_delay} to {delay} at attempt {attempt}"
-                )
+                assert (
+                    delay >= previous_delay
+                ), f"Delay decreased from {previous_delay} to {delay} at attempt {attempt}"
             previous_delay = delay

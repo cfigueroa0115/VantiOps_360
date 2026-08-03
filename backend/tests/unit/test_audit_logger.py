@@ -77,29 +77,21 @@ class TestAuditEvent:
     def test_invalid_result_raises_error(self):
         """A result other than 'success' or 'failure' raises ValueError."""
         with pytest.raises(ValueError, match="result must be"):
-            AuditEvent(
-                user_id="user-1", action="LOGIN", resource="/api/auth", result="unknown"
-            )
+            AuditEvent(user_id="user-1", action="LOGIN", resource="/api/auth", result="unknown")
 
     def test_result_success(self):
         """Result 'success' is accepted."""
-        event = AuditEvent(
-            user_id="user-1", action="LOGIN", resource="/api/auth", result="success"
-        )
+        event = AuditEvent(user_id="user-1", action="LOGIN", resource="/api/auth", result="success")
         assert event.result == "success"
 
     def test_result_failure(self):
         """Result 'failure' is accepted."""
-        event = AuditEvent(
-            user_id="user-1", action="LOGIN", resource="/api/auth", result="failure"
-        )
+        event = AuditEvent(user_id="user-1", action="LOGIN", resource="/api/auth", result="failure")
         assert event.result == "failure"
 
     def test_to_dict_excludes_none(self):
         """to_dict() omits keys with None values."""
-        event = AuditEvent(
-            user_id="user-1", action="READ", resource="/dashboard"
-        )
+        event = AuditEvent(user_id="user-1", action="READ", resource="/dashboard")
         d = event.to_dict()
         assert "resource_id" not in d
         assert "ip_address" not in d
@@ -121,12 +113,8 @@ class TestLogAuditEvent:
         """Use a temporary directory for the audit log file."""
         temp_log_dir = tmp_path / "audit"
         temp_log_file = temp_log_dir / "audit_log.jsonl"
-        monkeypatch.setattr(
-            "audit.logger.AUDIT_LOG_DIR", temp_log_dir
-        )
-        monkeypatch.setattr(
-            "audit.logger.AUDIT_LOG_FILE", temp_log_file
-        )
+        monkeypatch.setattr("audit.logger.AUDIT_LOG_DIR", temp_log_dir)
+        monkeypatch.setattr("audit.logger.AUDIT_LOG_FILE", temp_log_file)
         self.log_dir = temp_log_dir
         self.log_file = temp_log_file
 
@@ -221,21 +209,52 @@ class TestQueryAuditEvents:
         temp_log_dir = tmp_path / "audit"
         temp_log_dir.mkdir()
         temp_log_file = temp_log_dir / "audit_log.jsonl"
-        monkeypatch.setattr(
-            "audit.logger.AUDIT_LOG_DIR", temp_log_dir
-        )
-        monkeypatch.setattr(
-            "audit.logger.AUDIT_LOG_FILE", temp_log_file
-        )
+        monkeypatch.setattr("audit.logger.AUDIT_LOG_DIR", temp_log_dir)
+        monkeypatch.setattr("audit.logger.AUDIT_LOG_FILE", temp_log_file)
         self.log_file = temp_log_file
 
         # Seed sample events
         events = [
-            {"id": "e1", "timestamp": "2024-01-10T10:00:00+00:00", "user_id": "user-a", "action": "LOGIN", "resource": "/api/auth", "result": "success"},
-            {"id": "e2", "timestamp": "2024-01-11T12:00:00+00:00", "user_id": "user-b", "action": "CREATE", "resource": "/api/annulations", "result": "success"},
-            {"id": "e3", "timestamp": "2024-01-12T14:00:00+00:00", "user_id": "user-a", "action": "ACCESS_DENIED", "resource": "/api/admin", "result": "failure"},
-            {"id": "e4", "timestamp": "2024-01-13T08:00:00+00:00", "user_id": "user-c", "action": "LOGIN", "resource": "/api/auth", "result": "success"},
-            {"id": "e5", "timestamp": "2024-01-14T16:00:00+00:00", "user_id": "user-a", "action": "UPDATE", "resource": "/api/config", "result": "success"},
+            {
+                "id": "e1",
+                "timestamp": "2024-01-10T10:00:00+00:00",
+                "user_id": "user-a",
+                "action": "LOGIN",
+                "resource": "/api/auth",
+                "result": "success",
+            },
+            {
+                "id": "e2",
+                "timestamp": "2024-01-11T12:00:00+00:00",
+                "user_id": "user-b",
+                "action": "CREATE",
+                "resource": "/api/annulations",
+                "result": "success",
+            },
+            {
+                "id": "e3",
+                "timestamp": "2024-01-12T14:00:00+00:00",
+                "user_id": "user-a",
+                "action": "ACCESS_DENIED",
+                "resource": "/api/admin",
+                "result": "failure",
+            },
+            {
+                "id": "e4",
+                "timestamp": "2024-01-13T08:00:00+00:00",
+                "user_id": "user-c",
+                "action": "LOGIN",
+                "resource": "/api/auth",
+                "result": "success",
+            },
+            {
+                "id": "e5",
+                "timestamp": "2024-01-14T16:00:00+00:00",
+                "user_id": "user-a",
+                "action": "UPDATE",
+                "resource": "/api/config",
+                "result": "success",
+            },
         ]
         with open(temp_log_file, "w", encoding="utf-8") as f:
             for e in events:

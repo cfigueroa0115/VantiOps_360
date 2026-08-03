@@ -33,9 +33,7 @@ valid_roles = st.sampled_from([r.value for r in Role])
 valid_permissions = st.sampled_from([p.value for p in Permission])
 
 # Invalid role strings: text that is NOT a valid role
-invalid_roles = st.text(min_size=1, max_size=50).filter(
-    lambda s: s not in {r.value for r in Role}
-)
+invalid_roles = st.text(min_size=1, max_size=50).filter(lambda s: s not in {r.value for r in Role})
 
 # Invalid permission strings: text that is NOT a valid permission
 invalid_permissions = st.text(min_size=1, max_size=50).filter(
@@ -45,13 +43,10 @@ invalid_permissions = st.text(min_size=1, max_size=50).filter(
 
 # --- Helper ---
 
+
 def _get_allowed_roles_for_permission(permission: Permission) -> set[str]:
     """Return the set of roles that have the given permission."""
-    return {
-        role.value
-        for role, perms in PERMISSIONS.items()
-        if permission in perms
-    }
+    return {role.value for role, perms in PERMISSIONS.items() if permission in perms}
 
 
 def _get_denied_roles_for_permission(permission: Permission) -> set[str]:
@@ -171,8 +166,7 @@ class TestP4dInvalidRoleDenied:
         """Invalid role strings must fail role validation."""
         result = validate_role(role)
         assert result is False, (
-            f"Invalid role '{role}' should NOT pass validation "
-            f"but validate_role returned True"
+            f"Invalid role '{role}' should NOT pass validation " f"but validate_role returned True"
         )
 
 

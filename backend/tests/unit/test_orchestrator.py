@@ -52,13 +52,17 @@ def sample_excel_file(tmp_path: Path) -> Path:
 class TestComputeFileHash:
     """Tests for SHA-256 hash computation."""
 
-    def test_computes_sha256_hash(self, orchestrator: PipelineOrchestrator, sample_excel_file: Path):
+    def test_computes_sha256_hash(
+        self, orchestrator: PipelineOrchestrator, sample_excel_file: Path
+    ):
         """SHA-256 hash is computed correctly for a file."""
         expected = hashlib.sha256(b"sample excel content for testing").hexdigest()
         result = orchestrator.compute_file_hash(sample_excel_file)
         assert result == expected
 
-    def test_same_content_produces_same_hash(self, orchestrator: PipelineOrchestrator, tmp_path: Path):
+    def test_same_content_produces_same_hash(
+        self, orchestrator: PipelineOrchestrator, tmp_path: Path
+    ):
         """Two files with identical content produce the same hash."""
         file_a = tmp_path / "a.xlsx"
         file_b = tmp_path / "b.xlsx"
@@ -68,7 +72,9 @@ class TestComputeFileHash:
 
         assert orchestrator.compute_file_hash(file_a) == orchestrator.compute_file_hash(file_b)
 
-    def test_different_content_produces_different_hash(self, orchestrator: PipelineOrchestrator, tmp_path: Path):
+    def test_different_content_produces_different_hash(
+        self, orchestrator: PipelineOrchestrator, tmp_path: Path
+    ):
         """Different file content produces different hashes."""
         file_a = tmp_path / "a.xlsx"
         file_b = tmp_path / "b.xlsx"
@@ -90,39 +96,45 @@ class TestIsAlreadyProcessed:
         """Returns False when control_table.json doesn't exist."""
         assert orchestrator.is_already_processed("abc123") is False
 
-    def test_returns_false_when_hash_not_found(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_returns_false_when_hash_not_found(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Returns False when hash is not in the control table."""
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps({"batches": [
-            {"file_hash": "other_hash", "status": "completed"}
-        ]}))
+        control_path.write_text(
+            json.dumps({"batches": [{"file_hash": "other_hash", "status": "completed"}]})
+        )
 
         assert orchestrator.is_already_processed("abc123") is False
 
-    def test_returns_false_when_status_not_completed(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_returns_false_when_status_not_completed(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Returns False when hash exists but status is not 'completed'."""
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps({"batches": [
-            {"file_hash": "abc123", "status": "failed"}
-        ]}))
+        control_path.write_text(
+            json.dumps({"batches": [{"file_hash": "abc123", "status": "failed"}]})
+        )
 
         assert orchestrator.is_already_processed("abc123") is False
 
-    def test_returns_true_when_hash_completed(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_returns_true_when_hash_completed(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Returns True when hash exists with status 'completed'."""
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps({"batches": [
-            {"file_hash": "abc123", "status": "completed"}
-        ]}))
+        control_path.write_text(
+            json.dumps({"batches": [{"file_hash": "abc123", "status": "completed"}]})
+        )
 
         assert orchestrator.is_already_processed("abc123") is True
 
-    def test_supports_legacy_list_format(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_supports_legacy_list_format(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Supports legacy format where control table is a plain list."""
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps([
-            {"source_file_hash": "abc123", "status": "completed"}
-        ]))
+        control_path.write_text(json.dumps([{"source_file_hash": "abc123", "status": "completed"}]))
 
         assert orchestrator.is_already_processed("abc123") is True
 
@@ -141,7 +153,9 @@ class TestGetCompletedBatchEntry:
         """Returns None when no control table exists."""
         assert orchestrator.get_completed_batch_entry("abc123") is None
 
-    def test_returns_entry_for_completed_hash(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_returns_entry_for_completed_hash(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Returns the batch entry for a completed hash."""
         entry = {"file_hash": "abc123", "status": "completed", "records_processed": 100}
         control_path = tmp_output_dir / "serving" / "control_table.json"
@@ -150,12 +164,14 @@ class TestGetCompletedBatchEntry:
         result = orchestrator.get_completed_batch_entry("abc123")
         assert result == entry
 
-    def test_returns_none_for_non_completed_hash(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_returns_none_for_non_completed_hash(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Returns None when hash exists but status is not completed."""
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps({"batches": [
-            {"file_hash": "abc123", "status": "running"}
-        ]}))
+        control_path.write_text(
+            json.dumps({"batches": [{"file_hash": "abc123", "status": "running"}]})
+        )
 
         assert orchestrator.get_completed_batch_entry("abc123") is None
 
@@ -163,7 +179,9 @@ class TestGetCompletedBatchEntry:
 class TestUpdateControlTable:
     """Tests for control table update logic."""
 
-    def test_creates_control_table_with_new_schema(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_creates_control_table_with_new_schema(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Creates control table with the enhanced batches schema."""
         batch = IngestionBatch(
             batch_id="test-batch-001",
@@ -194,7 +212,9 @@ class TestUpdateControlTable:
         assert entry["started_at"] == "2024-01-15T10:30:00+00:00"
         assert entry["completed_at"] is not None
 
-    def test_updates_existing_batch_in_place(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_updates_existing_batch_in_place(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Updates an existing batch entry rather than appending duplicate."""
         batch = IngestionBatch(
             batch_id="test-batch-001",
@@ -222,7 +242,9 @@ class TestUpdateControlTable:
         assert entry["stages_completed"] == PIPELINE_STAGES
         assert entry["records_processed"] == 100
 
-    def test_completed_at_is_null_when_not_completed(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_completed_at_is_null_when_not_completed(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """completed_at is null when batch status is not 'completed'."""
         batch = IngestionBatch(
             batch_id="test-batch-002",
@@ -240,12 +262,21 @@ class TestUpdateControlTable:
         assert entry["completed_at"] is None
         assert entry["status"] == "in_progress"
 
-    def test_preserves_existing_batches(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_preserves_existing_batches(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """New batch entries are appended without removing existing ones."""
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        existing = {"batches": [
-            {"batch_id": "old-batch", "file_hash": "oldhash", "status": "completed", "stages_completed": PIPELINE_STAGES}
-        ]}
+        existing = {
+            "batches": [
+                {
+                    "batch_id": "old-batch",
+                    "file_hash": "oldhash",
+                    "status": "completed",
+                    "stages_completed": PIPELINE_STAGES,
+                }
+            ]
+        }
         control_path.write_text(json.dumps(existing))
 
         batch = IngestionBatch(
@@ -274,20 +305,30 @@ class TestPipelineStages:
         """Each stage follows the previous one in the canonical order."""
         expected_order = ["ingest", "profile", "validate", "enrich", "serve"]
         for i, stage in enumerate(PIPELINE_STAGES):
-            assert stage == expected_order[i], f"Stage {i} should be {expected_order[i]}, got {stage}"
+            assert (
+                stage == expected_order[i]
+            ), f"Stage {i} should be {expected_order[i]}, got {stage}"
 
 
 class TestPipelineIdempotency:
     """Tests for the full pipeline idempotency behavior."""
 
-    def test_skips_reprocessing_on_completed_hash(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path, sample_excel_file: Path):
+    def test_skips_reprocessing_on_completed_hash(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path, sample_excel_file: Path
+    ):
         """Pipeline skips reprocessing when file hash is already completed."""
         # Pre-populate control table with a completed entry for this file hash
         file_hash = orchestrator.compute_file_hash(sample_excel_file)
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps({"batches": [
-            {"file_hash": file_hash, "status": "completed", "records_processed": 50}
-        ]}))
+        control_path.write_text(
+            json.dumps(
+                {
+                    "batches": [
+                        {"file_hash": file_hash, "status": "completed", "records_processed": 50}
+                    ]
+                }
+            )
+        )
 
         result = orchestrator.run(sample_excel_file)
 
@@ -297,13 +338,21 @@ class TestPipelineIdempotency:
         assert result.quality_report is None
         assert result.quality_score is None
 
-    def test_force_reprocess_bypasses_idempotency(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path, sample_excel_file: Path):
+    def test_force_reprocess_bypasses_idempotency(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path, sample_excel_file: Path
+    ):
         """force_reprocess=True skips the idempotency check."""
         file_hash = orchestrator.compute_file_hash(sample_excel_file)
         control_path = tmp_output_dir / "serving" / "control_table.json"
-        control_path.write_text(json.dumps({"batches": [
-            {"file_hash": file_hash, "status": "completed", "records_processed": 50}
-        ]}))
+        control_path.write_text(
+            json.dumps(
+                {
+                    "batches": [
+                        {"file_hash": file_hash, "status": "completed", "records_processed": 50}
+                    ]
+                }
+            )
+        )
 
         config = PipelineConfig(
             source_path=sample_excel_file,
@@ -322,7 +371,9 @@ class TestPipelineIdempotency:
 class TestControlTableSchema:
     """Tests validating the control table JSON schema structure."""
 
-    def test_schema_has_required_fields(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_schema_has_required_fields(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Control table entries have all required schema fields."""
         batch = IngestionBatch(
             batch_id="schema-test",
@@ -339,11 +390,21 @@ class TestControlTableSchema:
         entry = data["batches"][0]
 
         # Required fields per task specification
-        required_fields = ["file_hash", "file_name", "status", "stages_completed", "records_processed", "started_at", "completed_at"]
+        required_fields = [
+            "file_hash",
+            "file_name",
+            "status",
+            "stages_completed",
+            "records_processed",
+            "started_at",
+            "completed_at",
+        ]
         for field in required_fields:
             assert field in entry, f"Missing required field: {field}"
 
-    def test_status_values_are_valid(self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path):
+    def test_status_values_are_valid(
+        self, orchestrator: PipelineOrchestrator, tmp_output_dir: Path
+    ):
         """Status field uses valid values: running, completed, failed."""
         for status in [BatchStatus.IN_PROGRESS, BatchStatus.COMPLETED, BatchStatus.FAILED]:
             batch = IngestionBatch(

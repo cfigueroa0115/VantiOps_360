@@ -51,9 +51,7 @@ def threshold_strategy(draw: st.DrawFn) -> float:
     return draw(st.floats(min_value=0.01, max_value=0.99, allow_nan=False, allow_infinity=False))
 
 
-def apply_pareto_enrichment(
-    rows: list[dict], threshold: float
-) -> list[dict]:
+def apply_pareto_enrichment(rows: list[dict], threshold: float) -> list[dict]:
     """Replicate the enrichment logic from _chart_pareto in routes.py.
 
     This is a pure-function extraction of the enrichment logic so we can
@@ -192,9 +190,7 @@ def test_p1d_concentration_pct_equals_row_percentage(
 
 @given(percentages=pareto_percentages(), threshold=threshold_strategy())
 @settings(max_examples=200, deadline=None)
-def test_p1e_analysis_level_is_valid_enum(
-    percentages: list[float], threshold: float
-) -> None:
+def test_p1e_analysis_level_is_valid_enum(percentages: list[float], threshold: float) -> None:
     """P1e: analysis_level must be one of the 3 valid values.
 
     **Validates: Requirements 5.5**
