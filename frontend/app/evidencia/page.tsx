@@ -31,13 +31,7 @@ const TECHNOLOGIES = [
   { category: "Seguridad", icon: <Shield size={16} />, color: "from-amber-500 to-yellow-500", items: ["RBAC 11 roles", "JWT middleware", "Audit append-only", "Email validation"] },
 ];
 
-const STATS = [
-  { label: "Frontend Tests", value: "427", icon: <TestTube2 size={18} />, color: "text-blue-600", bg: "bg-blue-50 group-hover:bg-blue-100" },
-  { label: "Backend Tests", value: "1,070", icon: <CheckCircle2 size={18} />, color: "text-emerald-600", bg: "bg-emerald-50 group-hover:bg-emerald-100" },
-  { label: "Failed", value: "0", icon: <XCircle size={18} />, color: "text-red-500", bg: "bg-red-50 group-hover:bg-red-100" },
-  { label: "Skipped", value: "22", icon: <Clock size={18} />, color: "text-gray-500", bg: "bg-gray-50 group-hover:bg-gray-100" },
-  { label: "Coverage", value: "No disponible", icon: <TrendingUp size={18} />, color: "text-purple-600", bg: "bg-purple-50 group-hover:bg-purple-100" },
-];
+const STATS: { label: string; value: string; icon: React.ReactNode; color: string; bg: string }[] = [];
 
 // ─── Page ────────────────────────────────────────────────────────────────
 
