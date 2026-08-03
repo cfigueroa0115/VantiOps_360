@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { useChartData } from "@/hooks/useChartData";
-import { SearchCode, Target, ListOrdered, Table2, GitBranch } from "lucide-react";
+import { SearchCode, Target, ListOrdered, Table2, GitBranch, X, ZoomIn } from "lucide-react";
 
 const PARETO_DATA = [
   { cause: "Cancela Servihogar a solicitud cliente", pct: 49.2, cumulative: 49.2 },
@@ -47,6 +47,7 @@ const FMEA_DATA = [
 
 export default function RCAPage() {
   const { data, loading, error } = useChartData("pareto");
+  const [zoomedImage, setZoomedImage] = useState<{ src: string; alt: string } | null>(null);
 
   // Derive main cause from live Pareto endpoint (same source as Dashboard)
   const paretoArray = data?.data || [];
@@ -257,16 +258,24 @@ export default function RCAPage() {
           {/* AS-IS */}
           <article data-testid="bpmn-asis-card" className="rounded-xl border border-red-200 bg-red-50/30 p-4">
             <h3 className="mb-3 text-sm font-semibold text-red-700">AS-IS (Estado actual)</h3>
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+            <div
+              className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm cursor-pointer transition-shadow hover:shadow-md"
+              onClick={() => setZoomedImage({ src: "/bpmn/AsIs.jpg", alt: "Diagrama BPMN del proceso actual de cancelación AS-IS" })}
+            >
               <Image
                 data-testid="bpmn-asis-image"
                 src="/bpmn/AsIs.jpg"
                 alt="Diagrama BPMN del proceso actual de cancelación AS-IS"
                 width={2000}
                 height={900}
-                className="h-auto w-full object-contain cursor-zoom-in"
+                className="h-auto w-full object-contain"
                 sizes="(max-width: 1280px) 100vw, 50vw"
               />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/5 transition-colors">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2 shadow-lg">
+                  <ZoomIn size={20} className="text-gray-700" />
+                </div>
+              </div>
             </div>
             <ul className="mt-4 space-y-2 text-sm text-slate-700">
               <li className="flex items-start gap-2">
@@ -287,16 +296,24 @@ export default function RCAPage() {
           {/* TO-BE */}
           <article data-testid="bpmn-tobe-card" className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
             <h3 className="mb-3 text-sm font-semibold text-emerald-700">TO-BE (Estado deseado)</h3>
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+            <div
+              className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm cursor-pointer transition-shadow hover:shadow-md"
+              onClick={() => setZoomedImage({ src: "/bpmn/ToBe.jpg", alt: "Diagrama BPMN del proceso futuro de cancelación TO-BE" })}
+            >
               <Image
                 data-testid="bpmn-tobe-image"
                 src="/bpmn/ToBe.jpg"
                 alt="Diagrama BPMN del proceso futuro de cancelación TO-BE"
                 width={2000}
                 height={900}
-                className="h-auto w-full object-contain cursor-zoom-in"
+                className="h-auto w-full object-contain"
                 sizes="(max-width: 1280px) 100vw, 50vw"
               />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/5 transition-colors">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2 shadow-lg">
+                  <ZoomIn size={20} className="text-gray-700" />
+                </div>
+              </div>
             </div>
             <ul className="mt-4 space-y-2 text-sm text-slate-700">
               <li className="flex items-start gap-2">
@@ -315,6 +332,36 @@ export default function RCAPage() {
           </article>
         </div>
       </div>
+
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setZoomedImage(null)}
+        >
+          <button
+            onClick={() => setZoomedImage(null)}
+            className="absolute top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg hover:bg-white transition-colors"
+            aria-label="Cerrar imagen ampliada"
+          >
+            <X size={20} className="text-gray-700" />
+          </button>
+          <div
+            className="relative max-w-[95vw] max-h-[90vh] overflow-auto rounded-xl bg-white shadow-2xl p-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={zoomedImage.src}
+              alt={zoomedImage.alt}
+              width={3000}
+              height={1500}
+              className="h-auto w-full max-h-[85vh] object-contain rounded-lg"
+              sizes="95vw"
+              priority
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
