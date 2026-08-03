@@ -96,7 +96,7 @@ def _execute_query(sql: str, params: list | None = None) -> list[dict[str, Any]]
             result = con.execute(sql, params)
         else:
             result = con.execute(sql)
-        columns = [desc[0] for desc in result.description]
+        columns = [desc[0] for desc in result.description]  # type: ignore[union-attr]
         rows = result.fetchall()
         return [dict(zip(columns, row)) for row in rows]
     finally:
