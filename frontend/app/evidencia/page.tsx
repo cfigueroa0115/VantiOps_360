@@ -32,20 +32,26 @@ const TECHNOLOGIES = [
 ];
 
 const STATS = [
-  { label: "Tests Totales", value: "1,497", icon: <TestTube2 size={18} />, color: "text-blue-600", bg: "bg-blue-50 group-hover:bg-blue-100" },
-  { label: "Tests Passed", value: "1,497", icon: <CheckCircle2 size={18} />, color: "text-emerald-600", bg: "bg-emerald-50 group-hover:bg-emerald-100" },
+  { label: "Frontend Tests", value: "427", icon: <TestTube2 size={18} />, color: "text-blue-600", bg: "bg-blue-50 group-hover:bg-blue-100" },
+  { label: "Backend Tests", value: "1,070", icon: <CheckCircle2 size={18} />, color: "text-emerald-600", bg: "bg-emerald-50 group-hover:bg-emerald-100" },
   { label: "Failed", value: "0", icon: <XCircle size={18} />, color: "text-red-500", bg: "bg-red-50 group-hover:bg-red-100" },
   { label: "Skipped", value: "22", icon: <Clock size={18} />, color: "text-gray-500", bg: "bg-gray-50 group-hover:bg-gray-100" },
-  { label: "Coverage", value: "92%", icon: <TrendingUp size={18} />, color: "text-purple-600", bg: "bg-purple-50 group-hover:bg-purple-100" },
+  { label: "Coverage", value: "No disponible", icon: <TrendingUp size={18} />, color: "text-purple-600", bg: "bg-purple-50 group-hover:bg-purple-100" },
 ];
 
 // ─── Page ────────────────────────────────────────────────────────────────
 
 export default function EvidenciaPage() {
   const [mounted, setMounted] = useState(false);
+  const [health, setHealth] = useState<any>(null);
+  const [validation, setValidation] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
+    // Fetch live health
+    fetch("/api/health").then(r => r.json()).then(setHealth).catch(() => {});
+    // Fetch latest validation JSON
+    fetch("/evidence/latest-validation.json").then(r => r.json()).then(setValidation).catch(() => {});
   }, []);
 
   return (
@@ -277,6 +283,58 @@ export default function EvidenciaPage() {
             ))}
           </ul>
         </div>
+      </div>
+
+      {/* ─── Live Validation Section ─── */}
+      <div className={`rounded-xl border border-gray-100 bg-white p-6 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+        <div className="flex items-center gap-2 mb-4">
+          <CheckCircle2 size={18} className="text-emerald-600" />
+          <h2 className="text-lg font-semibold text-gray-800">Validación en Vivo</h2>
+          <span className="ml-auto text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
+            Datos reales
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+          <div className="rounded-lg border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 mb-1">Health Check</p>
+            <p className={`font-semibold ${health?.status === "healthy" ? "text-emerald-600" : "text-gray-500"}`}>
+              {health?.status || "Consultando..."}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 mb-1">Base de Datos</p>
+            <p className={`font-semibold ${health?.database?.connected ? "text-emerald-600" : "text-gray-500"}`}>
+              {health?.database?.connected ? `Conectada (${health.database.latencyMs}ms)` : "Consultando..."}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 mb-1">SHA Validado</p>
+            <p className="font-mono text-xs font-semibold text-gray-700">
+              {validation?.commitSha || "No disponible"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 mb-1">Frontend Tests</p>
+            <p className="font-semibold text-gray-700">
+              {validation?.frontendTests?.total ? `${validation.frontendTests.total} (${validation.frontendTests.status})` : "No disponible"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 mb-1">Backend Tests</p>
+            <p className="font-semibold text-gray-700">
+              {validation?.backendTests?.total ? `${validation.backendTests.total} (${validation.backendTests.status})` : "No disponible"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 mb-1">Coverage</p>
+            <p className="font-semibold text-gray-700">
+              {validation?.coverage ? `${validation.coverage}%` : "No disponible"}
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-3 italic">
+          Datos obtenidos en tiempo real de /api/health y /evidence/latest-validation.json
+        </p>
       </div>
 
       {/* ─── Limitations Banner ─── */}
