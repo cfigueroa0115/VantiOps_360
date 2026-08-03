@@ -133,7 +133,7 @@ class TestLogAuditEvent:
     def test_log_event_writes_to_file_when_no_db(self):
         """When DATABASE_URL is not set, event is written to file fallback."""
         with patch.dict(os.environ, {}, clear=True):
-            event = log_audit_event(
+            log_audit_event(
                 user_id="user-123",
                 action="LOGIN",
                 resource="/api/auth",
@@ -167,7 +167,7 @@ class TestLogAuditEvent:
     def test_log_event_with_details(self):
         """Details dict is persisted as JSON."""
         with patch.dict(os.environ, {}, clear=True):
-            event = log_audit_event(
+            log_audit_event(
                 user_id="user-1",
                 action="UPDATE",
                 resource="/api/config",
@@ -200,7 +200,7 @@ class TestLogAuditEvent:
     def test_log_event_correlation_id(self):
         """Correlation ID is persisted when provided."""
         with patch.dict(os.environ, {}, clear=True):
-            event = log_audit_event(
+            log_audit_event(
                 user_id="user-1",
                 action="PROCESS",
                 resource="/api/etl",

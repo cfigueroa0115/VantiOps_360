@@ -378,7 +378,6 @@ class TestFindSemanticSimilarities:
 
     def test_preserves_original_values(self) -> None:
         """Grouped values should preserve original casing."""
-        categories = ["ABC Test", "ABC Tест"]  # Using different character
         # These should not be similar enough with standard threshold
         categories_similar = ["ABC Test Value", "ABC Test Valor"]
         result = find_semantic_similarities(categories_similar, threshold=0.75)

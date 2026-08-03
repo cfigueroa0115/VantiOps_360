@@ -360,7 +360,6 @@ def _chart_pareto(base: str, params: list) -> list[dict]:
         threshold = PARETO_HIGH_CONCENTRATION_THRESHOLD
 
         for i, row in enumerate(rows):
-            cause_pct = row["percentage"] / 100.0
             # high_concentration: true only for the top cause when it exceeds threshold
             is_high_concentration = (i == 0) and (top_cause_pct > threshold)
             row["high_concentration"] = is_high_concentration

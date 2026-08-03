@@ -376,7 +376,7 @@ class TestAuditLogNoRemoval:
         self, user_id: str, action: str, resource: str
     ):
         """query_audit_events must return previously logged events (retention guarantee)."""
-        with TempAuditFileContext() as ctx:
+        with TempAuditFileContext():
             # Log multiple events with same user_id
             events = []
             for _ in range(3):

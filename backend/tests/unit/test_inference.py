@@ -242,7 +242,6 @@ class TestChiSquareTest:
         result = chi_square_test(contingency)
 
         # Check that p-value has at most 4 decimal places
-        p_str = f"{result.p_value:.10f}"
         # After 4th decimal, remaining digits should be 0
         assert result.p_value == round(result.p_value, 4)
 

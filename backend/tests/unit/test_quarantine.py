@@ -302,7 +302,6 @@ class TestCuratedOutput:
     def test_curated_filename_pattern(self, tmp_output_dir: Path):
         """Curated output uses {source_stem}_curated.parquet naming."""
 
-        orch = PipelineOrchestrator(output_dir=tmp_output_dir)
         curated_dir = tmp_output_dir / "curated"
         curated_dir.mkdir(parents=True, exist_ok=True)
 

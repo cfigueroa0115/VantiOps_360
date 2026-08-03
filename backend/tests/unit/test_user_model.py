@@ -274,7 +274,6 @@ class TestProcessExpirations:
 
         mock_audit.assert_called_once()
         call_kwargs = mock_audit.call_args[1] if mock_audit.call_args[1] else {}
-        call_args = mock_audit.call_args[0] if mock_audit.call_args[0] else ()
 
         # Check it was called with expected arguments (positional or keyword)
         if call_kwargs:
