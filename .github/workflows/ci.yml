@@ -28,13 +28,16 @@ jobs:
         working-directory: backend
 
       - name: Python Lint (ruff)
-        run: python -m ruff check backend/src backend/tests
+        run: python -m ruff check src tests
+        working-directory: backend
 
       - name: Python Type Check (pyright)
-        run: python -m pyright backend/src
+        run: python -m pyright src
+        working-directory: backend
 
       - name: Python Tests (pytest)
-        run: python -m pytest backend/tests -q
+        run: python -m pytest tests -q
+        working-directory: backend
 
       # ─── Frontend Checks ─────────────────────────────────────────────
       - uses: actions/setup-node@v4
