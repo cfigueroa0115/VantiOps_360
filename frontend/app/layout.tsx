@@ -29,7 +29,7 @@ export default function RootLayout({
             </div>
             {/* Global authorship footer */}
             <footer className="border-t border-gray-200 bg-white px-4 py-2 text-center text-[11px] text-gray-500 shrink-0">
-              Desarrollado por el Ing. Carlos Alberto Figueroa Martínez
+             Copyright © 2026 Carlos Alberto Figueroa Martínez
             </footer>
           </main>
         </div>
