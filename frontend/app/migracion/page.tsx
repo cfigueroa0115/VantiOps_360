@@ -81,7 +81,7 @@ export default function MigracionPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Migración de Datos</h1>
-          <p className="text-sm text-gray-500">Simulación de migración de 600 registros PQR</p>
+          <p className="text-sm text-gray-500">Simulación conceptual independiente de migración de registros PQR</p>
         </div>
       </div>
 

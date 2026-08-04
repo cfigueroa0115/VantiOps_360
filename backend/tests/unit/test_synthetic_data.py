@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
-import pytest
 
-from pipeline.synthetic_data import SyntheticDataGenerator, _DEFAULT_DISTRIBUTIONS, _DEFAULT_NUMERIC_PARAMS
+from pipeline.synthetic_data import (
+    _DEFAULT_DISTRIBUTIONS,
+    _DEFAULT_NUMERIC_PARAMS,
+    SyntheticDataGenerator,
+)
 
 
 class TestSyntheticDataGeneratorDefaults:
@@ -187,9 +190,7 @@ class TestSyntheticDataGeneratorFromSource:
         df = gen.generate(n=5000)
 
         # Check causa distribution
-        source_dist = (
-            source.group_by("causa").len().sort("len", descending=True)
-        )
+        source_dist = source.group_by("causa").len().sort("len", descending=True)
         source_total = source_dist["len"].sum()
 
         for row in source_dist.iter_rows():

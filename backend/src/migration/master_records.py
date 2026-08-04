@@ -59,6 +59,7 @@ class MigrationAbortError(Exception):
             f"Existing data preserved."
         )
 
+
 # PQR valid domain values
 VALID_ESTADOS = {"cerrado", "en_proceso", "abierto"}
 VALID_TIPOS_PQR = {"peticion", "queja", "reclamo"}
@@ -267,55 +268,75 @@ class MasterMigrationPipeline:
         if "id_pqr" in df.columns:
             null_ids = df["id_pqr"].is_null()
             for idx in null_ids.arg_true().to_list():
-                quarantined.append(QuarantinedRecord(
-                    record_id=f"row_{idx}",
-                    failed_field="id_pqr",
-                    rule_violated="not_null",
-                    rejected_value=None,
-                ))
+                quarantined.append(
+                    QuarantinedRecord(
+                        record_id=f"row_{idx}",
+                        failed_field="id_pqr",
+                        rule_violated="not_null",
+                        rejected_value=None,
+                    )
+                )
             valid_mask = valid_mask & ~null_ids
 
         # Rule: estado must be in valid set
         if "estado" in df.columns:
             invalid_estado = ~df["estado"].is_in(list(VALID_ESTADOS)) & df["estado"].is_not_null()
             for idx in invalid_estado.arg_true().to_list():
-                quarantined.append(QuarantinedRecord(
-                    record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                    failed_field="estado",
-                    rule_violated="isin:cerrado,en_proceso,abierto",
-                    rejected_value=str(df["estado"][idx]),
-                ))
+                quarantined.append(
+                    QuarantinedRecord(
+                        record_id=str(df["id_pqr"][idx])
+                        if "id_pqr" in df.columns
+                        else f"row_{idx}",
+                        failed_field="estado",
+                        rule_violated="isin:cerrado,en_proceso,abierto",
+                        rejected_value=str(df["estado"][idx]),
+                    )
+                )
             # Also check null estado
             null_estado = df["estado"].is_null()
             for idx in null_estado.arg_true().to_list():
                 if not df["id_pqr"].is_null()[idx]:  # Only if not already quarantined for null id
-                    quarantined.append(QuarantinedRecord(
-                        record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                        failed_field="estado",
-                        rule_violated="not_null",
-                        rejected_value=None,
-                    ))
+                    quarantined.append(
+                        QuarantinedRecord(
+                            record_id=str(df["id_pqr"][idx])
+                            if "id_pqr" in df.columns
+                            else f"row_{idx}",
+                            failed_field="estado",
+                            rule_violated="not_null",
+                            rejected_value=None,
+                        )
+                    )
             valid_mask = valid_mask & ~invalid_estado & ~null_estado
 
         # Rule: tipo_pqr must be in valid set
         if "tipo_pqr" in df.columns:
-            invalid_tipo = ~df["tipo_pqr"].is_in(list(VALID_TIPOS_PQR)) & df["tipo_pqr"].is_not_null()
+            invalid_tipo = (
+                ~df["tipo_pqr"].is_in(list(VALID_TIPOS_PQR)) & df["tipo_pqr"].is_not_null()
+            )
             for idx in invalid_tipo.arg_true().to_list():
-                quarantined.append(QuarantinedRecord(
-                    record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                    failed_field="tipo_pqr",
-                    rule_violated="isin:peticion,queja,reclamo",
-                    rejected_value=str(df["tipo_pqr"][idx]),
-                ))
+                quarantined.append(
+                    QuarantinedRecord(
+                        record_id=str(df["id_pqr"][idx])
+                        if "id_pqr" in df.columns
+                        else f"row_{idx}",
+                        failed_field="tipo_pqr",
+                        rule_violated="isin:peticion,queja,reclamo",
+                        rejected_value=str(df["tipo_pqr"][idx]),
+                    )
+                )
             null_tipo = df["tipo_pqr"].is_null()
             for idx in null_tipo.arg_true().to_list():
                 if valid_mask[idx]:  # Only if not already invalid
-                    quarantined.append(QuarantinedRecord(
-                        record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                        failed_field="tipo_pqr",
-                        rule_violated="not_null",
-                        rejected_value=None,
-                    ))
+                    quarantined.append(
+                        QuarantinedRecord(
+                            record_id=str(df["id_pqr"][idx])
+                            if "id_pqr" in df.columns
+                            else f"row_{idx}",
+                            failed_field="tipo_pqr",
+                            rule_violated="not_null",
+                            rejected_value=None,
+                        )
+                    )
             valid_mask = valid_mask & ~invalid_tipo & ~null_tipo
 
         # Rule: causa must not be null/empty
@@ -323,25 +344,39 @@ class MasterMigrationPipeline:
             empty_causa = df["causa"].is_null() | (df["causa"].str.len_chars() == 0)
             for idx in empty_causa.arg_true().to_list():
                 if valid_mask[idx]:
-                    quarantined.append(QuarantinedRecord(
-                        record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                        failed_field="causa",
-                        rule_violated="not_null_or_empty",
-                        rejected_value=str(df["causa"][idx]) if df["causa"][idx] is not None else None,
-                    ))
+                    quarantined.append(
+                        QuarantinedRecord(
+                            record_id=str(df["id_pqr"][idx])
+                            if "id_pqr" in df.columns
+                            else f"row_{idx}",
+                            failed_field="causa",
+                            rule_violated="not_null_or_empty",
+                            rejected_value=str(df["causa"][idx])
+                            if df["causa"][idx] is not None
+                            else None,
+                        )
+                    )
             valid_mask = valid_mask & ~empty_causa
 
         # Rule: canal_atencion must not be null/empty
         if "canal_atencion" in df.columns:
-            empty_canal = df["canal_atencion"].is_null() | (df["canal_atencion"].str.len_chars() == 0)
+            empty_canal = df["canal_atencion"].is_null() | (
+                df["canal_atencion"].str.len_chars() == 0
+            )
             for idx in empty_canal.arg_true().to_list():
                 if valid_mask[idx]:
-                    quarantined.append(QuarantinedRecord(
-                        record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                        failed_field="canal_atencion",
-                        rule_violated="not_null_or_empty",
-                        rejected_value=str(df["canal_atencion"][idx]) if df["canal_atencion"][idx] is not None else None,
-                    ))
+                    quarantined.append(
+                        QuarantinedRecord(
+                            record_id=str(df["id_pqr"][idx])
+                            if "id_pqr" in df.columns
+                            else f"row_{idx}",
+                            failed_field="canal_atencion",
+                            rule_violated="not_null_or_empty",
+                            rejected_value=str(df["canal_atencion"][idx])
+                            if df["canal_atencion"][idx] is not None
+                            else None,
+                        )
+                    )
             valid_mask = valid_mask & ~empty_canal
 
         # Rule: empresa must not be null/empty
@@ -349,12 +384,18 @@ class MasterMigrationPipeline:
             empty_empresa = df["empresa"].is_null() | (df["empresa"].str.len_chars() == 0)
             for idx in empty_empresa.arg_true().to_list():
                 if valid_mask[idx]:
-                    quarantined.append(QuarantinedRecord(
-                        record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                        failed_field="empresa",
-                        rule_violated="not_null_or_empty",
-                        rejected_value=str(df["empresa"][idx]) if df["empresa"][idx] is not None else None,
-                    ))
+                    quarantined.append(
+                        QuarantinedRecord(
+                            record_id=str(df["id_pqr"][idx])
+                            if "id_pqr" in df.columns
+                            else f"row_{idx}",
+                            failed_field="empresa",
+                            rule_violated="not_null_or_empty",
+                            rejected_value=str(df["empresa"][idx])
+                            if df["empresa"][idx] is not None
+                            else None,
+                        )
+                    )
             valid_mask = valid_mask & ~empty_empresa
 
         # Rule: tiempo_gestion_dias >= 0 (if present and not null)
@@ -363,12 +404,16 @@ class MasterMigrationPipeline:
             negative_tiempo = non_null_tiempo & (df["tiempo_gestion_dias"] < 0)
             for idx in negative_tiempo.arg_true().to_list():
                 if valid_mask[idx]:
-                    quarantined.append(QuarantinedRecord(
-                        record_id=str(df["id_pqr"][idx]) if "id_pqr" in df.columns else f"row_{idx}",
-                        failed_field="tiempo_gestion_dias",
-                        rule_violated="ge:0",
-                        rejected_value=float(df["tiempo_gestion_dias"][idx]),
-                    ))
+                    quarantined.append(
+                        QuarantinedRecord(
+                            record_id=str(df["id_pqr"][idx])
+                            if "id_pqr" in df.columns
+                            else f"row_{idx}",
+                            failed_field="tiempo_gestion_dias",
+                            rule_violated="ge:0",
+                            rejected_value=float(df["tiempo_gestion_dias"][idx]),
+                        )
+                    )
             valid_mask = valid_mask & ~negative_tiempo
 
         valid_df = df.filter(valid_mask)
@@ -425,7 +470,7 @@ class MasterMigrationPipeline:
         # Process in batches
         batch_size = self._config.batch_size
         for i in range(0, len(records), batch_size):
-            batch = records[i: i + batch_size]
+            batch = records[i : i + batch_size]
             try:
                 results = self._load_batch(batch)
                 for result in results:
@@ -567,7 +612,11 @@ class MasterMigrationPipeline:
         quarantine_df = pl.DataFrame(quarantine_data)
         self._config.quarantine_path.parent.mkdir(parents=True, exist_ok=True)
         quarantine_df.write_parquet(self._config.quarantine_path)
-        logger.info("Quarantine saved: %d records to %s", len(self._quarantined), self._config.quarantine_path)
+        logger.info(
+            "Quarantine saved: %d records to %s",
+            len(self._quarantined),
+            self._config.quarantine_path,
+        )
         return self._config.quarantine_path
 
     # ─── Full Pipeline ───────────────────────────────────────────────

@@ -11,9 +11,8 @@ Tests the validation logic that ensures:
 - P14d: The response always includes provenance = "DERIVED_DATA"
 """
 
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
-
 
 # ---------------------------------------------------------------------------
 # Validation functions mirroring the TypeScript route logic
@@ -79,12 +78,14 @@ invalid_metric_above_st = st.floats(min_value=1.0001, allow_nan=False, allow_inf
 invalid_metric_st = st.one_of(invalid_metric_below_st, invalid_metric_above_st)
 
 # Strategy for a full valid metrics dictionary
-valid_metrics_dict_st = st.fixed_dictionaries({
-    "precision": valid_metric_st,
-    "recall": valid_metric_st,
-    "f1_score": valid_metric_st,
-    "roc_auc": valid_metric_st,
-})
+valid_metrics_dict_st = st.fixed_dictionaries(
+    {
+        "precision": valid_metric_st,
+        "recall": valid_metric_st,
+        "f1_score": valid_metric_st,
+        "roc_auc": valid_metric_st,
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -109,9 +110,7 @@ class TestRiskModelMetricsValidity:
 
         For any float v in [0.0, 1.0], is_valid_metric(v) must return True.
         """
-        assert is_valid_metric(value), (
-            f"Metric value {value} is in [0, 1] but was rejected"
-        )
+        assert is_valid_metric(value), f"Metric value {value} is in [0, 1] but was rejected"
 
     @given(value=invalid_metric_st)
     @settings(max_examples=200)
@@ -124,9 +123,9 @@ class TestRiskModelMetricsValidity:
         For any float v outside [0.0, 1.0], is_valid_metric(v) must return False.
         """
         assume(value < 0.0 or value > 1.0)
-        assert not is_valid_metric(value), (
-            f"Metric value {value} is outside [0, 1] but was accepted"
-        )
+        assert not is_valid_metric(
+            value
+        ), f"Metric value {value} is outside [0, 1] but was accepted"
 
     @given(metrics=valid_metrics_dict_st)
     @settings(max_examples=200)
@@ -143,9 +142,9 @@ class TestRiskModelMetricsValidity:
         disclaimer = response.get("disclaimer")
         assert isinstance(disclaimer, str), "Disclaimer must be a string"
         assert len(disclaimer) > 0, "Disclaimer must not be empty"
-        assert "demonstration" in disclaimer.lower() or "analytical" in disclaimer.lower(), (
-            "Disclaimer must indicate this is for analytical demonstration"
-        )
+        assert (
+            "demonstration" in disclaimer.lower() or "analytical" in disclaimer.lower()
+        ), "Disclaimer must indicate this is for analytical demonstration"
 
     @given(metrics=valid_metrics_dict_st)
     @settings(max_examples=200)
@@ -160,6 +159,6 @@ class TestRiskModelMetricsValidity:
         """
         response = build_risk_model_response(metrics)
         provenance = response.get("dataProvenance")
-        assert provenance == "DERIVED_DATA", (
-            f"Expected dataProvenance='DERIVED_DATA', got '{provenance}'"
-        )
+        assert (
+            provenance == "DERIVED_DATA"
+        ), f"Expected dataProvenance='DERIVED_DATA', got '{provenance}'"

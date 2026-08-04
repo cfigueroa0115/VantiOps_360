@@ -10,8 +10,8 @@ Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 9.10
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, cast
 
 import numpy as np
 import polars as pl
@@ -25,7 +25,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
-
 
 # --- Disclaimer constant (Req 9.6) ---
 DISCLAIMER = "Analytical demonstration — not a production-grade model"
@@ -113,7 +112,9 @@ class RiskModel:
         """
         # Compute P90 threshold for target variable
         management_time = df["tiempo_gestion_dias"].drop_nulls()
-        p90 = float(management_time.quantile(0.9, interpolation="linear"))
+        # quantile on numeric series returns float (cast for pyright's broad PythonLiteral type)
+        p90_raw = cast("float | None", management_time.quantile(0.9, interpolation="linear"))
+        p90 = float(p90_raw) if p90_raw is not None else 0.0
         self._p90_threshold = p90
 
         # Filter out rows with null management time (cannot compute target)
@@ -123,9 +124,7 @@ class RiskModel:
         target = (df_valid["tiempo_gestion_dias"] > p90).cast(pl.Int32)
 
         # Select only creation-time features
-        available_features = [
-            col for col in CREATION_TIME_FEATURES if col in df_valid.columns
-        ]
+        available_features = [col for col in CREATION_TIME_FEATURES if col in df_valid.columns]
 
         features_df = df_valid.select(available_features)
 
@@ -155,8 +154,10 @@ class RiskModel:
         if total == 0:
             return False
 
-        min_count = counts["count"].min()
-        minority_ratio = min_count / total
+        # "count" column is always integer; cast for pyright since
+        # .min() returns PythonLiteral | None
+        min_count_raw = cast("int | None", counts["count"].min())
+        minority_ratio = int(min_count_raw) / total if min_count_raw is not None else 0.0
         return minority_ratio < 0.20
 
     def train(self, df: pl.DataFrame) -> ModelResult:
@@ -192,6 +193,10 @@ class RiskModel:
             stratify=y_np,
         )
 
+        # Ensure arrays are np.ndarray for type safety
+        X_test_arr: np.ndarray = np.asarray(X_test)
+        y_test_arr: np.ndarray = np.asarray(y_test)
+
         # Step 3: Check class imbalance
         imbalanced = self.check_class_imbalance(y)
         class_weight = "balanced" if imbalanced else None
@@ -213,7 +218,9 @@ class RiskModel:
         lr_model.fit(X_train, y_train)
 
         # Evaluate logistic regression
-        lr_metrics = self.evaluate(lr_model, X_test, y_test, model_type="logistic_regression")
+        lr_metrics = self.evaluate(
+            lr_model, X_test_arr, y_test_arr, model_type="logistic_regression"
+        )
 
         limitations: list[str] = []
         final_model = lr_model
@@ -232,7 +239,7 @@ class RiskModel:
                 random_state=self._random_seed,
             )
             dt_model.fit(X_train, y_train)
-            dt_metrics = self.evaluate(dt_model, X_test, y_test, model_type="decision_tree")
+            dt_metrics = self.evaluate(dt_model, X_test_arr, y_test_arr, model_type="decision_tree")
 
             if dt_metrics.roc_auc >= lr_metrics.roc_auc:
                 final_model = dt_model
@@ -286,9 +293,9 @@ class RiskModel:
         y_pred = model.predict(X_test)
         y_proba = model.predict_proba(X_test)[:, 1]
 
-        precision = float(precision_score(y_test, y_pred, zero_division=0))
-        recall = float(recall_score(y_test, y_pred, zero_division=0))
-        f1 = float(f1_score(y_test, y_pred, zero_division=0))
+        precision = float(precision_score(y_test, y_pred, zero_division="warn"))
+        recall = float(recall_score(y_test, y_pred, zero_division="warn"))
+        f1 = float(f1_score(y_test, y_pred, zero_division="warn"))
         roc_auc = float(roc_auc_score(y_test, y_proba))
         cm = confusion_matrix(y_test, y_pred).tolist()
 

@@ -32,8 +32,8 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone, timedelta
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -126,9 +126,7 @@ class ApprovalRequest:
     justification: str
     status: ApprovalStatus = ApprovalStatus.PENDING
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    requested_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    requested_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     expires_at: str = field(default="")
     approved_by: str | None = None
     approved_at: str | None = None
@@ -143,7 +141,8 @@ class ApprovalRequest:
             raise ValueError("approver_role is required")
         if self.approver_role not in ("LEGAL_APPROVER", "VP_APPROVER"):
             raise ValueError(
-                f"approver_role must be 'LEGAL_APPROVER' or 'VP_APPROVER', got '{self.approver_role}'"
+                f"approver_role must be 'LEGAL_APPROVER' or "
+                f"'VP_APPROVER', got '{self.approver_role}'"
             )
         if not self.justification or len(self.justification) < MIN_JUSTIFICATION_LENGTH:
             raise ValueError(
@@ -152,9 +151,7 @@ class ApprovalRequest:
         # Compute expires_at if not set
         if not self.expires_at:
             requested = datetime.fromisoformat(self.requested_at)
-            self.expires_at = (
-                requested + timedelta(hours=APPROVAL_EXPIRATION_HOURS)
-            ).isoformat()
+            self.expires_at = (requested + timedelta(hours=APPROVAL_EXPIRATION_HOURS)).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -434,11 +431,14 @@ def approve_request(
 
     # Approve
     now = datetime.now(timezone.utc).isoformat()
-    _update_approval(approval_id, {
-        "status": ApprovalStatus.APPROVED,
-        "approved_by": approver_id,
-        "approved_at": now,
-    })
+    _update_approval(
+        approval_id,
+        {
+            "status": ApprovalStatus.APPROVED,
+            "approved_by": approver_id,
+            "approved_at": now,
+        },
+    )
 
     # Log audit event
     log_audit_event(
@@ -456,6 +456,7 @@ def approve_request(
 
     # Reconstruct the updated approval
     updated_record = _find_approval(approval_id)
+    assert updated_record is not None  # Just updated above, must exist
     updated_approval = ApprovalRequest(
         id=updated_record["id"],
         operation=updated_record["operation"],
@@ -554,11 +555,14 @@ def reject_request(
 
     # Reject
     now = datetime.now(timezone.utc).isoformat()
-    _update_approval(approval_id, {
-        "status": ApprovalStatus.REJECTED,
-        "approved_by": approver_id,
-        "approved_at": now,
-    })
+    _update_approval(
+        approval_id,
+        {
+            "status": ApprovalStatus.REJECTED,
+            "approved_by": approver_id,
+            "approved_at": now,
+        },
+    )
 
     # Log audit event
     log_audit_event(
@@ -575,6 +579,7 @@ def reject_request(
     )
 
     updated_record = _find_approval(approval_id)
+    assert updated_record is not None  # Just updated above, must exist
     updated_approval = ApprovalRequest(
         id=updated_record["id"],
         operation=updated_record["operation"],

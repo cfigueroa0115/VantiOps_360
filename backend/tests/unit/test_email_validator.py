@@ -17,17 +17,13 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
-
 from auth.email_validator import (
-    CORPORATE_DOMAIN,
     WhitelistCache,
     get_denial_reason,
     is_email_authorized,
     reload_whitelist,
     validate_email_format,
 )
-
 
 # ---------------------------------------------------------------------------
 # Format validation tests
@@ -109,60 +105,50 @@ class TestWhitelistCache:
         return wl
 
     def test_load_email_entry(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"email": "partner@external.com", "expires_at": None}
-        ])
+        wl = self._create_whitelist(
+            tmp_path, [{"email": "partner@external.com", "expires_at": None}]
+        )
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("partner@external.com") is True
 
     def test_load_domain_entry(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"domain": "@partner.com", "expires_at": None}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"domain": "@partner.com", "expires_at": None}])
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("anyone@partner.com") is True
 
     def test_expired_email_denied(self, tmp_path: Path) -> None:
         past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
-        wl = self._create_whitelist(tmp_path, [
-            {"email": "old@expired.com", "expires_at": past}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"email": "old@expired.com", "expires_at": past}])
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("old@expired.com") is False
 
     def test_expired_domain_denied(self, tmp_path: Path) -> None:
         past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
-        wl = self._create_whitelist(tmp_path, [
-            {"domain": "@oldpartner.com", "expires_at": past}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"domain": "@oldpartner.com", "expires_at": past}])
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("user@oldpartner.com") is False
 
     def test_future_expiration_allowed(self, tmp_path: Path) -> None:
         future = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
-        wl = self._create_whitelist(tmp_path, [
-            {"email": "valid@partner.com", "expires_at": future}
-        ])
+        wl = self._create_whitelist(
+            tmp_path, [{"email": "valid@partner.com", "expires_at": future}]
+        )
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("valid@partner.com") is True
 
     def test_null_expiration_never_expires(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"domain": "@forever.com", "expires_at": None}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"domain": "@forever.com", "expires_at": None}])
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("anyone@forever.com") is True
 
     def test_case_insensitive_lookup(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"email": "User@Partner.COM", "expires_at": None}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"email": "User@Partner.COM", "expires_at": None}])
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("user@partner.com") is True
@@ -174,9 +160,7 @@ class TestWhitelistCache:
         assert cache.email_count == 0
 
     def test_domain_without_at_prefix(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"domain": "partner.com", "expires_at": None}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"domain": "partner.com", "expires_at": None}])
         cache = WhitelistCache()
         cache.load(wl)
         assert cache.is_whitelisted("user@partner.com") is True
@@ -201,16 +185,12 @@ class TestIsEmailAuthorized:
         assert is_email_authorized("any.user@vanti.com.co", wl) is True
 
     def test_whitelisted_email_passes(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"email": "guest@allowed.com", "expires_at": None}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"email": "guest@allowed.com", "expires_at": None}])
         reload_whitelist(wl)
         assert is_email_authorized("guest@allowed.com", wl) is True
 
     def test_whitelisted_domain_passes(self, tmp_path: Path) -> None:
-        wl = self._create_whitelist(tmp_path, [
-            {"domain": "@contractor.co", "expires_at": None}
-        ])
+        wl = self._create_whitelist(tmp_path, [{"domain": "@contractor.co", "expires_at": None}])
         reload_whitelist(wl)
         assert is_email_authorized("worker@contractor.co", wl) is True
 
@@ -235,10 +215,7 @@ class TestPerformance:
 
     def test_2000_emails_no_degradation(self, tmp_path: Path) -> None:
         """Load 2,000 email entries and verify lookup time stays under 1ms per check."""
-        entries = [
-            {"email": f"user{i}@company{i}.com", "expires_at": None}
-            for i in range(2000)
-        ]
+        entries = [{"email": f"user{i}@company{i}.com", "expires_at": None} for i in range(2000)]
         wl = tmp_path / "big_whitelist.json"
         wl.write_text(json.dumps(entries))
 
@@ -257,10 +234,7 @@ class TestPerformance:
 
     def test_2000_domain_entries(self, tmp_path: Path) -> None:
         """Load 2,000 domain entries and verify lookup time stays under 1ms per check."""
-        entries = [
-            {"domain": f"@domain{i}.com", "expires_at": None}
-            for i in range(2000)
-        ]
+        entries = [{"domain": f"@domain{i}.com", "expires_at": None} for i in range(2000)]
         wl = tmp_path / "big_domain_whitelist.json"
         wl.write_text(json.dumps(entries))
 

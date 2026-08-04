@@ -18,20 +18,19 @@ Property 10: MIN_GROUP_SIZE privacy exclusion
 
 from __future__ import annotations
 
-from hypothesis import given, settings, assume
-from hypothesis import strategies as st
-import polars as pl
-
 from statistics.descriptive import (
+    MIN_GROUP_SIZE,
     descriptive_stats,
     grouped_descriptive_stats,
-    MIN_GROUP_SIZE,
 )
 from statistics.inference import (
-    grouped_shapiro_wilk,
     grouped_mean_ci,
+    grouped_shapiro_wilk,
 )
 
+import polars as pl
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
 # ---------------------------------------------------------------------------
 # Strategies

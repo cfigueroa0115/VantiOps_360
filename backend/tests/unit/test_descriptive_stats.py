@@ -7,18 +7,18 @@ Also tests MIN_GROUP_SIZE enforcement and grouped_descriptive_stats.
 
 from __future__ import annotations
 
-import polars as pl
-import pytest
-
 from statistics.descriptive import (
+    MIN_GROUP_SIZE,
     ConditionalProbResult,
     DescriptiveStats,
-    MIN_GROUP_SIZE,
     conditional_probability,
     descriptive_stats,
     descriptive_stats_tiempo_gestion,
     grouped_descriptive_stats,
 )
+
+import polars as pl
+import pytest
 
 
 class TestDescriptiveStats:
@@ -151,7 +151,12 @@ class TestConditionalProbability:
         return pl.DataFrame(
             {
                 "cause": ["A"] * 40 + ["B"] * 35 + ["C"] * 25,
-                "time": [5.0] * 30 + [15.0] * 10 + [5.0] * 25 + [15.0] * 10 + [5.0] * 20 + [15.0] * 5,
+                "time": [5.0] * 30
+                + [15.0] * 10
+                + [5.0] * 25
+                + [15.0] * 10
+                + [5.0] * 20
+                + [15.0] * 5,
                 "channel": ["phone"] * 50 + ["web"] * 30 + ["email"] * 20,
             }
         )
@@ -241,9 +246,7 @@ class TestConditionalProbability:
 
     def test_all_null_group_col(self):
         """All-null group column should return empty results (all excluded)."""
-        df = pl.DataFrame(
-            {"cause": [None, None, None], "time": [5.0, 10.0, 15.0]}
-        )
+        df = pl.DataFrame({"cause": [None, None, None], "time": [5.0, 10.0, 15.0]})
 
         def time_above_10(frame: pl.DataFrame) -> pl.Series:
             return frame["time"] > 10.0
@@ -293,15 +296,14 @@ class TestConditionalProbability:
         assert results["B"].probability == 0.0
 
 
-
 class TestDescriptiveStatsTiempoGestion:
     """Tests for descriptive_stats_tiempo_gestion convenience function (Req 9.1)."""
 
     def test_computes_all_required_stats(self):
         """Verifies mean, median, P90, P95, max, stddev for tiempo_gestion_dias."""
-        df = pl.DataFrame({
-            "tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-        })
+        df = pl.DataFrame(
+            {"tiempo_gestion_dias": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]}
+        )
         result = descriptive_stats_tiempo_gestion(df)
 
         assert result.mean == pytest.approx(5.5, abs=0.01)
@@ -324,10 +326,12 @@ class TestGroupedDescriptiveStats:
 
     def test_excludes_groups_below_min_group_size(self):
         """Groups with fewer than 5 records are excluded for privacy."""
-        df = pl.DataFrame({
-            "tiempo_gestion_dias": [5.0] * 10 + [3.0] * 3,
-            "causa": ["A"] * 10 + ["B"] * 3,
-        })
+        df = pl.DataFrame(
+            {
+                "tiempo_gestion_dias": [5.0] * 10 + [3.0] * 3,
+                "causa": ["A"] * 10 + ["B"] * 3,
+            }
+        )
         results = grouped_descriptive_stats(df, "tiempo_gestion_dias", "causa")
 
         # Group A has 10 records → included
@@ -337,10 +341,12 @@ class TestGroupedDescriptiveStats:
 
     def test_includes_groups_at_min_group_size(self):
         """Groups with exactly MIN_GROUP_SIZE records are included."""
-        df = pl.DataFrame({
-            "tiempo_gestion_dias": [2.0] * 5 + [7.0] * 5,
-            "causa": ["X"] * 5 + ["Y"] * 5,
-        })
+        df = pl.DataFrame(
+            {
+                "tiempo_gestion_dias": [2.0] * 5 + [7.0] * 5,
+                "causa": ["X"] * 5 + ["Y"] * 5,
+            }
+        )
         results = grouped_descriptive_stats(df, "tiempo_gestion_dias", "causa")
 
         assert "X" in results
@@ -354,10 +360,12 @@ class TestGroupedDescriptiveStats:
 
     def test_grouped_stats_correctness(self):
         """Verify stats are computed correctly per group."""
-        df = pl.DataFrame({
-            "value": [10.0, 20.0, 30.0, 40.0, 50.0, 1.0, 2.0, 3.0, 4.0, 5.0],
-            "group": ["A"] * 5 + ["B"] * 5,
-        })
+        df = pl.DataFrame(
+            {
+                "value": [10.0, 20.0, 30.0, 40.0, 50.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+                "group": ["A"] * 5 + ["B"] * 5,
+            }
+        )
         results = grouped_descriptive_stats(df, "value", "group")
 
         assert results["A"].mean == 30.0
@@ -367,10 +375,12 @@ class TestGroupedDescriptiveStats:
 
     def test_null_group_values_excluded(self):
         """Records with null group values are excluded from all groups."""
-        df = pl.DataFrame({
-            "value": [1.0, 2.0, 3.0, 4.0, 5.0, 99.0, 99.0],
-            "group": ["A", "A", "A", "A", "A", None, None],
-        })
+        df = pl.DataFrame(
+            {
+                "value": [1.0, 2.0, 3.0, 4.0, 5.0, 99.0, 99.0],
+                "group": ["A", "A", "A", "A", "A", None, None],
+            }
+        )
         results = grouped_descriptive_stats(df, "value", "group")
 
         assert "A" in results

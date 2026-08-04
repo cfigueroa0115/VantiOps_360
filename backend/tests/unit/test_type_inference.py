@@ -9,15 +9,14 @@ Requirements: 2.1, 2.7
 from __future__ import annotations
 
 import polars as pl
-import pytest
 
 from profiling.type_inference import (
     BOOLEAN_VALUES,
     ColumnTypeInfo,
-    infer_types,
     _is_boolean,
     _is_datetime,
     _is_numeric,
+    infer_types,
 )
 
 
@@ -213,9 +212,16 @@ class TestInferTypesMixed:
         """Column with no single type ≥80% → mixed with breakdown."""
         # 4 numeric, 3 dates, 3 text = no type reaches 80%
         values = [
-            "1", "2", "3", "4",
-            "2024-01-01", "2024-01-02", "2024-01-03",
-            "hello", "world", "foo",
+            "1",
+            "2",
+            "3",
+            "4",
+            "2024-01-01",
+            "2024-01-02",
+            "2024-01-03",
+            "hello",
+            "world",
+            "foo",
         ]
         df = pl.DataFrame({"mixed": values})
         result = infer_types(df)

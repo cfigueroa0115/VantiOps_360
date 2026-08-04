@@ -19,24 +19,17 @@ using the file-based fallback mechanism.
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import HealthCheck, given, settings
 
 from audit.logger import (
     log_audit_event,
     query_audit_events,
-    AuditEvent,
-    AUDIT_LOG_FILE,
-    AUDIT_LOG_DIR,
-    _write_to_file,
-    _query_from_file,
 )
-
 
 # --- Strategies ---
 
@@ -44,40 +37,58 @@ from audit.logger import (
 user_ids = st.from_regex(r"user-[a-z0-9]{3,10}", fullmatch=True)
 
 # Actions: common audit action verbs
-actions = st.sampled_from([
-    "LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE",
-    "ACCESS_DENIED", "APPROVE", "REJECT", "EXPORT", "IMPORT",
-    "CREATE_ANNULATION", "TRANSITION_STATE", "VIEW_REPORT",
-])
+actions = st.sampled_from(
+    [
+        "LOGIN",
+        "LOGOUT",
+        "CREATE",
+        "UPDATE",
+        "DELETE",
+        "ACCESS_DENIED",
+        "APPROVE",
+        "REJECT",
+        "EXPORT",
+        "IMPORT",
+        "CREATE_ANNULATION",
+        "TRANSITION_STATE",
+        "VIEW_REPORT",
+    ]
+)
 
 # Resources: plausible resource paths
-resources = st.sampled_from([
-    "/api/annulations",
-    "/api/auth",
-    "/api/users",
-    "/api/reports",
-    "/api/capacity",
-    "/api/migration",
-    "cancellation_request",
-    "user_profile",
-    "audit_log",
-    "approval_workflow",
-])
+resources = st.sampled_from(
+    [
+        "/api/annulations",
+        "/api/auth",
+        "/api/users",
+        "/api/reports",
+        "/api/capacity",
+        "/api/migration",
+        "cancellation_request",
+        "user_profile",
+        "audit_log",
+        "approval_workflow",
+    ]
+)
 
 # Results: success or failure
 results = st.sampled_from(["success", "failure"])
 
 # IP addresses
-ip_addresses = st.from_regex(
-    r"192\.168\.[0-9]{1,3}\.[0-9]{1,3}", fullmatch=True
-)
+ip_addresses = st.from_regex(r"192\.168\.[0-9]{1,3}\.[0-9]{1,3}", fullmatch=True)
 
 # Details: optional metadata dict
 details = st.one_of(
     st.none(),
-    st.fixed_dictionaries({
-        "reason": st.text(min_size=1, max_size=30, alphabet=st.characters(whitelist_categories=("L", "N", "Z"))),
-    }),
+    st.fixed_dictionaries(
+        {
+            "reason": st.text(
+                min_size=1,
+                max_size=30,
+                alphabet=st.characters(whitelist_categories=("L", "N", "Z")),
+            ),
+        }
+    ),
 )
 
 
@@ -116,6 +127,7 @@ class TempAuditFileContext:
             self.temp_file.unlink()
         if self.temp_dir:
             import shutil
+
             shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def read_lines(self) -> list[str]:
@@ -152,9 +164,7 @@ class TestAuditLogMonotonicGrowth:
         )
     )
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
-    def test_event_count_monotonically_increases(
-        self, event_data: list[tuple[str, str, str, str]]
-    ):
+    def test_event_count_monotonically_increases(self, event_data: list[tuple[str, str, str, str]]):
         """After each log_audit_event() call, the total event count must be >= previous count."""
         with TempAuditFileContext() as ctx:
             previous_count = 0
@@ -215,31 +225,31 @@ class TestAuditLogDataImmutability:
 
             # Read back from file
             stored_events = ctx.read_events()
-            assert len(stored_events) == 1, (
-                f"Expected exactly 1 stored event, got {len(stored_events)}"
-            )
+            assert (
+                len(stored_events) == 1
+            ), f"Expected exactly 1 stored event, got {len(stored_events)}"
 
             stored = stored_events[0]
 
             # Verify core fields are unchanged
-            assert stored["user_id"] == user_id, (
-                f"user_id mismatch: stored={stored['user_id']}, expected={user_id}"
-            )
-            assert stored["action"] == action, (
-                f"action mismatch: stored={stored['action']}, expected={action}"
-            )
-            assert stored["resource"] == resource, (
-                f"resource mismatch: stored={stored['resource']}, expected={resource}"
-            )
-            assert stored["result"] == result, (
-                f"result mismatch: stored={stored['result']}, expected={result}"
-            )
-            assert stored["id"] == event.id, (
-                f"id mismatch: stored={stored['id']}, expected={event.id}"
-            )
-            assert stored["timestamp"] == event.timestamp, (
-                f"timestamp mismatch: stored={stored['timestamp']}, expected={event.timestamp}"
-            )
+            assert (
+                stored["user_id"] == user_id
+            ), f"user_id mismatch: stored={stored['user_id']}, expected={user_id}"
+            assert (
+                stored["action"] == action
+            ), f"action mismatch: stored={stored['action']}, expected={action}"
+            assert (
+                stored["resource"] == resource
+            ), f"resource mismatch: stored={stored['resource']}, expected={resource}"
+            assert (
+                stored["result"] == result
+            ), f"result mismatch: stored={stored['result']}, expected={result}"
+            assert (
+                stored["id"] == event.id
+            ), f"id mismatch: stored={stored['id']}, expected={event.id}"
+            assert (
+                stored["timestamp"] == event.timestamp
+            ), f"timestamp mismatch: stored={stored['timestamp']}, expected={event.timestamp}"
             if ip_address:
                 assert stored["ip_address"] == ip_address
             if detail:
@@ -294,9 +304,7 @@ class TestAuditLogFileAppendOnly:
         )
     )
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
-    def test_file_lines_are_append_only(
-        self, events_data: list[tuple[str, str, str]]
-    ):
+    def test_file_lines_are_append_only(self, events_data: list[tuple[str, str, str]]):
         """Existing lines in the audit JSONL file must never change; new events only append."""
         with TempAuditFileContext() as ctx:
             previous_lines: list[str] = []
@@ -323,9 +331,9 @@ class TestAuditLogFileAppendOnly:
                     )
 
                 # New file must have exactly one more line
-                assert len(current_lines) == len(previous_lines) + 1, (
-                    f"Expected {len(previous_lines) + 1} lines, got {len(current_lines)}"
-                )
+                assert (
+                    len(current_lines) == len(previous_lines) + 1
+                ), f"Expected {len(previous_lines) + 1} lines, got {len(current_lines)}"
 
                 previous_lines = current_lines
 
@@ -341,9 +349,7 @@ class TestAuditLogNoRemoval:
         )
     )
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
-    def test_logged_events_cannot_be_removed(
-        self, events_data: list[tuple[str, str, str, str]]
-    ):
+    def test_logged_events_cannot_be_removed(self, events_data: list[tuple[str, str, str, str]]):
         """All logged event IDs must persist in the log — none can disappear."""
         with TempAuditFileContext() as ctx:
             logged_ids: list[str] = []
@@ -379,11 +385,9 @@ class TestAuditLogNoRemoval:
         resource=resources,
     )
     @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
-    def test_query_returns_all_logged_events(
-        self, user_id: str, action: str, resource: str
-    ):
+    def test_query_returns_all_logged_events(self, user_id: str, action: str, resource: str):
         """query_audit_events must return previously logged events (retention guarantee)."""
-        with TempAuditFileContext() as ctx:
+        with TempAuditFileContext():
             # Log multiple events with same user_id
             events = []
             for _ in range(3):
@@ -398,9 +402,9 @@ class TestAuditLogNoRemoval:
             # Query by user_id
             result = query_audit_events(user_id=user_id)
 
-            assert result["total"] == 3, (
-                f"Expected 3 events for user {user_id}, got {result['total']}"
-            )
+            assert (
+                result["total"] == 3
+            ), f"Expected 3 events for user {user_id}, got {result['total']}"
 
             # All event IDs must be present in query results
             result_ids = {e["id"] for e in result["data"]}

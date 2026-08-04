@@ -13,11 +13,8 @@ from dataclasses import dataclass, field
 
 import polars as pl
 
-
 # Boolean values recognized (case-insensitive)
-BOOLEAN_VALUES = frozenset(
-    {"true", "false", "yes", "no", "1", "0", "si", "verdadero", "falso"}
-)
+BOOLEAN_VALUES = frozenset({"true", "false", "yes", "no", "1", "0", "si", "verdadero", "falso"})
 
 # Common date patterns for regex-based detection
 _DATE_PATTERNS: list[re.Pattern[str]] = [
@@ -54,7 +51,9 @@ class ColumnTypeInfo:
     """
 
     column_name: str
-    inferred_type: str  # "categorical", "numeric", "datetime", "boolean", "text", "mixed", "unknown"
+    inferred_type: (
+        str  # "categorical", "numeric", "datetime", "boolean", "text", "mixed", "unknown"
+    )
     confidence: float  # percentage (0-100)
     distinct_count: int
     type_breakdown: dict[str, float] = field(default_factory=dict)

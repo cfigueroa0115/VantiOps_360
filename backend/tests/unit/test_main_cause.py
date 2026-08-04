@@ -21,7 +21,6 @@ from rca.main_cause import (
     pareto_chart_data,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -51,13 +50,13 @@ def sample_pqr_df() -> pl.DataFrame:
             "causa": records,
             "fecha_creacion": [date(2023, (i % 12) + 1, 15) for i in range(n)],
             "canal_atencion": (
-                ["telefono"] * (n // 2) + ["presencial"] * (n // 4) + ["web"] * (n - n // 2 - n // 4)
+                ["telefono"] * (n // 2)
+                + ["presencial"] * (n // 4)
+                + ["web"] * (n - n // 2 - n // 4)
             ),
             "tiempo_gestion_dias": [float(i % 15) + 1.0 for i in range(n)],
             "resultado": (
-                ["accede"] * (n // 3)
-                + ["no_accede"] * (n // 3)
-                + ["desiste"] * (n - 2 * (n // 3))
+                ["accede"] * (n // 3) + ["no_accede"] * (n // 3) + ["desiste"] * (n - 2 * (n // 3))
             ),
         }
     )
@@ -68,11 +67,7 @@ def below_threshold_df() -> pl.DataFrame:
     """DataFrame where no cause reaches 45% share."""
     return pl.DataFrame(
         {
-            "causa": (
-                ["Causa A"] * 40
-                + ["Causa B"] * 35
-                + ["Causa C"] * 25
-            ),
+            "causa": (["Causa A"] * 40 + ["Causa B"] * 35 + ["Causa C"] * 25),
         }
     )
 
@@ -116,9 +111,7 @@ class TestIdentifyMainCause:
 
     def test_null_values_excluded(self):
         """Null values in cause column are excluded from analysis."""
-        df = pl.DataFrame(
-            {"causa": ["Main"] * 60 + ["Other"] * 20 + [None] * 20}
-        )
+        df = pl.DataFrame({"causa": ["Main"] * 60 + ["Other"] * 20 + [None] * 20})
         result = identify_main_cause(df)
 
         # Total is 80 (nulls excluded), Main is 60/80 = 75%
@@ -129,9 +122,7 @@ class TestIdentifyMainCause:
     def test_exactly_at_threshold(self):
         """Cause at exactly 45% share is confirmed."""
         # 45 out of 100 = 45% — Main must be the top cause
-        df = pl.DataFrame(
-            {"causa": ["Main"] * 45 + ["Other1"] * 30 + ["Other2"] * 25}
-        )
+        df = pl.DataFrame({"causa": ["Main"] * 45 + ["Other1"] * 30 + ["Other2"] * 25})
         result = identify_main_cause(df)
 
         assert result.cause_name == "Main"
@@ -140,9 +131,7 @@ class TestIdentifyMainCause:
 
     def test_custom_cause_column(self):
         """Works with a custom cause column name."""
-        df = pl.DataFrame(
-            {"motivo": ["Cause A"] * 80 + ["Cause B"] * 20}
-        )
+        df = pl.DataFrame({"motivo": ["Cause A"] * 80 + ["Cause B"] * 20})
         result = identify_main_cause(df, cause_col="motivo")
 
         assert result.cause_name == "Cause A"
@@ -255,9 +244,7 @@ class TestBuildMainCauseSummary:
 
     def test_basic_summary_structure(self, sample_pqr_df: pl.DataFrame):
         """Summary contains all expected fields populated."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert isinstance(result, MainCauseSummary)
         assert result.cause_name == "Cancela Servihogar a solicitud cliente"
@@ -266,9 +253,7 @@ class TestBuildMainCauseSummary:
 
     def test_temporal_trend_has_monthly_keys(self, sample_pqr_df: pl.DataFrame):
         """Temporal trend keys are in YYYY-MM format."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert len(result.temporal_trend) > 0
         for key in result.temporal_trend:
@@ -277,26 +262,20 @@ class TestBuildMainCauseSummary:
 
     def test_temporal_trend_volumes_sum_to_total(self, sample_pqr_df: pl.DataFrame):
         """Monthly volumes sum to the absolute volume."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert sum(result.temporal_trend.values()) == result.absolute_volume
 
     def test_channels_proportions_sum_to_1(self, sample_pqr_df: pl.DataFrame):
         """Channel proportions sum to approximately 1.0."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert len(result.channels) > 0
         assert sum(result.channels.values()) == pytest.approx(1.0, abs=0.01)
 
     def test_time_stats_has_required_keys(self, sample_pqr_df: pl.DataFrame):
         """Time stats contain mean, median, and p90."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert "mean" in result.time_stats
         assert "median" in result.time_stats
@@ -305,9 +284,7 @@ class TestBuildMainCauseSummary:
 
     def test_result_distribution_percentages(self, sample_pqr_df: pl.DataFrame):
         """Result distribution percentages are between 0 and 100."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert len(result.result_distribution) > 0
         for pct in result.result_distribution.values():
@@ -315,17 +292,13 @@ class TestBuildMainCauseSummary:
 
     def test_result_distribution_sums_to_100(self, sample_pqr_df: pl.DataFrame):
         """Result distribution percentages sum to approximately 100%."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert sum(result.result_distribution.values()) == pytest.approx(100.0, abs=1.0)
 
     def test_related_causes_contain_cancel(self, sample_pqr_df: pl.DataFrame):
         """Related causes all contain 'cancel' in their name."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         for related in result.related_causes:
             assert "cancel" in related["cause"].lower()
@@ -340,34 +313,26 @@ class TestBuildMainCauseSummary:
 
     def test_combined_cancellation_share_includes_main(self, sample_pqr_df: pl.DataFrame):
         """Combined cancellation share includes the main cause."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         # Main cause = 50%, "Cancelacion por no pago" = 15% → combined ≥ 65%
         assert result.combined_cancellation_share >= 0.65
 
     def test_operational_impact_positive(self, sample_pqr_df: pl.DataFrame):
         """Operational impact hours per month is positive."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         assert result.operational_impact_hours_per_month > 0
 
     def test_operational_impact_formula(self, sample_pqr_df: pl.DataFrame):
         """Operational impact follows the 15 min/PQR formula."""
-        result = build_main_cause_summary(
-            sample_pqr_df, "Cancela Servihogar a solicitud cliente"
-        )
+        result = build_main_cause_summary(sample_pqr_df, "Cancela Servihogar a solicitud cliente")
 
         # 500 records over 12 months → ~41.67/month × 15 min / 60 = ~10.42 hours
         num_months = len(result.temporal_trend)
         expected_monthly_avg = result.absolute_volume / num_months
         expected_hours = expected_monthly_avg * 15 / 60
-        assert result.operational_impact_hours_per_month == pytest.approx(
-            expected_hours, abs=0.1
-        )
+        assert result.operational_impact_hours_per_month == pytest.approx(expected_hours, abs=0.1)
 
     def test_cause_not_in_dataframe(self, sample_pqr_df: pl.DataFrame):
         """Summary for a cause not present returns zero volume."""

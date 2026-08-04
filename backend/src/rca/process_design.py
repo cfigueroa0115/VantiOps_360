@@ -13,11 +13,9 @@ Requirements: 11.4, 11.5, 11.6, 11.7
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 import polars as pl
-
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -39,7 +37,9 @@ class ProcessControl:
     """
 
     control_name: str
-    control_type: str  # mandatory_field, catalog, validation, idempotency, timer, alert, escalation, traceability, segregation
+    # mandatory_field, catalog, validation, idempotency, timer,
+    # alert, escalation, traceability, segregation
+    control_type: str
     description: str
     target_step: str
     specification: str
@@ -258,7 +258,10 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="mandatory_intake_fields",
             control_type="mandatory_field",
-            description="Ensure all required fields are present at intake before processing begins.",
+            description=(
+                "Ensure all required fields are present"
+                " at intake before processing begins."
+            ),
             target_step="Structured intake form",
             specification=(
                 "Required fields: client_id, contract_number, product_type, "
@@ -270,7 +273,10 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="cancellation_reason_catalog",
             control_type="catalog",
-            description="Restrict cancellation reasons to a homologated catalog to ensure consistent classification.",
+            description=(
+                "Restrict cancellation reasons to a homologated"
+                " catalog to ensure consistent classification."
+            ),
             target_step="Reason identification",
             specification=(
                 "Valid values from maintained catalog: 'Cancela Servihogar a solicitud cliente', "
@@ -283,7 +289,11 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="contract_format_validation",
             control_type="validation",
-            description="Validate that contract number follows the expected format and references an active contract.",
+            description=(
+                "Validate that contract number follows the"
+                " expected format and references an active"
+                " contract."
+            ),
             target_step="Client & contract identification",
             specification=(
                 "Contract number must match regex pattern ^[A-Z]{2}\\d{6,10}$ or "
@@ -294,7 +304,11 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="duplicate_request_check",
             control_type="idempotency",
-            description="Detect and prevent duplicate cancellation requests for the same contract within a 30-day window.",
+            description=(
+                "Detect and prevent duplicate cancellation"
+                " requests for the same contract within a"
+                " 30-day window."
+            ),
             target_step="Structured intake form",
             specification=(
                 "Before creating a new case, query existing open/recent cases (last 30 days) "
@@ -331,12 +345,16 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="unresolved_escalation",
             control_type="escalation",
-            description="Escalate stalled cases through management hierarchy when timers expire.",
+            description=(
+                "Escalate stalled cases through management"
+                " hierarchy when timers expire."
+            ),
             target_step="Execution of cancellation",
             specification=(
                 "Level 1 (timer expiry): Escalate to team supervisor with full case context. "
                 "Level 2 (+2 business days): Escalate to operations coordinator. "
-                "Level 3 (+3 business days): Escalate to operations manager with SLA breach report. "
+                "Level 3 (+3 business days): Escalate to operations "
+                "manager with SLA breach report. "
                 "Each escalation includes: case ID, elapsed time, current assignee, "
                 "blocking reason (if documented), client contact history."
             ),
@@ -344,7 +362,10 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="full_audit_trail",
             control_type="traceability",
-            description="Maintain complete audit trail of all actions, decisions, and status changes.",
+            description=(
+                "Maintain complete audit trail of all"
+                " actions, decisions, and status changes."
+            ),
             target_step="All steps",
             specification=(
                 "Every transaction must log: timestamp (ISO 8601), actor (user_id + role), "
@@ -357,7 +378,10 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="execution_segregation",
             control_type="segregation",
-            description="Enforce segregation of duties between case intake, approval, and execution roles.",
+            description=(
+                "Enforce segregation of duties between case"
+                " intake, approval, and execution roles."
+            ),
             target_step="Execution of cancellation",
             specification=(
                 "The following role pairs must NOT be the same person for any single case: "
@@ -371,7 +395,10 @@ def define_process_controls() -> list[ProcessControl]:
         ProcessControl(
             control_name="eligibility_rules_validation",
             control_type="validation",
-            description="Validate eligibility for cancellation based on contractual terms before proceeding.",
+            description=(
+                "Validate eligibility for cancellation based"
+                " on contractual terms before proceeding."
+            ),
             target_step="Eligibility verification",
             specification=(
                 "Verify: (1) Contract is active (not already cancelled or suspended), "

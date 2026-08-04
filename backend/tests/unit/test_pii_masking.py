@@ -10,13 +10,11 @@ Tests cover:
 import hashlib
 
 import polars as pl
-import pytest
 
 from pipeline.pii_masking import (
     DEFAULT_PII_PATTERNS,
     MaskingResult,
     PIIMasker,
-    QuarantinedRecord,
 )
 
 
@@ -98,22 +96,26 @@ class TestDetectPIIColumns:
 
     def test_no_false_positives(self):
         masker = PIIMasker()
-        df = pl.DataFrame({
-            "fecha_creacion": ["2024-01-01"],
-            "estado": ["activo"],
-            "cantidad": [5],
-        })
+        df = pl.DataFrame(
+            {
+                "fecha_creacion": ["2024-01-01"],
+                "estado": ["activo"],
+                "cantidad": [5],
+            }
+        )
         detected = masker.detect_pii_columns(df)
         assert detected == []
 
     def test_multiple_pii_columns(self):
         masker = PIIMasker()
-        df = pl.DataFrame({
-            "nombre": ["Carlos"],
-            "cedula": ["123"],
-            "telefono": ["300"],
-            "estado": ["activo"],
-        })
+        df = pl.DataFrame(
+            {
+                "nombre": ["Carlos"],
+                "cedula": ["123"],
+                "telefono": ["300"],
+                "estado": ["activo"],
+            }
+        )
         detected = masker.detect_pii_columns(df)
         assert len(detected) == 3
         assert "nombre" in detected
@@ -188,10 +190,12 @@ class TestMaskDataFrame:
 
     def test_masks_pii_columns_only(self):
         masker = PIIMasker()
-        df = pl.DataFrame({
-            "nombre": ["Carlos", "Ana", "Pedro"],
-            "edad": [30, 25, 40],
-        })
+        df = pl.DataFrame(
+            {
+                "nombre": ["Carlos", "Ana", "Pedro"],
+                "edad": [30, 25, 40],
+            }
+        )
         result = masker.mask_dataframe(df)
         assert result.masked_df["nombre"][0] == "C****s"
         assert result.masked_df["nombre"][1] == "A*a"
@@ -216,11 +220,13 @@ class TestMaskDataFrame:
 
     def test_multiple_pii_columns_masked(self):
         masker = PIIMasker()
-        df = pl.DataFrame({
-            "nombre": ["Carlos"],
-            "telefono": ["3001234567"],
-            "estado": ["activo"],
-        })
+        df = pl.DataFrame(
+            {
+                "nombre": ["Carlos"],
+                "telefono": ["3001234567"],
+                "estado": ["activo"],
+            }
+        )
         result = masker.mask_dataframe(df)
         assert result.masked_df["nombre"][0] == "C****s"
         assert result.masked_df["telefono"][0] == "3********7"

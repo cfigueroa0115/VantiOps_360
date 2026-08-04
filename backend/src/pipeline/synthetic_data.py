@@ -15,7 +15,6 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 
-
 # Default distributions derived from the real dataset profile.
 # These are used when no source DataFrame is provided for learning.
 _DEFAULT_DISTRIBUTIONS: dict[str, dict[str, float]] = {
@@ -69,15 +68,49 @@ _DEFAULT_NUMERIC_PARAMS: dict[str, dict[str, float]] = {
 
 # PII faker pools — no real customer data
 _FIRST_NAMES = [
-    "Carlos", "Maria", "Juan", "Ana", "Pedro", "Laura", "Andres", "Diana",
-    "Jorge", "Sandra", "Luis", "Patricia", "Diego", "Carmen", "Felipe",
-    "Claudia", "Ricardo", "Marcela", "Alejandro", "Monica",
+    "Carlos",
+    "Maria",
+    "Juan",
+    "Ana",
+    "Pedro",
+    "Laura",
+    "Andres",
+    "Diana",
+    "Jorge",
+    "Sandra",
+    "Luis",
+    "Patricia",
+    "Diego",
+    "Carmen",
+    "Felipe",
+    "Claudia",
+    "Ricardo",
+    "Marcela",
+    "Alejandro",
+    "Monica",
 ]
 
 _LAST_NAMES = [
-    "Garcia", "Rodriguez", "Martinez", "Lopez", "Gonzalez", "Hernandez",
-    "Perez", "Sanchez", "Ramirez", "Torres", "Flores", "Rivera",
-    "Gomez", "Diaz", "Reyes", "Morales", "Cruz", "Ortiz", "Gutierrez", "Chavez",
+    "Garcia",
+    "Rodriguez",
+    "Martinez",
+    "Lopez",
+    "Gonzalez",
+    "Hernandez",
+    "Perez",
+    "Sanchez",
+    "Ramirez",
+    "Torres",
+    "Flores",
+    "Rivera",
+    "Gomez",
+    "Diaz",
+    "Reyes",
+    "Morales",
+    "Cruz",
+    "Ortiz",
+    "Gutierrez",
+    "Chavez",
 ]
 
 
@@ -115,9 +148,7 @@ class SyntheticDataGenerator:
             self.category_distributions = _DEFAULT_DISTRIBUTIONS.copy()
             self.numeric_params = _DEFAULT_NUMERIC_PARAMS.copy()
 
-    def _learn_category_distributions(
-        self, df: pl.DataFrame
-    ) -> dict[str, dict[str, float]]:
+    def _learn_category_distributions(self, df: pl.DataFrame) -> dict[str, dict[str, float]]:
         """Learn category frequency distributions from a source DataFrame.
 
         Args:
@@ -137,11 +168,7 @@ class SyntheticDataGenerator:
                 continue
 
             value_counts = (
-                df.select(col)
-                .drop_nulls()
-                .group_by(col)
-                .len()
-                .sort("len", descending=True)
+                df.select(col).drop_nulls().group_by(col).len().sort("len", descending=True)
             )
 
             total = value_counts["len"].sum()
@@ -158,9 +185,7 @@ class SyntheticDataGenerator:
 
         return distributions
 
-    def _learn_numeric_params(
-        self, df: pl.DataFrame
-    ) -> dict[str, dict[str, float]]:
+    def _learn_numeric_params(self, df: pl.DataFrame) -> dict[str, dict[str, float]]:
         """Learn numeric field parameters from source DataFrame.
 
         Args:
@@ -217,9 +242,7 @@ class SyntheticDataGenerator:
             probabilities = np.array(list(dist.values()), dtype=np.float64)
             # Normalize to ensure sum == 1.0 (handle floating point)
             probabilities = probabilities / probabilities.sum()
-            data[col] = list(
-                self._rng.choice(categories, size=n, p=probabilities)
-            )
+            data[col] = list(self._rng.choice(categories, size=n, p=probabilities))
 
         # Generate numeric columns
         for col, params in self.numeric_params.items():
@@ -234,9 +257,7 @@ class SyntheticDataGenerator:
 
         # Generate dates
         data["fecha_creacion"] = self._generate_dates(n, start_year=2021, end_year=2024)
-        data["fecha_cierre"] = self._generate_closure_dates(
-            data["fecha_creacion"], data["estado"]
-        )
+        data["fecha_cierre"] = self._generate_closure_dates(data["fecha_creacion"], data["estado"])
 
         # Generate PII-safe fake fields
         data["unidad_responsable"] = self._generate_fake_units(n)
@@ -264,9 +285,7 @@ class SyntheticDataGenerator:
 
         return df
 
-    def _generate_dates(
-        self, n: int, start_year: int = 2021, end_year: int = 2024
-    ) -> list[date]:
+    def _generate_dates(self, n: int, start_year: int = 2021, end_year: int = 2024) -> list[date]:
         """Generate random creation dates within the specified year range."""
         start = date(start_year, 1, 1)
         end = date(end_year, 12, 31)
@@ -326,9 +345,7 @@ class SyntheticDataGenerator:
                 result.append(str(self._rng.choice(markings)))
         return result
 
-    def _generate_fake_closure_reasons(
-        self, n: int, estados: list[str]
-    ) -> list[str | None]:
+    def _generate_fake_closure_reasons(self, n: int, estados: list[str]) -> list[str | None]:
         """Generate fake closure reason strings (None for open/in-process)."""
         reasons = [
             "Solicitud procesada exitosamente",

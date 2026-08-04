@@ -8,8 +8,8 @@ Tests cover core functionality and edge cases for:
 Requirements: 2.3, 2.4, 2.5
 """
 
-import pytest
 import polars as pl
+import pytest
 
 from profiling.detectors import (
     DuplicateReport,
@@ -19,7 +19,6 @@ from profiling.detectors import (
     detect_outliers_iqr,
     find_duplicates,
 )
-
 
 # ============================================================================
 # detect_outliers_iqr tests
@@ -157,11 +156,13 @@ class TestCalculateNullStats:
 
     def test_basic_null_counting(self):
         """Correctly counts nulls in each column."""
-        df = pl.DataFrame({
-            "a": [1, 2, None, 4, None],
-            "b": ["x", None, "z", None, None],
-            "c": [1.0, 2.0, 3.0, 4.0, 5.0],
-        })
+        df = pl.DataFrame(
+            {
+                "a": [1, 2, None, 4, None],
+                "b": ["x", None, "z", None, None],
+                "c": [1.0, 2.0, 3.0, 4.0, 5.0],
+            }
+        )
 
         stats = calculate_null_stats(df)
 
@@ -171,9 +172,11 @@ class TestCalculateNullStats:
 
     def test_null_percentage_calculation(self):
         """Null percentage = null_count / total_rows × 100."""
-        df = pl.DataFrame({
-            "col": [1, None, 3, None, 5, None, 7, None, 9, None],
-        })
+        df = pl.DataFrame(
+            {
+                "col": [1, None, 3, None, 5, None, 7, None, 9, None],
+            }
+        )
 
         stats = calculate_null_stats(df)
 
@@ -212,10 +215,12 @@ class TestCalculateNullStats:
 
     def test_total_count_equals_dataframe_height(self):
         """Total count matches the DataFrame height for all columns."""
-        df = pl.DataFrame({
-            "a": [1, 2, 3, 4, 5, 6, 7],
-            "b": [None, None, "x", "y", None, "z", None],
-        })
+        df = pl.DataFrame(
+            {
+                "a": [1, 2, 3, 4, 5, 6, 7],
+                "b": [None, None, "x", "y", None, "z", None],
+            }
+        )
 
         stats = calculate_null_stats(df)
 
@@ -233,11 +238,13 @@ class TestCalculateNullStats:
 
     def test_multiple_columns_independent(self):
         """Each column is analyzed independently."""
-        df = pl.DataFrame({
-            "full": [1, 2, 3, 4, 5],
-            "half": [1, None, 3, None, 5],
-            "empty": pl.Series([None, None, None, None, None], dtype=pl.Utf8),
-        })
+        df = pl.DataFrame(
+            {
+                "full": [1, 2, 3, 4, 5],
+                "half": [1, None, 3, None, 5],
+                "empty": pl.Series([None, None, None, None, None], dtype=pl.Utf8),
+            }
+        )
 
         stats = calculate_null_stats(df)
 
@@ -268,10 +275,12 @@ class TestFindDuplicates:
 
     def test_with_duplicates(self):
         """Correctly identifies records with repeated identifiers."""
-        df = pl.DataFrame({
-            "id": [1, 2, 3, 2, 4, 3, 5],
-            "data": ["a", "b", "c", "d", "e", "f", "g"],
-        })
+        df = pl.DataFrame(
+            {
+                "id": [1, 2, 3, 2, 4, 3, 5],
+                "data": ["a", "b", "c", "d", "e", "f", "g"],
+            }
+        )
 
         report = find_duplicates(df, "id")
 
@@ -323,9 +332,11 @@ class TestFindDuplicates:
 
     def test_string_identifiers(self):
         """Works with string identifier columns."""
-        df = pl.DataFrame({
-            "pqr_id": ["PQR001", "PQR002", "PQR001", "PQR003", "PQR002"],
-        })
+        df = pl.DataFrame(
+            {
+                "pqr_id": ["PQR001", "PQR002", "PQR001", "PQR003", "PQR002"],
+            }
+        )
 
         report = find_duplicates(df, "pqr_id")
 

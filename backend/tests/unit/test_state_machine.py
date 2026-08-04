@@ -13,20 +13,15 @@ Tests cover:
 Requirements: REQ-16.1, REQ-16.2, REQ-16.3, REQ-16.5, REQ-16.6
 """
 
-import pytest
-
 from annulations.state_machine import (
-    AnnulationState,
     MIN_JUSTIFICATION_LENGTH,
     TERMINAL_STATES,
     VALID_TRANSITIONS,
-    TransitionResult,
+    AnnulationState,
     get_valid_transitions,
     transition,
     validate_transition,
 )
-from auth.rbac import Role
-
 
 # ---------------------------------------------------------------------------
 # Test AnnulationState enum
@@ -429,7 +424,8 @@ class TestGetValidTransitions:
         """SYSTEM_ADMIN should be able to perform any valid transition."""
         assert get_valid_transitions("Solicitada", "SYSTEM_ADMIN") == ["En_Revision"]
         assert sorted(get_valid_transitions("En_Revision", "SYSTEM_ADMIN")) == [
-            "Aprobada", "Rechazada"
+            "Aprobada",
+            "Rechazada",
         ]
         assert get_valid_transitions("Aprobada", "SYSTEM_ADMIN") == ["En_Ejecucion"]
         assert get_valid_transitions("En_Ejecucion", "SYSTEM_ADMIN") == ["Cerrada"]

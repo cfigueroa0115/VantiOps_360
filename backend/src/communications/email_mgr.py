@@ -20,16 +20,16 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 import threading
-from dataclasses import dataclass, field, asdict
+import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from auth.rbac import Role, is_authorized
 from audit.logger import log_audit_event
+from auth.rbac import is_authorized
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,7 @@ class EmailEntry:
 
     email: str
     status: EmailStatus = EmailStatus.ACTIVO
-    updated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict[str, str]:
         """Serialize to dictionary for JSON storage."""
@@ -116,9 +114,7 @@ class ThrottledSender:
     def _prune_old_timestamps(self) -> None:
         """Remove timestamps older than 60 seconds from the window."""
         cutoff = time.time() - 60.0
-        self._send_timestamps = [
-            ts for ts in self._send_timestamps if ts > cutoff
-        ]
+        self._send_timestamps = [ts for ts in self._send_timestamps if ts > cutoff]
 
     def can_send(self) -> bool:
         """Check if sending is allowed within the current rate limit.
@@ -237,7 +233,7 @@ class EmailDirectory:
 
         total = len(entries)
         offset = (page - 1) * page_size
-        page_data = entries[offset: offset + page_size]
+        page_data = entries[offset : offset + page_size]
 
         return {
             "data": [e.to_dict() for e in page_data],

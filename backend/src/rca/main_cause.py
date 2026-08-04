@@ -11,11 +11,10 @@ Requirements: 11.1, 11.2
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import polars as pl
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -102,9 +101,7 @@ class ParetoChartData:
 # ---------------------------------------------------------------------------
 
 
-def identify_main_cause(
-    df: pl.DataFrame, cause_col: str = "causa"
-) -> MainCauseResult:
+def identify_main_cause(df: pl.DataFrame, cause_col: str = "causa") -> MainCauseResult:
     """Identify the main cause via Pareto ranking and confirm ≥45% share.
 
     The function counts records per cause, ranks them in descending order,
@@ -226,9 +223,7 @@ def build_main_cause_summary(
     )
 
     # --- Operational impact (hours per month) ---
-    operational_impact_hours_per_month = _compute_operational_impact(
-        df_main, temporal_trend
-    )
+    operational_impact_hours_per_month = _compute_operational_impact(df_main, temporal_trend)
 
     return MainCauseSummary(
         cause_name=main_cause,
@@ -329,17 +324,13 @@ def _compute_temporal_trend(df_main: pl.DataFrame) -> dict[str, int]:
     trend_df = (
         df_main.select(pl.col("fecha_creacion"))
         .drop_nulls()
-        .with_columns(
-            pl.col("fecha_creacion").cast(pl.Date).dt.strftime("%Y-%m").alias("month")
-        )
+        .with_columns(pl.col("fecha_creacion").cast(pl.Date).dt.strftime("%Y-%m").alias("month"))
         .group_by("month")
         .agg(pl.len().alias("count"))
         .sort("month")
     )
 
-    return {
-        str(row["month"]): int(row["count"]) for row in trend_df.iter_rows(named=True)
-    }
+    return {str(row["month"]): int(row["count"]) for row in trend_df.iter_rows(named=True)}
 
 
 def _compute_channel_proportions(df_main: pl.DataFrame) -> dict[str, float]:
@@ -429,9 +420,7 @@ def _compute_related_causes(
 
     # Get all causes with counts
     freq_df = (
-        df_valid.group_by(cause_col)
-        .agg(pl.len().alias("count"))
-        .sort("count", descending=True)
+        df_valid.group_by(cause_col).agg(pl.len().alias("count")).sort("count", descending=True)
     )
 
     related_causes: list[dict[str, Any]] = []
@@ -447,18 +436,14 @@ def _compute_related_causes(
             combined_cancellation_count += count
             # Add to related list only if it's NOT the main cause
             if cause != main_cause:
-                related_causes.append(
-                    {"cause": cause, "count": count, "share": round(share, 6)}
-                )
+                related_causes.append({"cause": cause, "count": count, "share": round(share, 6)})
 
     combined_cancellation_share = combined_cancellation_count / total_count
 
     return related_causes, round(combined_cancellation_share, 6)
 
 
-def _compute_operational_impact(
-    df_main: pl.DataFrame, temporal_trend: dict[str, int]
-) -> float:
+def _compute_operational_impact(df_main: pl.DataFrame, temporal_trend: dict[str, int]) -> float:
     """Estimate operational impact in manual hours per month.
 
     Assumes 15 minutes of manual handling per PQR. Calculates average

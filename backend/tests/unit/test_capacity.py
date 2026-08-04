@@ -17,7 +17,6 @@ from operations.capacity import (
     DEFAULT_PRODUCTIVITY_FACTOR,
     MONTHLY_HOURS_BASE,
     PQR_DEDICATION,
-    CapacitySummary,
     calculate_net_capacity,
     calculate_utilization,
     get_alert_level,
@@ -308,7 +307,12 @@ class TestGetCapacityReport:
     def test_overloaded_user(self):
         """User with assigned work exceeding capacity triggers red alert."""
         users = [
-            {"name": "Overloaded", "hours": 32.0, "productivity_factor": 0.85, "assigned_work": 40.0},
+            {
+                "name": "Overloaded",
+                "hours": 32.0,
+                "productivity_factor": 0.85,
+                "assigned_work": 40.0,
+            },
         ]
         report = get_capacity_report(users)
 

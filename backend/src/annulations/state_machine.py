@@ -23,7 +23,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Any
 
 from auth.rbac import Role
 
@@ -43,10 +42,12 @@ class AnnulationState(StrEnum):
 # Terminal states: no outgoing transitions allowed (REQ-16.1)
 # ---------------------------------------------------------------------------
 
-TERMINAL_STATES: frozenset[AnnulationState] = frozenset([
-    AnnulationState.CERRADA,
-    AnnulationState.RECHAZADA,
-])
+TERMINAL_STATES: frozenset[AnnulationState] = frozenset(
+    [
+        AnnulationState.CERRADA,
+        AnnulationState.RECHAZADA,
+    ]
+)
 
 # ---------------------------------------------------------------------------
 # Valid transitions table (REQ-16.2)
@@ -54,29 +55,39 @@ TERMINAL_STATES: frozenset[AnnulationState] = frozenset([
 # ---------------------------------------------------------------------------
 
 VALID_TRANSITIONS: dict[tuple[AnnulationState, AnnulationState], frozenset[Role]] = {
-    (AnnulationState.SOLICITADA, AnnulationState.EN_REVISION): frozenset([
-        Role.OPERATIONS_LEAD,
-        Role.ANALYST,
-        Role.SYSTEM_ADMIN,
-    ]),
-    (AnnulationState.EN_REVISION, AnnulationState.APROBADA): frozenset([
-        Role.LEGAL_APPROVER,
-        Role.VP_APPROVER,
-        Role.SYSTEM_ADMIN,
-    ]),
-    (AnnulationState.EN_REVISION, AnnulationState.RECHAZADA): frozenset([
-        Role.LEGAL_APPROVER,
-        Role.VP_APPROVER,
-        Role.SYSTEM_ADMIN,
-    ]),
-    (AnnulationState.APROBADA, AnnulationState.EN_EJECUCION): frozenset([
-        Role.OPERATIONS_LEAD,
-        Role.SYSTEM_ADMIN,
-    ]),
-    (AnnulationState.EN_EJECUCION, AnnulationState.CERRADA): frozenset([
-        Role.OPERATIONS_LEAD,
-        Role.SYSTEM_ADMIN,
-    ]),
+    (AnnulationState.SOLICITADA, AnnulationState.EN_REVISION): frozenset(
+        [
+            Role.OPERATIONS_LEAD,
+            Role.ANALYST,
+            Role.SYSTEM_ADMIN,
+        ]
+    ),
+    (AnnulationState.EN_REVISION, AnnulationState.APROBADA): frozenset(
+        [
+            Role.LEGAL_APPROVER,
+            Role.VP_APPROVER,
+            Role.SYSTEM_ADMIN,
+        ]
+    ),
+    (AnnulationState.EN_REVISION, AnnulationState.RECHAZADA): frozenset(
+        [
+            Role.LEGAL_APPROVER,
+            Role.VP_APPROVER,
+            Role.SYSTEM_ADMIN,
+        ]
+    ),
+    (AnnulationState.APROBADA, AnnulationState.EN_EJECUCION): frozenset(
+        [
+            Role.OPERATIONS_LEAD,
+            Role.SYSTEM_ADMIN,
+        ]
+    ),
+    (AnnulationState.EN_EJECUCION, AnnulationState.CERRADA): frozenset(
+        [
+            Role.OPERATIONS_LEAD,
+            Role.SYSTEM_ADMIN,
+        ]
+    ),
 }
 
 # Minimum justification length (REQ-16.6)
@@ -109,9 +120,7 @@ class AuditEntry:
     user_id: str
     user_role: str
     justification: str
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 @dataclass
@@ -445,7 +454,7 @@ def transition(
 def _get_all_valid_targets(from_state: AnnulationState) -> list[str]:
     """Get all valid target states from a given state (regardless of role)."""
     targets: list[str] = []
-    for (src, dst) in VALID_TRANSITIONS:
+    for src, dst in VALID_TRANSITIONS:
         if src == from_state:
             targets.append(dst.value)
     return sorted(targets)

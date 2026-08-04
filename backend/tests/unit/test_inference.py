@@ -5,10 +5,6 @@ and two-proportion z-test implementations.
 """
 
 import re
-
-import polars as pl
-import pytest
-
 from statistics.inference import (
     MeanConfidenceInterval,
     NormalityTestResult,
@@ -23,8 +19,9 @@ from statistics.inference import (
     two_proportion_z_test,
     wilson_confidence_interval,
 )
-from statistics.descriptive import MIN_GROUP_SIZE
 
+import polars as pl
+import pytest
 
 # ---------------------------------------------------------------------------
 # Pareto Analysis Tests
@@ -40,9 +37,7 @@ class TestParetoAnalysis:
         # A alone = 50% (not enough)
         # A+B = 75% (not enough)
         # A+B+C = 90% (enough!) → minimum set is [A, B, C]
-        df = pl.DataFrame(
-            {"cause": ["A"] * 50 + ["B"] * 25 + ["C"] * 15 + ["D"] * 7 + ["E"] * 3}
-        )
+        df = pl.DataFrame({"cause": ["A"] * 50 + ["B"] * 25 + ["C"] * 15 + ["D"] * 7 + ["E"] * 3})
         result = pareto_analysis(df, "cause")
 
         assert isinstance(result, ParetoResult)
@@ -73,9 +68,7 @@ class TestParetoAnalysis:
 
     def test_minimum_set_property(self):
         """Removing any category from the set drops cumulative below 80%."""
-        df = pl.DataFrame(
-            {"cause": ["A"] * 40 + ["B"] * 30 + ["C"] * 20 + ["D"] * 10}
-        )
+        df = pl.DataFrame({"cause": ["A"] * 40 + ["B"] * 30 + ["C"] * 20 + ["D"] * 10})
         result = pareto_analysis(df, "cause")
 
         # The result must hit ≥80%
@@ -106,9 +99,7 @@ class TestParetoAnalysis:
 
     def test_cumulative_percentages_are_increasing(self):
         """Cumulative percentages are strictly increasing."""
-        df = pl.DataFrame(
-            {"cat": ["A"] * 30 + ["B"] * 25 + ["C"] * 20 + ["D"] * 15 + ["E"] * 10}
-        )
+        df = pl.DataFrame({"cat": ["A"] * 30 + ["B"] * 25 + ["C"] * 20 + ["D"] * 15 + ["E"] * 10})
         result = pareto_analysis(df, "cat")
 
         for i in range(len(result.cumulative_percentages) - 1):
@@ -245,7 +236,6 @@ class TestChiSquareTest:
         result = chi_square_test(contingency)
 
         # Check that p-value has at most 4 decimal places
-        p_str = f"{result.p_value:.10f}"
         # After 4th decimal, remaining digits should be 0
         assert result.p_value == round(result.p_value, 4)
 
@@ -389,9 +379,9 @@ class TestStatisticalFindingLabeling:
 
         for result in [chi_result, z_result]:
             text = result.description.lower()
-            assert "association" in text or "correlation" in text, (
-                f"Description must contain 'association' or 'correlation': {result.description}"
-            )
+            assert (
+                "association" in text or "correlation" in text
+            ), f"Description must contain 'association' or 'correlation': {result.description}"
 
 
 # ---------------------------------------------------------------------------
@@ -523,10 +513,12 @@ class TestGroupedInference:
 
     def test_grouped_shapiro_excludes_small_groups(self):
         """Groups below MIN_GROUP_SIZE are excluded from Shapiro-Wilk results."""
-        df = pl.DataFrame({
-            "time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 1.0, 2.0, 3.0],
-            "cause": ["A"] * 10 + ["B"] * 3,
-        })
+        df = pl.DataFrame(
+            {
+                "time": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 1.0, 2.0, 3.0],
+                "cause": ["A"] * 10 + ["B"] * 3,
+            }
+        )
         results = grouped_shapiro_wilk(df, "time", "cause")
 
         assert "A" in results
@@ -534,10 +526,12 @@ class TestGroupedInference:
 
     def test_grouped_mean_ci_excludes_small_groups(self):
         """Groups below MIN_GROUP_SIZE are excluded from CI results."""
-        df = pl.DataFrame({
-            "time": [5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 1.0, 2.0],
-            "cause": ["X"] * 6 + ["Y"] * 2,
-        })
+        df = pl.DataFrame(
+            {
+                "time": [5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 1.0, 2.0],
+                "cause": ["X"] * 6 + ["Y"] * 2,
+            }
+        )
         results = grouped_mean_ci(df, "time", "cause")
 
         assert "X" in results
@@ -545,19 +539,23 @@ class TestGroupedInference:
 
     def test_grouped_shapiro_at_boundary(self):
         """Groups with exactly MIN_GROUP_SIZE records are included."""
-        df = pl.DataFrame({
-            "time": [1.0, 2.0, 3.0, 4.0, 5.0],
-            "cause": ["A"] * 5,
-        })
+        df = pl.DataFrame(
+            {
+                "time": [1.0, 2.0, 3.0, 4.0, 5.0],
+                "cause": ["A"] * 5,
+            }
+        )
         results = grouped_shapiro_wilk(df, "time", "cause")
         assert "A" in results
 
     def test_grouped_mean_ci_at_boundary(self):
         """Groups with exactly MIN_GROUP_SIZE records are included in CI."""
-        df = pl.DataFrame({
-            "time": [10.0, 20.0, 30.0, 40.0, 50.0],
-            "cause": ["Z"] * 5,
-        })
+        df = pl.DataFrame(
+            {
+                "time": [10.0, 20.0, 30.0, 40.0, 50.0],
+                "cause": ["Z"] * 5,
+            }
+        )
         results = grouped_mean_ci(df, "time", "cause")
         assert "Z" in results
         assert results["Z"].mean == 30.0
@@ -567,14 +565,10 @@ class TestGroupedInference:
 # Helper
 # ---------------------------------------------------------------------------
 
-CAUSAL_TERMS_PATTERN = re.compile(
-    r"\b(causes|leads\s+to|results\s+in)\b", re.IGNORECASE
-)
+CAUSAL_TERMS_PATTERN = re.compile(r"\b(causes|leads\s+to|results\s+in)\b", re.IGNORECASE)
 
 
 def _assert_no_causal_language(text: str) -> None:
     """Assert that text does not contain causal language."""
     match = CAUSAL_TERMS_PATTERN.search(text)
-    assert match is None, (
-        f"Found forbidden causal term '{match.group()}' in: {text}"
-    )
+    assert match is None, f"Found forbidden causal term '{match.group()}' in: {text}"

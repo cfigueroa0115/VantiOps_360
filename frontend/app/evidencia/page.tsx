@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import {
   FileCheck, Server, Database, Shield, GitBranch,
   TestTube2, Globe, AlertTriangle, Zap, Layers,
-  CheckCircle2, XCircle, Clock, TrendingUp
+  CheckCircle2, XCircle, Clock
 } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────
@@ -25,33 +25,96 @@ const ENDPOINTS = [
 const TECHNOLOGIES = [
   { category: "Frontend", icon: <Layers size={16} />, color: "from-blue-500 to-cyan-500", items: ["Next.js 14", "React 18", "TypeScript 5.7", "Tailwind CSS", "Recharts", "Radix UI"] },
   { category: "Backend", icon: <Server size={16} />, color: "from-emerald-500 to-teal-500", items: ["Python 3.11", "FastAPI", "Polars", "DuckDB", "scikit-learn", "Hypothesis"] },
-  { category: "Base de Datos", icon: <Database size={16} />, color: "from-purple-500 to-indigo-500", items: ["Neon PostgreSQL", "Serverless", "51,008 registros", "13 migraciones"] },
-  { category: "Infraestructura", icon: <Globe size={16} />, color: "from-orange-500 to-red-500", items: ["Vercel", "GitHub Actions", "CI/CD ≤ 15min", "Auto-rollback"] },
-  { category: "Testing", icon: <TestTube2 size={16} />, color: "from-pink-500 to-rose-500", items: ["Vitest", "Playwright", "pytest", "14 PBT suites", "1,497 tests"] },
+  { category: "Base de Datos", icon: <Database size={16} />, color: "from-purple-500 to-indigo-500", items: ["Neon PostgreSQL", "Serverless", "51.008 registros base assessment"] },
+  { category: "Infraestructura", icon: <Globe size={16} />, color: "from-orange-500 to-red-500", items: ["Vercel", "GitHub Actions"] },
+  { category: "Testing", icon: <TestTube2 size={16} />, color: "from-pink-500 to-rose-500", items: ["Vitest", "Playwright", "pytest", "Hypothesis PBT"] },
   { category: "Seguridad", icon: <Shield size={16} />, color: "from-amber-500 to-yellow-500", items: ["RBAC 11 roles", "JWT middleware", "Audit append-only", "Email validation"] },
 ];
 
-const STATS = [
-  { label: "Frontend Tests", value: "427", icon: <TestTube2 size={18} />, color: "text-blue-600", bg: "bg-blue-50 group-hover:bg-blue-100" },
-  { label: "Backend Tests", value: "1,070", icon: <CheckCircle2 size={18} />, color: "text-emerald-600", bg: "bg-emerald-50 group-hover:bg-emerald-100" },
-  { label: "Failed", value: "0", icon: <XCircle size={18} />, color: "text-red-500", bg: "bg-red-50 group-hover:bg-red-100" },
-  { label: "Skipped", value: "22", icon: <Clock size={18} />, color: "text-gray-500", bg: "bg-gray-50 group-hover:bg-gray-100" },
-  { label: "Coverage", value: "No disponible", icon: <TrendingUp size={18} />, color: "text-purple-600", bg: "bg-purple-50 group-hover:bg-purple-100" },
-];
+// ─── Types ───────────────────────────────────────────────────────────────
+
+type HealthStatus = "success" | "failure" | "pending";
+type ValidationStatus = "success" | "unavailable" | "failure" | "pending";
+
+interface HealthData {
+  status: string;
+  database?: { connected: boolean; latencyMs?: number };
+}
+
+interface ValidationData {
+  commitHash?: string | null;
+  generatedAt?: string | null;
+  source?: string;
+  workflowStatus?: string;
+  verificationStatus?: string;
+  e2eStatus?: string;
+  visualRegressionStatus?: string;
+  backendTests?: { total?: number; passed?: number; status?: string } | null;
+  frontendTests?: { total?: number; passed?: number; status?: string } | null;
+  coverage?: { statements?: number; branches?: number; functions?: number; lines?: number } | number | null;
+}
 
 // ─── Page ────────────────────────────────────────────────────────────────
 
 export default function EvidenciaPage() {
   const [mounted, setMounted] = useState(false);
-  const [health, setHealth] = useState<any>(null);
-  const [validation, setValidation] = useState<any>(null);
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [healthStatus, setHealthStatus] = useState<HealthStatus>("pending");
+  const [validation, setValidation] = useState<ValidationData | null>(null);
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus>("pending");
 
   useEffect(() => {
     setMounted(true);
-    // Fetch live health
-    fetch("/api/health").then(r => r.json()).then(setHealth).catch(() => {});
-    // Fetch latest validation JSON
-    fetch("/evidence/latest-validation.json").then(r => r.json()).then(setValidation).catch(() => {});
+
+    // Fetch live health with proper error handling
+    fetch("/api/health")
+      .then((r) => {
+        if (!r.ok) {
+          setHealthStatus("failure");
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (data) {
+          setHealth(data);
+          setHealthStatus("success");
+        }
+      })
+      .catch(() => {
+        setHealthStatus("failure");
+      });
+
+    // Fetch latest validation JSON with proper error handling
+    fetch("/evidence/latest-validation.json")
+      .then((r) => {
+        if (!r.ok) {
+          setValidationStatus("failure");
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (data) {
+          setValidation(data);
+          // Map verificationStatus from CI evidence
+          const vs = data.verificationStatus || data.workflowStatus;
+          if (vs === "success") {
+            setValidationStatus("success");
+          } else if (vs === "partial" || vs === "pending") {
+            setValidationStatus("unavailable");
+          } else if (vs === "failure") {
+            setValidationStatus("failure");
+          } else if (!data.commitHash && data.workflowStatus === "unavailable") {
+            setValidationStatus("unavailable");
+          } else {
+            setValidationStatus("unavailable");
+          }
+        }
+      })
+      .catch(() => {
+        setValidationStatus("failure");
+      });
   }, []);
 
   return (
@@ -69,37 +132,11 @@ export default function EvidenciaPage() {
             <p className="text-sm text-slate-300 mt-1">Stack, arquitectura y calidad de VantiOps 360</p>
           </div>
         </div>
+        {/* Dynamic health indicator */}
         <div className="mt-6 flex flex-wrap gap-3">
-          {["Producción activa", "1,497 tests", "0 errores", "DB conectada"].map((badge) => (
-            <span key={badge} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 px-3 py-1 text-xs text-white/90">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {badge}
-            </span>
-          ))}
+          <HealthBadge status={healthStatus} label="Health" />
+          <ValidationBadge status={validationStatus} label="CI Validation" />
         </div>
-      </div>
-
-      {/* ─── Stats Cards ─── */}
-      <div className={`grid grid-cols-2 md:grid-cols-5 gap-3 transition-all duration-700 delay-100 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-        {STATS.map((stat, i) => (
-          <div
-            key={stat.label}
-            className={`group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-4 text-center
-              transition-all duration-300 ease-out
-              hover:scale-[1.04] hover:shadow-lg hover:shadow-gray-200/60 hover:border-gray-200
-              hover:-translate-y-1 cursor-default`}
-            style={{ transitionDelay: `${i * 50}ms` }}
-          >
-            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${stat.bg}`} />
-            <div className="relative">
-              <div className={`mx-auto mb-2 ${stat.color} transition-transform duration-300 group-hover:scale-110`}>
-                {stat.icon}
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">{stat.label}</p>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* ─── Tech Stack Grid ─── */}
@@ -117,11 +154,8 @@ export default function EvidenciaPage() {
                 hover:shadow-xl hover:shadow-gray-200/50 hover:border-transparent hover:-translate-y-1 hover:scale-[1.02]`}
               style={{ transitionDelay: `${i * 75}ms` }}
             >
-              {/* Gradient glow on hover */}
               <div className={`absolute inset-0 opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500 bg-gradient-to-br ${tech.color}`} />
-              {/* Top accent bar */}
               <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${tech.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-
               <div className="relative">
                 <div className="flex items-center gap-2 mb-3">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${tech.color} text-white shadow-sm
@@ -152,8 +186,8 @@ export default function EvidenciaPage() {
         <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2 bg-gradient-to-r from-gray-50 to-white">
           <Globe size={16} className="text-blue-500" />
           <h2 className="text-lg font-semibold text-gray-800">Endpoints REST API</h2>
-          <span className="ml-auto text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
-            {ENDPOINTS.filter(e => e.status === "live").length} activos
+          <span className="ml-auto text-[10px] bg-gray-50 text-gray-600 px-2 py-0.5 rounded-full border border-gray-100">
+            {ENDPOINTS.length} definidos
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -163,25 +197,24 @@ export default function EvidenciaPage() {
                 <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Método</th>
                 <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Endpoint</th>
                 <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Descripción</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Estado</th>
+                <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs">Tipo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {ENDPOINTS.map((ep) => (
                 <tr key={ep.path} className="group transition-colors duration-200 hover:bg-blue-50/30">
                   <td className="px-4 py-2.5">
-                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded transition-transform duration-200 group-hover:scale-110
+                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded
                       ${ep.method === "GET" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>
                       {ep.method}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700 group-hover:text-blue-600 transition-colors">{ep.path}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{ep.path}</td>
                   <td className="px-4 py-2.5 text-gray-600 text-xs">{ep.description}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full
                       ${ep.status === "live" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border border-amber-100"}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${ep.status === "live" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-                      {ep.status === "live" ? "Activo" : "Protegido"}
+                      {ep.status === "live" ? "Público" : "Protegido"}
                     </span>
                   </td>
                 </tr>
@@ -195,13 +228,13 @@ export default function EvidenciaPage() {
       <div className={`rounded-xl border border-gray-100 bg-white p-6 transition-all duration-700 delay-400 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
         <div className="flex items-center gap-2 mb-5">
           <Server size={18} className="text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Arquitectura de Producción</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Arquitectura</h2>
         </div>
         <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-0">
           {[
             { label: "Browser", sub: "React 18 SPA", color: "from-blue-500 to-cyan-500" },
             { label: "Vercel Edge", sub: "Next.js 14 + RBAC MW", color: "from-slate-700 to-slate-900" },
-            { label: "Route Handlers", sub: "15 API endpoints", color: "from-emerald-500 to-teal-600" },
+            { label: "Route Handlers", sub: "API endpoints", color: "from-emerald-500 to-teal-600" },
             { label: "Neon PostgreSQL", sub: "Serverless DB", color: "from-purple-500 to-indigo-600" },
           ].map((node, i) => (
             <React.Fragment key={node.label}>
@@ -228,112 +261,71 @@ export default function EvidenciaPage() {
         </div>
       </div>
 
-      {/* ─── Bottom Row: Deploy + Repo + Security ─── */}
-      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-        {/* Deploy */}
-        <div className="group rounded-xl border border-gray-100 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-emerald-100 hover:-translate-y-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 transition-transform duration-300 group-hover:scale-110">
-              <Globe size={14} />
-            </div>
-            <h3 className="font-semibold text-gray-800 text-sm">Deploy</h3>
-          </div>
-          <ul className="space-y-2 text-xs text-gray-600">
-            {["Vercel (auto-deploy on push)", "GitHub Actions CI ≤ 15 min", "Neon Cloud (always-on)"].map((item) => (
-              <li key={item} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Repo */}
-        <div className="group rounded-xl border border-gray-100 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-purple-100 hover:-translate-y-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-600 transition-transform duration-300 group-hover:scale-110">
-              <GitBranch size={14} />
-            </div>
-            <h3 className="font-semibold text-gray-800 text-sm">Repositorio</h3>
-          </div>
-          <ul className="space-y-2 text-xs text-gray-600">
-            {["Monorepo: frontend/ + backend/", "Conventional Commits", "14 property-based test suites", "Pre-commit: ruff + eslint"].map((item) => (
-              <li key={item} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Security */}
-        <div className="group rounded-xl border border-gray-100 bg-white p-5 transition-all duration-300 hover:shadow-lg hover:border-amber-100 hover:-translate-y-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600 transition-transform duration-300 group-hover:scale-110">
-              <Shield size={14} />
-            </div>
-            <h3 className="font-semibold text-gray-800 text-sm">Seguridad</h3>
-          </div>
-          <ul className="space-y-2 text-xs text-gray-600">
-            {["RBAC 11 roles (JWT middleware)", "Audit inmutable (append-only)", "Email @vanti.com.co + whitelist", "Security scan en CI"].map((item) => (
-              <li key={item} className="flex items-center gap-2 transition-transform duration-200 hover:translate-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
       {/* ─── Live Validation Section ─── */}
-      <div className={`rounded-xl border border-gray-100 bg-white p-6 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+      <div className={`rounded-xl border border-gray-100 bg-white p-6 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} data-testid="live-validation">
         <div className="flex items-center gap-2 mb-4">
           <CheckCircle2 size={18} className="text-emerald-600" />
           <h2 className="text-lg font-semibold text-gray-800">Validación en Vivo</h2>
-          <span className="ml-auto text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
-            Datos reales
-          </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">Health Check</p>
-            <p className={`font-semibold ${health?.status === "healthy" ? "text-emerald-600" : "text-gray-500"}`}>
-              {health?.status || "Consultando..."}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">Base de Datos</p>
-            <p className={`font-semibold ${health?.database?.connected ? "text-emerald-600" : "text-gray-500"}`}>
-              {health?.database?.connected ? `Conectada (${health.database.latencyMs}ms)` : "Consultando..."}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">SHA Validado</p>
-            <p className="font-mono text-xs font-semibold text-gray-700">
-              {validation?.commitSha || "No disponible"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">Frontend Tests</p>
-            <p className="font-semibold text-gray-700">
-              {validation?.frontendTests?.total ? `${validation.frontendTests.total} (${validation.frontendTests.status})` : "No disponible"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">Backend Tests</p>
-            <p className="font-semibold text-gray-700">
-              {validation?.backendTests?.total ? `${validation.backendTests.total} (${validation.backendTests.status})` : "No disponible"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">Coverage</p>
-            <p className="font-semibold text-gray-700">
-              {validation?.coverage ? `${validation.coverage}%` : "No disponible"}
-            </p>
-          </div>
+          <StatusCard
+            label="Health Check"
+            status={healthStatus}
+            value={healthStatus === "success" ? health?.status || "—" : healthStatus === "failure" ? "No disponible" : "Verificando..."}
+          />
+          <StatusCard
+            label="Base de Datos"
+            status={healthStatus === "success" && health?.database?.connected ? "success" : healthStatus === "pending" ? "pending" : "failure"}
+            value={
+              healthStatus === "success" && health?.database?.connected
+                ? `Conectada (${health.database.latencyMs ?? "?"}ms)`
+                : healthStatus === "pending"
+                ? "Verificando..."
+                : "No disponible"
+            }
+          />
+          <StatusCard
+            label="CI Commit"
+            status={validation?.commitHash ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
+            value={validation?.commitHash || (validationStatus === "pending" ? "Verificando..." : "No disponible")}
+            mono
+          />
+          <StatusCard
+            label="Frontend Tests"
+            status={validation?.frontendTests?.total ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
+            value={
+              validation?.frontendTests?.total
+                ? `${validation.frontendTests.total} (${validation.frontendTests.status})`
+                : validationStatus === "pending"
+                ? "Verificando..."
+                : "No disponible"
+            }
+          />
+          <StatusCard
+            label="Backend Tests"
+            status={validation?.backendTests?.total ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
+            value={
+              validation?.backendTests?.total
+                ? `${validation.backendTests.total} (${validation.backendTests.status})`
+                : validationStatus === "pending"
+                ? "Verificando..."
+                : "No disponible"
+            }
+          />
+          <StatusCard
+            label="Coverage"
+            status={validation?.coverage != null ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
+            value={
+              validation?.coverage != null
+                ? typeof validation.coverage === "object"
+                  ? `Stmts ${validation.coverage.statements ?? "?"}%`
+                  : `${validation.coverage}%`
+                : validationStatus === "pending" ? "Verificando..." : "No disponible"
+            }
+          />
         </div>
-        <p className="text-[10px] text-gray-400 mt-3 italic">
-          Datos obtenidos en tiempo real de /api/health y /evidence/latest-validation.json
+        <p className="text-[10px] text-gray-400 mt-3 italic" data-testid="evidence-source-note">
+          Evidencia de CI disponible en GitHub Actions; no publicada dentro del despliegue actual. Los valores de /api/health se obtienen en tiempo real.
         </p>
       </div>
 
@@ -351,7 +343,7 @@ export default function EvidenciaPage() {
               "SAP, Power Automate, R → diseño conceptual (no productivo)",
               "Autenticación JWT local (sin Azure AD/SSO)",
               "Datos de demostración con proveniencia documentada",
-              "Rendimiento validado para 42 usuarios concurrentes",
+              "Rendimiento validado para uso de assessment únicamente",
             ].map((item) => (
               <div key={item} className="flex items-start gap-2">
                 <span className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
@@ -361,6 +353,53 @@ export default function EvidenciaPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Components ──────────────────────────────────────────────────────────
+
+function HealthBadge({ status, label }: { status: HealthStatus; label: string }) {
+  const config = {
+    success: { color: "bg-emerald-400", text: "text-white/90", border: "border-emerald-400/30", bg: "bg-white/10" },
+    failure: { color: "bg-red-400", text: "text-white/90", border: "border-red-400/30", bg: "bg-red-500/10" },
+    pending: { color: "bg-amber-400 animate-pulse", text: "text-white/70", border: "border-amber-400/30", bg: "bg-white/5" },
+  };
+  const c = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full ${c.bg} backdrop-blur-sm border ${c.border} px-3 py-1 text-xs ${c.text}`} data-testid={`badge-${label.toLowerCase().replace(/\s/g, "-")}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${c.color}`} />
+      {label}: {status === "success" ? "OK" : status === "failure" ? "Error" : "..."}
+    </span>
+  );
+}
+
+function ValidationBadge({ status, label }: { status: ValidationStatus; label: string }) {
+  const config = {
+    success: { color: "bg-emerald-400", text: "text-white/90", border: "border-emerald-400/30", bg: "bg-white/10" },
+    unavailable: { color: "bg-amber-400", text: "text-white/70", border: "border-amber-400/30", bg: "bg-white/5" },
+    failure: { color: "bg-red-400", text: "text-white/90", border: "border-red-400/30", bg: "bg-red-500/10" },
+    pending: { color: "bg-amber-400 animate-pulse", text: "text-white/70", border: "border-amber-400/30", bg: "bg-white/5" },
+  };
+  const c = config[status];
+  const statusText = status === "success" ? "OK" : status === "unavailable" ? "Pendiente" : status === "failure" ? "Error" : "...";
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full ${c.bg} backdrop-blur-sm border ${c.border} px-3 py-1 text-xs ${c.text}`} data-testid={`badge-${label.toLowerCase().replace(/\s/g, "-")}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${c.color}`} />
+      {label}: {statusText}
+    </span>
+  );
+}
+
+function StatusCard({ label, status, value, mono }: { label: string; status: string; value: string; mono?: boolean }) {
+  const borderColor = status === "success" ? "border-emerald-200" : status === "failure" ? "border-red-200" : status === "unavailable" ? "border-amber-200" : "border-gray-100";
+  const textColor = status === "success" ? "text-emerald-600" : status === "failure" ? "text-red-600" : status === "unavailable" ? "text-amber-600" : "text-gray-500";
+  return (
+    <div className={`rounded-lg border ${borderColor} p-3`} data-testid={`status-${label.toLowerCase().replace(/\s/g, "-")}`}>
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className={`font-semibold ${textColor} ${mono ? "font-mono text-xs" : ""}`}>
+        {value}
+      </p>
     </div>
   );
 }

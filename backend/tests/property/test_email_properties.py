@@ -18,30 +18,30 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 
 from auth.email_validator import (
     CORPORATE_DOMAIN,
-    WhitelistCache,
     get_denial_reason,
     is_email_authorized,
     reload_whitelist,
     validate_email_format,
 )
 
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 # Predefined denial reasons from the email_validator module
-VALID_DENIAL_REASONS = frozenset({
-    "INVALID_EMAIL_FORMAT",
-    "EMAIL_NOT_IN_AUTHORIZED_LIST",
-    "WHITELIST_ENTRY_EXPIRED",
-    "WHITELIST_DOMAIN_EXPIRED",
-    "UNKNOWN",
-})
+VALID_DENIAL_REASONS = frozenset(
+    {
+        "INVALID_EMAIL_FORMAT",
+        "EMAIL_NOT_IN_AUTHORIZED_LIST",
+        "WHITELIST_ENTRY_EXPIRED",
+        "WHITELIST_DOMAIN_EXPIRED",
+        "UNKNOWN",
+    }
+)
 
 # ---------------------------------------------------------------------------
 # Strategies
@@ -49,10 +49,7 @@ VALID_DENIAL_REASONS = frozenset({
 
 # Valid email local parts (RFC-5322 simplified: alphanumeric + allowed specials)
 _local_part_chars = st.sampled_from(
-    "abcdefghijklmnopqrstuvwxyz"
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "0123456789"
-    ".!#$%&'*+/=?^_`{|}~-"
+    "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789" ".!#$%&'*+/=?^_`{|}~-"
 )
 
 email_local_parts = st.text(
@@ -61,9 +58,7 @@ email_local_parts = st.text(
     max_size=30,
 ).filter(
     # Local part cannot start/end with a dot and cannot have consecutive dots
-    lambda s: not s.startswith(".")
-    and not s.endswith(".")
-    and ".." not in s
+    lambda s: not s.startswith(".") and not s.endswith(".") and ".." not in s
 )
 
 # Non-corporate domains (never @vanti.com.co)
@@ -73,10 +68,23 @@ non_corporate_domain_parts = st.text(
     max_size=20,
 ).filter(lambda s: not s.startswith("-") and not s.endswith("-"))
 
-non_corporate_tlds = st.sampled_from([
-    "com", "org", "net", "io", "co", "edu", "gov", "xyz", "info",
-    "com.mx", "co.uk", "org.co", "com.ar",
-])
+non_corporate_tlds = st.sampled_from(
+    [
+        "com",
+        "org",
+        "net",
+        "io",
+        "co",
+        "edu",
+        "gov",
+        "xyz",
+        "info",
+        "com.mx",
+        "co.uk",
+        "org.co",
+        "com.ar",
+    ]
+)
 
 
 @st.composite
@@ -147,9 +155,9 @@ class TestCorporateEmailAlwaysAuthorized:
 
             result = is_email_authorized(email, whitelist_path)
 
-            assert result is True, (
-                f"Corporate email '{email}' was denied but should ALWAYS be authorized"
-            )
+            assert (
+                result is True
+            ), f"Corporate email '{email}' was denied but should ALWAYS be authorized"
         finally:
             whitelist_path.unlink(missing_ok=True)
 
@@ -197,9 +205,9 @@ class TestExpiredWhitelistTreatedAsUnauthorized:
 
             result = is_email_authorized(email, whitelist_path)
 
-            assert result is False, (
-                f"Email '{email}' with expired whitelist entry was authorized but should be DENIED"
-            )
+            assert (
+                result is False
+            ), f"Email '{email}' with expired whitelist entry was authorized but should be DENIED"
         finally:
             whitelist_path.unlink(missing_ok=True)
 

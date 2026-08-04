@@ -65,7 +65,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div className="p-4 rounded-lg bg-green-50 border border-green-200">
             <p className="font-semibold text-green-800 mb-1">Fase 1 — Datos Reales</p>
-            <p className="text-xs text-green-700">Dashboard, Calidad, Riesgo, Causa Raíz. Pipeline completo con 600+ registros reales procesados.</p>
+            <p className="text-xs text-green-700">Dashboard, Calidad, Riesgo, Causa Raíz. Pipeline completo con 51.008 registros de la base suministrada para el assessment.</p>
           </div>
           <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
             <p className="font-semibold text-blue-800 mb-1">Fase 2 — Conceptual</p>

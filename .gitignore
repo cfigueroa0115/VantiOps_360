@@ -42,3 +42,6 @@ frontend/coverage/
 frontend/coverage-output.txt
 .vercel
 .env*
+
+# Hypothesis test cache
+.hypothesis/

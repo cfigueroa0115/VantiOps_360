@@ -93,9 +93,7 @@ class ExcelIngestionAdapter:
             )
 
         if not path.is_file():
-            raise ValueError(
-                f"Path is not a file: '{path}'. Expected an Excel workbook file."
-            )
+            raise ValueError(f"Path is not a file: '{path}'. Expected an Excel workbook file.")
 
         try:
             # Test readability
@@ -107,9 +105,7 @@ class ExcelIngestionAdapter:
                 f"Permission denied when attempting to read the file."
             )
         except OSError as e:
-            raise ValueError(
-                f"Cannot read Excel file: '{path}'. Error: {e}"
-            )
+            raise ValueError(f"Cannot read Excel file: '{path}'. Error: {e}")
 
         # Req 1.1: Read the Excel file and detect all sheet names
         try:
@@ -134,9 +130,7 @@ class ExcelIngestionAdapter:
             try:
                 df = pl.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
             except Exception as e:
-                logger.warning(
-                    f"Failed to read sheet '{sheet_name}' from '{path}': {e}. Skipping."
-                )
+                logger.warning(f"Failed to read sheet '{sheet_name}' from '{path}': {e}. Skipping.")
                 continue
 
             # Req 1.5: Skip empty sheets with warning
@@ -168,7 +162,8 @@ class ExcelIngestionAdapter:
         integrity = self.verify_integrity(source_counts, output_counts)
         if not integrity.is_valid:
             failed_sheets = [
-                name for name, detail in integrity.details.items()
+                name
+                for name, detail in integrity.details.items()
                 if detail.get("record_diff", 0) != 0 or detail.get("column_diff", 0) != 0
             ]
             logger.error(
@@ -177,9 +172,7 @@ class ExcelIngestionAdapter:
             )
 
         elapsed = time.time() - start_time
-        logger.info(
-            f"Successfully read {len(results)} sheet(s) from '{path}' in {elapsed:.2f}s."
-        )
+        logger.info(f"Successfully read {len(results)} sheet(s) from '{path}' in {elapsed:.2f}s.")
 
         return results
 
@@ -299,9 +292,7 @@ class ExcelIngestionAdapter:
         path = Path(source)
 
         if not path.exists():
-            raise FileNotFoundError(
-                f"Cannot extract metadata: file not found at '{path}'."
-            )
+            raise FileNotFoundError(f"Cannot extract metadata: file not found at '{path}'.")
 
         # Compute SHA-256 hash
         sha256_hash = hashlib.sha256()
@@ -320,9 +311,7 @@ class ExcelIngestionAdapter:
         column_count = 0
 
         for sheet_name, df in sheets.items():
-            schema_info[sheet_name] = {
-                col: str(dtype) for col, dtype in zip(df.columns, df.dtypes)
-            }
+            schema_info[sheet_name] = {col: str(dtype) for col, dtype in zip(df.columns, df.dtypes)}
             column_count = max(column_count, df.width)
 
         return {
@@ -366,8 +355,7 @@ class ExcelIngestionAdapter:
                 is_valid=False,
                 status=ValidationStatus.INVALID,
                 errors=[
-                    f"Unsupported file extension: '{path.suffix}'. "
-                    f"Expected .xlsx or .xls."
+                    f"Unsupported file extension: '{path.suffix}'. " f"Expected .xlsx or .xls."
                 ],
             )
 

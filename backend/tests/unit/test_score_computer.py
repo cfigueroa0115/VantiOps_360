@@ -20,11 +20,9 @@ import pytest
 
 from quality.models import QualityScore, SeverityLevel
 from quality.score_computer import (
-    DEFAULT_DOMAIN_CATALOGS,
     QualityScoreComputer,
     QualityViolation,
 )
-
 
 # ============================================================================
 # Helpers
@@ -33,18 +31,20 @@ from quality.score_computer import (
 
 def _make_clean_df(n: int = 10) -> pl.DataFrame:
     """Create a clean DataFrame with no quality issues."""
-    return pl.DataFrame({
-        "id_pqr": list(range(1, n + 1)),
-        "fecha_creacion": [date(2023, 1, i + 1) for i in range(n)],
-        "fecha_cierre": [date(2023, 1, i + 2) for i in range(n)],
-        "estado": ["cerrado"] * n,
-        "tipo_pqr": ["peticion"] * (n // 2) + ["queja"] * (n - n // 2),
-        "tiempo_gestion_dias": [float(i + 1) for i in range(n)],
-        "resultado": ["accede"] * (n // 2) + ["no_accede"] * (n - n // 2),
-        "empresa": ["empresa_a"] * n,
-        "causa": ["causa_1"] * n,
-        "canal_atencion": ["telefono"] * n,
-    })
+    return pl.DataFrame(
+        {
+            "id_pqr": list(range(1, n + 1)),
+            "fecha_creacion": [date(2023, 1, i + 1) for i in range(n)],
+            "fecha_cierre": [date(2023, 1, i + 2) for i in range(n)],
+            "estado": ["cerrado"] * n,
+            "tipo_pqr": ["peticion"] * (n // 2) + ["queja"] * (n - n // 2),
+            "tiempo_gestion_dias": [float(i + 1) for i in range(n)],
+            "resultado": ["accede"] * (n // 2) + ["no_accede"] * (n - n // 2),
+            "empresa": ["empresa_a"] * n,
+            "causa": ["causa_1"] * n,
+            "canal_atencion": ["telefono"] * n,
+        }
+    )
 
 
 # ============================================================================
@@ -65,12 +65,14 @@ class TestCompleteness:
 
     def test_nulls_reduce_completeness(self):
         """Null values reduce the completeness score."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4],
-            "fecha_creacion": [date(2023, 1, 1), None, date(2023, 1, 3), None],
-            "estado": ["cerrado", "abierto", "en_proceso", "abierto"],
-            "tipo_pqr": ["peticion", "queja", "reclamo", "peticion"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4],
+                "fecha_creacion": [date(2023, 1, 1), None, date(2023, 1, 3), None],
+                "estado": ["cerrado", "abierto", "en_proceso", "abierto"],
+                "tipo_pqr": ["peticion", "queja", "reclamo", "peticion"],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -81,10 +83,12 @@ class TestCompleteness:
 
     def test_all_null_column(self):
         """A column that is entirely null scores 0% for that field."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "all_null": [None, None],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "all_null": [None, None],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -101,10 +105,12 @@ class TestCompleteness:
 
     def test_completeness_violations_generated(self):
         """Null values generate violation records."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "campo_a": [None, "ok", "ok"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "campo_a": [None, "ok", "ok"],
+            }
+        )
         computer = QualityScoreComputer()
         _, violations = computer.compute(df)
 
@@ -135,11 +141,13 @@ class TestValidity:
 
     def test_invalid_estado_reduces_validity(self):
         """Invalid estado values reduce validity score."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4],
-            "estado": ["cerrado", "abierto", "INVALID", "bad_value"],
-            "tipo_pqr": ["peticion", "queja", "reclamo", "peticion"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4],
+                "estado": ["cerrado", "abierto", "INVALID", "bad_value"],
+                "tipo_pqr": ["peticion", "queja", "reclamo", "peticion"],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -148,11 +156,13 @@ class TestValidity:
 
     def test_invalid_tipo_pqr(self):
         """Invalid tipo_pqr values reduce validity score."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "tipo_pqr": ["peticion", "invalid_type"],
-            "estado": ["cerrado", "abierto"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "tipo_pqr": ["peticion", "invalid_type"],
+                "estado": ["cerrado", "abierto"],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -161,10 +171,12 @@ class TestValidity:
 
     def test_negative_tiempo_gestion(self):
         """Negative tiempo_gestion_dias values are invalid."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "tiempo_gestion_dias": [5.0, -1.0, 10.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "tiempo_gestion_dias": [5.0, -1.0, 10.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -174,10 +186,12 @@ class TestValidity:
 
     def test_null_tiempo_gestion_not_checked(self):
         """Null tiempo_gestion_dias values are not counted in validity check."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "tiempo_gestion_dias": [5.0, None, 10.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "tiempo_gestion_dias": [5.0, None, 10.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -203,14 +217,16 @@ class TestConsistency:
 
     def test_cerrado_null_fecha_cierre(self):
         """estado='cerrado' with null fecha_cierre is a contradiction."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4],
-            "estado": ["cerrado", "cerrado", "abierto", "en_proceso"],
-            "fecha_cierre": [date(2023, 2, 1), None, None, None],
-            "fecha_creacion": [date(2023, 1, 1)] * 4,
-            "resultado": ["accede", "no_accede", "no_accede", "no_accede"],
-            "tiempo_gestion_dias": [5.0, 3.0, 2.0, 1.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4],
+                "estado": ["cerrado", "cerrado", "abierto", "en_proceso"],
+                "fecha_cierre": [date(2023, 2, 1), None, None, None],
+                "fecha_creacion": [date(2023, 1, 1)] * 4,
+                "resultado": ["accede", "no_accede", "no_accede", "no_accede"],
+                "tiempo_gestion_dias": [5.0, 3.0, 2.0, 1.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -219,14 +235,16 @@ class TestConsistency:
 
     def test_accede_zero_tiempo(self):
         """resultado='accede' with tiempo_gestion_dias=0 is a contradiction."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4, 5],
-            "estado": ["cerrado"] * 5,
-            "fecha_cierre": [date(2023, 2, 1)] * 5,
-            "fecha_creacion": [date(2023, 1, 1)] * 5,
-            "resultado": ["accede", "accede", "no_accede", "no_accede", "accede"],
-            "tiempo_gestion_dias": [0.0, 5.0, 0.0, 3.0, 0.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4, 5],
+                "estado": ["cerrado"] * 5,
+                "fecha_cierre": [date(2023, 2, 1)] * 5,
+                "fecha_creacion": [date(2023, 1, 1)] * 5,
+                "resultado": ["accede", "accede", "no_accede", "no_accede", "accede"],
+                "tiempo_gestion_dias": [0.0, 5.0, 0.0, 3.0, 0.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -236,14 +254,16 @@ class TestConsistency:
 
     def test_fecha_cierre_before_creacion(self):
         """fecha_cierre < fecha_creacion is a contradiction."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "fecha_creacion": [date(2023, 6, 1), date(2023, 1, 1), date(2023, 3, 1)],
-            "fecha_cierre": [date(2023, 1, 1), date(2023, 2, 1), date(2023, 4, 1)],
-            "estado": ["cerrado", "cerrado", "cerrado"],
-            "resultado": ["no_accede", "no_accede", "no_accede"],
-            "tiempo_gestion_dias": [5.0, 5.0, 5.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "fecha_creacion": [date(2023, 6, 1), date(2023, 1, 1), date(2023, 3, 1)],
+                "fecha_cierre": [date(2023, 1, 1), date(2023, 2, 1), date(2023, 4, 1)],
+                "estado": ["cerrado", "cerrado", "cerrado"],
+                "resultado": ["no_accede", "no_accede", "no_accede"],
+                "tiempo_gestion_dias": [5.0, 5.0, 5.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -253,14 +273,16 @@ class TestConsistency:
 
     def test_multiple_contradictions_accumulate(self):
         """Multiple contradiction types accumulate."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "estado": ["cerrado", "cerrado"],
-            "fecha_cierre": [None, date(2022, 12, 1)],
-            "fecha_creacion": [date(2023, 1, 1), date(2023, 1, 1)],
-            "resultado": ["accede", "no_accede"],
-            "tiempo_gestion_dias": [0.0, 5.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "estado": ["cerrado", "cerrado"],
+                "fecha_cierre": [None, date(2022, 12, 1)],
+                "fecha_creacion": [date(2023, 1, 1), date(2023, 1, 1)],
+                "resultado": ["accede", "no_accede"],
+                "tiempo_gestion_dias": [0.0, 5.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -289,11 +311,13 @@ class TestUniqueness:
 
     def test_duplicates_reduce_uniqueness(self):
         """Duplicate identifiers reduce uniqueness score."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 3, 4, 4],
-            "estado": ["abierto"] * 6,
-            "tipo_pqr": ["peticion"] * 6,
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 3, 4, 4],
+                "estado": ["abierto"] * 6,
+                "tipo_pqr": ["peticion"] * 6,
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -328,15 +352,17 @@ class TestTimeliness:
 
     def test_dates_before_2020_reduce_score(self):
         """Dates before 2020-01-01 are timeliness violations."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4],
-            "fecha_creacion": [
-                date(2019, 12, 31),  # violation
-                date(2020, 1, 1),    # valid (boundary)
-                date(2023, 6, 15),   # valid
-                date(2018, 5, 1),    # violation
-            ],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4],
+                "fecha_creacion": [
+                    date(2019, 12, 31),  # violation
+                    date(2020, 1, 1),  # valid (boundary)
+                    date(2023, 6, 15),  # valid
+                    date(2018, 5, 1),  # violation
+                ],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -346,14 +372,16 @@ class TestTimeliness:
     def test_future_dates_reduce_score(self):
         """Dates after current date are timeliness violations."""
         future = date.today() + timedelta(days=30)
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "fecha_creacion": [
-                date(2023, 1, 1),  # valid
-                future,            # violation
-                date(2022, 6, 1),  # valid
-            ],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "fecha_creacion": [
+                    date(2023, 1, 1),  # valid
+                    future,  # violation
+                    date(2022, 6, 1),  # valid
+                ],
+            }
+        )
         computer = QualityScoreComputer()
         score, violations = computer.compute(df)
 
@@ -387,12 +415,14 @@ class TestReferentialIntegrity:
 
     def test_all_values_in_catalog(self):
         """Values matching the catalog score 100%."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "empresa": ["vanti", "vanti_gas", "vanti"],
-            "causa": ["causa_a", "causa_b", "causa_a"],
-            "canal_atencion": ["telefono", "web", "telefono"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "empresa": ["vanti", "vanti_gas", "vanti"],
+                "causa": ["causa_a", "causa_b", "causa_a"],
+                "canal_atencion": ["telefono", "web", "telefono"],
+            }
+        )
         catalogs = {
             "empresa": ["vanti", "vanti_gas"],
             "causa": ["causa_a", "causa_b"],
@@ -405,10 +435,12 @@ class TestReferentialIntegrity:
 
     def test_unmatched_values_reduce_score(self):
         """Values not in catalog reduce referential integrity."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4],
-            "empresa": ["vanti", "unknown_co", "vanti", "other_co"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4],
+                "empresa": ["vanti", "unknown_co", "vanti", "other_co"],
+            }
+        )
         catalogs = {"empresa": ["vanti"]}
         computer = QualityScoreComputer(domain_catalogs=catalogs)
         score, violations = computer.compute(df)
@@ -418,10 +450,12 @@ class TestReferentialIntegrity:
 
     def test_null_values_excluded_from_check(self):
         """Null values in catalog fields are not counted."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3],
-            "empresa": ["vanti", None, "invalid"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3],
+                "empresa": ["vanti", None, "invalid"],
+            }
+        )
         catalogs = {"empresa": ["vanti"]}
         computer = QualityScoreComputer(domain_catalogs=catalogs)
         score, violations = computer.compute(df)
@@ -431,11 +465,13 @@ class TestReferentialIntegrity:
 
     def test_multiple_catalogs(self):
         """Multiple catalogs combine their unmatched counts."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "empresa": ["vanti", "unknown"],
-            "canal_atencion": ["telefono", "fax"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "empresa": ["vanti", "unknown"],
+                "canal_atencion": ["telefono", "fax"],
+            }
+        )
         catalogs = {
             "empresa": ["vanti"],
             "canal_atencion": ["telefono", "web"],
@@ -484,15 +520,17 @@ class TestCompositeScore:
     def test_composite_in_range_0_100(self):
         """Composite score is always within [0, 100]."""
         # Worst case: many issues
-        df = pl.DataFrame({
-            "id_pqr": [1, 1, 1],  # all duplicates
-            "fecha_creacion": [date(2019, 1, 1), date(2019, 1, 1), None],  # violations
-            "estado": ["cerrado", "cerrado", "cerrado"],
-            "fecha_cierre": [None, None, None],  # contradictions
-            "tipo_pqr": ["INVALID", "INVALID", "INVALID"],  # validity issues
-            "resultado": ["accede", "accede", "accede"],
-            "tiempo_gestion_dias": [0.0, 0.0, 0.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 1, 1],  # all duplicates
+                "fecha_creacion": [date(2019, 1, 1), date(2019, 1, 1), None],  # violations
+                "estado": ["cerrado", "cerrado", "cerrado"],
+                "fecha_cierre": [None, None, None],  # contradictions
+                "tipo_pqr": ["INVALID", "INVALID", "INVALID"],  # validity issues
+                "resultado": ["accede", "accede", "accede"],
+                "tiempo_gestion_dias": [0.0, 0.0, 0.0],
+            }
+        )
         computer = QualityScoreComputer()
         score, _ = computer.compute(df)
 
@@ -525,10 +563,12 @@ class TestViolationDetails:
 
     def test_violation_has_all_fields(self):
         """Each violation contains all required fields."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 2],
-            "campo_con_nulls": [None, "valor"],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2],
+                "campo_con_nulls": [None, "valor"],
+            }
+        )
         computer = QualityScoreComputer()
         _, violations = computer.compute(df)
 
@@ -545,20 +585,21 @@ class TestViolationDetails:
     def test_severity_levels_assigned_correctly(self):
         """Severity levels follow threshold rules: >20% critical, >10% high, >5% medium, ≤5% low."""
         # 1 violation out of 4 records = 25% → CRITICAL
-        df = pl.DataFrame({
-            "id_pqr": [1, 2, 3, 4],
-            "estado": ["cerrado", "cerrado", "cerrado", "cerrado"],
-            "fecha_cierre": [None, date(2023, 2, 1), date(2023, 2, 1), date(2023, 2, 1)],
-            "fecha_creacion": [date(2023, 1, 1)] * 4,
-            "resultado": ["no_accede"] * 4,
-            "tiempo_gestion_dias": [5.0] * 4,
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 2, 3, 4],
+                "estado": ["cerrado", "cerrado", "cerrado", "cerrado"],
+                "fecha_cierre": [None, date(2023, 2, 1), date(2023, 2, 1), date(2023, 2, 1)],
+                "fecha_creacion": [date(2023, 1, 1)] * 4,
+                "resultado": ["no_accede"] * 4,
+                "tiempo_gestion_dias": [5.0] * 4,
+            }
+        )
         computer = QualityScoreComputer()
         _, violations = computer.compute(df)
 
         consistency_v = [
-            v for v in violations
-            if v.rule_name == "consistency_cerrado_null_fecha_cierre"
+            v for v in violations if v.rule_name == "consistency_cerrado_null_fecha_cierre"
         ]
         assert len(consistency_v) == 1
         # 1/4 = 25% → CRITICAL
@@ -566,15 +607,17 @@ class TestViolationDetails:
 
     def test_multiple_rule_types_in_violations(self):
         """Violations from multiple dimensions are collected together."""
-        df = pl.DataFrame({
-            "id_pqr": [1, 1, 2],  # duplicates
-            "fecha_creacion": [date(2019, 1, 1), date(2023, 1, 1), None],  # timeliness + nulls
-            "estado": ["cerrado", "abierto", "en_proceso"],
-            "fecha_cierre": [None, None, None],  # consistency issue with cerrado
-            "tipo_pqr": ["peticion", "queja", "reclamo"],
-            "resultado": ["no_accede"] * 3,
-            "tiempo_gestion_dias": [5.0, 3.0, 1.0],
-        })
+        df = pl.DataFrame(
+            {
+                "id_pqr": [1, 1, 2],  # duplicates
+                "fecha_creacion": [date(2019, 1, 1), date(2023, 1, 1), None],  # timeliness + nulls
+                "estado": ["cerrado", "abierto", "en_proceso"],
+                "fecha_cierre": [None, None, None],  # consistency issue with cerrado
+                "tipo_pqr": ["peticion", "queja", "reclamo"],
+                "resultado": ["no_accede"] * 3,
+                "tiempo_gestion_dias": [5.0, 3.0, 1.0],
+            }
+        )
         computer = QualityScoreComputer()
         _, violations = computer.compute(df)
 

@@ -30,7 +30,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-
 # ---------------------------------------------------------------------------
 # Constants (configurable defaults)
 # ---------------------------------------------------------------------------
@@ -139,9 +138,7 @@ def calculate_net_capacity(hours: float, productivity_factor: float) -> float:
     if hours < 0:
         raise ValueError(f"hours must be non-negative, got {hours}")
     if productivity_factor <= 0 or productivity_factor > 1:
-        raise ValueError(
-            f"productivity_factor must be in (0, 1], got {productivity_factor}"
-        )
+        raise ValueError(f"productivity_factor must be in (0, 1], got {productivity_factor}")
 
     return hours * productivity_factor
 
@@ -269,9 +266,7 @@ def get_capacity_summary(team_config: dict) -> CapacitySummary:
     if pqr_dedication < 0 or pqr_dedication > 1:
         raise ValueError(f"pqr_dedication must be in [0, 1], got {pqr_dedication}")
     if productivity_factor <= 0 or productivity_factor > 1:
-        raise ValueError(
-            f"productivity_factor must be in (0, 1], got {productivity_factor}"
-        )
+        raise ValueError(f"productivity_factor must be in (0, 1], got {productivity_factor}")
     if current_load < 0:
         raise ValueError(f"current_load must be non-negative, got {current_load}")
 
@@ -328,7 +323,8 @@ def get_capacity_report(users: list[dict]) -> dict:
 
     Examples:
         >>> users = [
-        ...     {"name": "Alice", "hours": 32.0, "productivity_factor": 0.85, "assigned_work": 20.0},
+        ...     {"name": "Alice", "hours": 32.0,
+        ...      "productivity_factor": 0.85, "assigned_work": 20.0},
         ...     {"name": "Bob", "hours": 32.0, "productivity_factor": 0.85, "assigned_work": 10.0},
         ... ]
         >>> report = get_capacity_report(users)
@@ -374,15 +370,17 @@ def get_capacity_report(users: list[dict]) -> dict:
 
         alert_level = get_alert_level(utilization)
 
-        user_results.append({
-            "name": name,
-            "hours": hours,
-            "productivity_factor": productivity_factor,
-            "net_capacity": net_capacity,
-            "assigned_work": assigned_work,
-            "utilization": utilization,
-            "alert_level": alert_level,
-        })
+        user_results.append(
+            {
+                "name": name,
+                "hours": hours,
+                "productivity_factor": productivity_factor,
+                "net_capacity": net_capacity,
+                "assigned_work": assigned_work,
+                "utilization": utilization,
+                "alert_level": alert_level,
+            }
+        )
 
         total_net_capacity += net_capacity
         total_assigned_work += assigned_work

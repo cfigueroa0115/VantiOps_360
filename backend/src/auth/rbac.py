@@ -105,95 +105,130 @@ class Permission(StrEnum):
 _ALL_PERMISSIONS: frozenset[Permission] = frozenset(Permission)
 
 _BASIC_READ: frozenset[Permission] = frozenset(
-    [Permission.READ_DASHBOARD, Permission.READ_CHARTS, Permission.READ_KPIS, Permission.READ_FILTERS]
+    [
+        Permission.READ_DASHBOARD,
+        Permission.READ_CHARTS,
+        Permission.READ_KPIS,
+        Permission.READ_FILTERS,
+    ]
 )
 
 PERMISSIONS: dict[Role, frozenset[Permission]] = {
     # SYSTEM_ADMIN: full access to all permissions
     Role.SYSTEM_ADMIN: _ALL_PERMISSIONS,
     # OPERATIONS_LEAD: read + analysis + reports + capacity + evidence
-    Role.OPERATIONS_LEAD: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_RISK,
-        Permission.READ_STATISTICS,
-        Permission.READ_REPORTS,
-        Permission.EXPORT_DATA,
-        Permission.READ_ANNULATIONS,
-        Permission.READ_CAPACITY,
-        Permission.MANAGE_CAPACITY,
-        Permission.READ_EVIDENCE,
-    ]),
+    Role.OPERATIONS_LEAD: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_RISK,
+            Permission.READ_STATISTICS,
+            Permission.READ_REPORTS,
+            Permission.EXPORT_DATA,
+            Permission.READ_ANNULATIONS,
+            Permission.READ_CAPACITY,
+            Permission.MANAGE_CAPACITY,
+            Permission.READ_EVIDENCE,
+        ]
+    ),
     # ANALYST: read + analysis + reports
-    Role.ANALYST: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_RISK,
-        Permission.READ_STATISTICS,
-        Permission.READ_REPORTS,
-        Permission.EXPORT_DATA,
-        Permission.READ_ANNULATIONS,
-    ]),
+    Role.ANALYST: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_RISK,
+            Permission.READ_STATISTICS,
+            Permission.READ_REPORTS,
+            Permission.EXPORT_DATA,
+            Permission.READ_ANNULATIONS,
+        ]
+    ),
     # LEGAL_APPROVER: read + legal approvals + audit
-    Role.LEGAL_APPROVER: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_ANNULATIONS,
-        Permission.APPROVE_LEGAL,
-        Permission.APPROVE_ANNULATION,
-        Permission.READ_AUDIT,
-    ]),
+    Role.LEGAL_APPROVER: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_ANNULATIONS,
+            Permission.APPROVE_LEGAL,
+            Permission.APPROVE_ANNULATION,
+            Permission.READ_AUDIT,
+        ]
+    ),
     # VP_APPROVER: read + VP approvals + audit
-    Role.VP_APPROVER: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_ANNULATIONS,
-        Permission.APPROVE_VP,
-        Permission.APPROVE_ANNULATION,
-        Permission.READ_AUDIT,
-    ]),
+    Role.VP_APPROVER: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_ANNULATIONS,
+            Permission.APPROVE_VP,
+            Permission.APPROVE_ANNULATION,
+            Permission.READ_AUDIT,
+        ]
+    ),
     # BUSINESS_OWNER: read + reports + create annulation + capacity read
-    Role.BUSINESS_OWNER: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_REPORTS,
-        Permission.EXPORT_DATA,
-        Permission.READ_ANNULATIONS,
-        Permission.CREATE_ANNULATION,
-        Permission.READ_CAPACITY,
-    ]),
+    Role.BUSINESS_OWNER: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_REPORTS,
+            Permission.EXPORT_DATA,
+            Permission.READ_ANNULATIONS,
+            Permission.CREATE_ANNULATION,
+            Permission.READ_CAPACITY,
+        ]
+    ),
     # AUDITOR: read + audit logs + evidence
-    Role.AUDITOR: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_AUDIT,
-        Permission.READ_EVIDENCE,
-        Permission.READ_ANNULATIONS,
-    ]),
+    Role.AUDITOR: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_AUDIT,
+            Permission.READ_EVIDENCE,
+            Permission.READ_ANNULATIONS,
+        ]
+    ),
     # PARTNER_ADMIN: read + manage own partner organization
-    Role.PARTNER_ADMIN: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.MANAGE_OWN_PARTNER,
-    ]),
+    Role.PARTNER_ADMIN: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.MANAGE_OWN_PARTNER,
+        ]
+    ),
     # PARTNER_OPERATOR: read + delegated operations
-    Role.PARTNER_OPERATOR: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_ANNULATIONS,
-    ]),
+    Role.PARTNER_OPERATOR: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_ANNULATIONS,
+        ]
+    ),
     # CONTRACTOR_OPERATOR: read + analysis + statistics
-    Role.CONTRACTOR_OPERATOR: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.READ_STATISTICS,
-    ]),
+    Role.CONTRACTOR_OPERATOR: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.READ_STATISTICS,
+        ]
+    ),
     # INTERN_READONLY: read + data ingestion
-    Role.INTERN_READONLY: _BASIC_READ | frozenset([
-        Permission.READ_RCA,
-        Permission.READ_QUALITY,
-        Permission.INGEST_DATA,
-    ]),
+    Role.INTERN_READONLY: _BASIC_READ
+    | frozenset(
+        [
+            Permission.READ_RCA,
+            Permission.READ_QUALITY,
+            Permission.INGEST_DATA,
+        ]
+    ),
 }
 
 
