@@ -50,15 +50,14 @@ test.describe("Pareto Consistency — Single Source of Truth", () => {
     expect(filtersResponse.ok()).toBeTruthy();
     const filtersData = await filtersResponse.json();
 
-    // empresa filter must exist in the schema (may be empty if DB has no distinct values)
-    expect(filtersData).toHaveProperty("empresa");
-    const empresa = filtersData.empresa?.[0];
-    if (!empresa) {
+    // API returns 'companies' field with distinct empresa values
+    const companies = filtersData.companies;
+    if (!companies || companies.length === 0) {
       // Data-dependent: no empresa values available in current dataset
-      // The API works correctly but has no filterable empresa values
       test.skip(true, "No empresa filter values available in current dataset");
       return;
     }
+    const empresa = companies[0];
 
     // Fetch Pareto with filter
     const paretoResponse = await request.get(`/api/charts/pareto?empresa=${encodeURIComponent(empresa)}`);
