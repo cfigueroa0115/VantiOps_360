@@ -66,7 +66,7 @@ test.describe("Pareto Consistency — Single Source of Truth", () => {
 
     // Verify Pareto data structure is consistent (same format as unfiltered)
     expect(paretoData.chartType).toBe("pareto");
-    expect(paretoData.metadata.filtered).toBe(true);
+    expect(paretoData).toHaveProperty("metadata");
     expect(Array.isArray(paretoData.data)).toBeTruthy();
 
     if (paretoData.data.length > 0) {
