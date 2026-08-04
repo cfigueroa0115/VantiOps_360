@@ -168,8 +168,9 @@ jobs:
         run: |
           BASELINE_COUNT=$(find tests/e2e/visual-regression.spec.ts-snapshots/ -name "*.png" 2>/dev/null | wc -l)
           if [ "$BASELINE_COUNT" -lt 9 ]; then
-            echo "::warning::Visual regression baselines not found ($BASELINE_COUNT/9). Run generate-baselines workflow."
-            exit 1
+            echo "::warning::Visual regression baselines not found ($BASELINE_COUNT/9). Run generate-baselines workflow to create them."
+            echo "VISUAL_UNAVAILABLE=true" >> "$GITHUB_ENV"
+            exit 0
           fi
           npx playwright test tests/e2e/visual-regression.spec.ts
         working-directory: frontend
@@ -185,11 +186,14 @@ jobs:
           E2E_STATUS="${{ steps.e2e.outcome }}"
           VISUAL_STATUS="${{ steps.visual.outcome }}"
 
+          if [ "${VISUAL_UNAVAILABLE}" = "true" ]; then
+            VISUAL_STATUS="unavailable"
+          fi
+
           if [ "$E2E_STATUS" = "success" ] && [ "$VISUAL_STATUS" = "success" ]; then
             VERIFICATION_STATUS="success"
-          elif [ "$VISUAL_STATUS" = "skipped" ] || [ "$VISUAL_STATUS" = "" ]; then
+          elif [ "$VISUAL_STATUS" = "unavailable" ] && [ "$E2E_STATUS" = "success" ]; then
             VERIFICATION_STATUS="partial"
-            VISUAL_STATUS="unavailable"
           else
             VERIFICATION_STATUS="failed"
           fi
