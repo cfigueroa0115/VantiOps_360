@@ -2,10 +2,10 @@
  * Visual Regression Tests — Screenshot Baselines
  *
  * Captures screenshot baselines for all protected routes and compares
- * against stored baselines with a 0.1% pixel difference threshold.
+ * against stored baselines with a 2% pixel difference threshold.
  *
- * Baselines are stored in: frontend/artifacts/screenshots/
- * Comparison threshold: 0.1% pixel difference
+ * Baselines are stored in: tests/e2e/visual-regression.spec.ts-snapshots/
+ * Comparison threshold: 2% pixel difference (accommodates cross-platform antialiasing)
  *
  * Requirements: REQ-1.1, REQ-1.3
  */
@@ -25,9 +25,9 @@ const VISUAL_ROUTES = [
   { path: "/rca", name: "rca" },
 ];
 
-// Cross-platform tolerance: font rendering and antialiasing vary between OS.
-// 10% threshold ensures stability across Windows/Linux CI without false positives.
-const MAX_DIFF_PIXEL_RATIO = 0.10;
+// Cross-platform tolerance: font rendering and antialiasing differ between OS.
+// 2% threshold accommodates subpixel antialiasing differences across environments.
+const MAX_DIFF_PIXEL_RATIO = 0.02;
 
 test.describe("Visual Regression — Screenshot Baselines", () => {
   for (const route of VISUAL_ROUTES) {
