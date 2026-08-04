@@ -47,16 +47,10 @@ test.describe("Pareto Consistency — Single Source of Truth", () => {
   test("Pareto consistency maintained with empresa filter", async ({ request }) => {
     // First get available filters to use a real empresa value
     const filtersResponse = await request.get("/api/filters");
-    if (!filtersResponse.ok()) {
-      test.skip();
-      return;
-    }
+    expect(filtersResponse.ok()).toBeTruthy();
     const filtersData = await filtersResponse.json();
-    const empresa = filtersData.empresa?.[0];
-    if (!empresa) {
-      test.skip();
-      return;
-    }
+    expect(filtersData.empresa?.length).toBeGreaterThan(0);
+    const empresa = filtersData.empresa[0];
 
     // Fetch Pareto with filter
     const paretoResponse = await request.get(`/api/charts/pareto?empresa=${encodeURIComponent(empresa)}`);

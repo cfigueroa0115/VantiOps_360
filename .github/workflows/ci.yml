@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ─── Python Backend Checks ───────────────────────────────────────
+      # ─── Python Backend ──────────────────────────────────────────────
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -39,7 +39,7 @@ jobs:
         run: python -m pytest tests -q
         working-directory: backend
 
-      # ─── Frontend Checks ─────────────────────────────────────────────
+      # ─── Frontend ────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -52,6 +52,11 @@ jobs:
 
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=critical
+        working-directory: frontend
+
+      - name: Generate audit report
+        if: always()
+        run: npm audit --omit=dev --json > npm-audit-production.json || true
         working-directory: frontend
 
       - name: Frontend Lint
@@ -79,31 +84,25 @@ jobs:
         run: |
           echo "Validating SQL migration files..."
           ERRORS=0
-
           for file in database/migrations/*.sql; do
             [ -f "$file" ] || continue
             filename=$(basename "$file")
-
             if ! grep -qi "UP" "$file"; then
               echo "ERROR: $filename missing UP section"
               ERRORS=$((ERRORS + 1))
             fi
-
             if ! grep -qi "DOWN" "$file"; then
               echo "ERROR: $filename missing DOWN section"
               ERRORS=$((ERRORS + 1))
             fi
-
             if ! grep -qiE "(IF NOT EXISTS|IF EXISTS|ON CONFLICT)" "$file"; then
               echo "WARNING: $filename may not be idempotent"
             fi
           done
-
           if [ $ERRORS -gt 0 ]; then
             echo "SQL validation failed with $ERRORS error(s)"
             exit 1
           fi
-
           echo "All SQL migrations validated successfully"
 
       # ─── Security Scan ──────────────────────────────────────────────
@@ -111,7 +110,6 @@ jobs:
         run: |
           echo "Scanning for exposed secrets..."
           FOUND=0
-
           PATTERNS=(
             'password\s*=\s*["\x27][^"\x27]+'
             'api[_-]?key\s*=\s*["\x27][^"\x27]+'
@@ -122,10 +120,8 @@ jobs:
             'NEON_.*=\s*["\x27][^"\x27]+'
             'AWS_SECRET_ACCESS_KEY\s*=\s*["\x27][^"\x27]+'
           )
-
           EXCLUDE_DIRS="node_modules|.git|dist|.next|coverage|playwright-report|.hypothesis|__pycache__"
           EXCLUDE_FILES=".env.example|.env.local.example|requirements.md|design.md|tasks.md|CHANGELOG.md"
-
           for pattern in "${PATTERNS[@]}"; do
             MATCHES=$(grep -rn --include="*.ts" --include="*.tsx" --include="*.js" --include="*.py" --include="*.yml" --include="*.yaml" --include="*.json" --include="*.sql" -E "$pattern" . \
               | grep -vE "($EXCLUDE_DIRS)" \
@@ -135,19 +131,16 @@ jobs:
               | grep -vE '(export DATABASE_URL=.postgresql://\.\.\.)' \
               | grep -vE '(NEON_DATABASE_URL_ENV|NEON_DATABASE_URL.*=.*"NEON)' \
               || true)
-
             if [ -n "$MATCHES" ]; then
               echo "POTENTIAL SECRET EXPOSURE:"
               echo "$MATCHES"
               FOUND=$((FOUND + 1))
             fi
           done
-
           if [ $FOUND -gt 0 ]; then
             echo "Security scan found $FOUND potential secret exposure(s)"
             exit 1
           fi
-
           echo "Security scan passed"
 
       # ─── Playwright E2E ──────────────────────────────────────────────
@@ -161,21 +154,46 @@ jobs:
           npx wait-on http://127.0.0.1:3000 --timeout 30000
         working-directory: frontend
 
-      - name: Playwright E2E tests (excludes visual regression)
+      - name: Playwright E2E tests
+        id: e2e
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
         run: npx playwright test --grep-invert "Visual Regression"
         working-directory: frontend
 
-      # ─── Evidence (only on success) ─────────────────────────────────
+      - name: Visual Regression
+        id: visual
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: |
+          BASELINE_COUNT=$(find tests/e2e/visual-regression.spec.ts-snapshots/ -name "*.png" 2>/dev/null | wc -l)
+          if [ "$BASELINE_COUNT" -lt 9 ]; then
+            echo "::warning::Visual regression baselines not found ($BASELINE_COUNT/9). Run generate-baselines workflow."
+            exit 1
+          fi
+          npx playwright test tests/e2e/visual-regression.spec.ts
+        working-directory: frontend
+
+      # ─── Evidence ───────────────────────────────────────────────────
       - name: Generate verified evidence
-        if: success()
+        if: always()
         working-directory: frontend
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          # Collect coverage from coverage-summary.json
+          E2E_STATUS="${{ steps.e2e.outcome }}"
+          VISUAL_STATUS="${{ steps.visual.outcome }}"
+
+          if [ "$E2E_STATUS" = "success" ] && [ "$VISUAL_STATUS" = "success" ]; then
+            VERIFICATION_STATUS="success"
+          elif [ "$VISUAL_STATUS" = "skipped" ] || [ "$VISUAL_STATUS" = "" ]; then
+            VERIFICATION_STATUS="partial"
+            VISUAL_STATUS="unavailable"
+          else
+            VERIFICATION_STATUS="failed"
+          fi
+
           STMT_PCT="null"
           BRANCH_PCT="null"
           FUNC_PCT="null"
@@ -187,21 +205,16 @@ jobs:
             LINE_PCT=$(node -p "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total.lines.pct")
           fi
 
-          # Determine E2E and visual regression status
-          E2E_STATUS='"success"'
-          VISUAL_STATUS='"success"'
-          VERIFICATION_STATUS='"success"'
-
           cat > public/evidence/latest-validation.json <<EOF
           {
             "commitHash": "${COMMIT_SHA}",
             "generatedAt": "${GENERATED_AT}",
             "source": "github-actions",
-            "workflowStatus": "success",
-            "qualityJobStatus": "success",
-            "e2eStatus": ${E2E_STATUS},
-            "visualRegressionStatus": ${VISUAL_STATUS},
-            "verificationStatus": ${VERIFICATION_STATUS},
+            "workflowStatus": "${{ job.status }}",
+            "qualityJobStatus": "${{ job.status }}",
+            "e2eStatus": "${E2E_STATUS}",
+            "visualRegressionStatus": "${VISUAL_STATUS}",
+            "verificationStatus": "${VERIFICATION_STATUS}",
             "productionSmokeStatus": "pending",
             "backendTests": null,
             "frontendTests": null,
@@ -214,24 +227,31 @@ jobs:
           }
           EOF
 
-          echo "Verified evidence generated (verification: ${VERIFICATION_STATUS})"
+          echo "Evidence: e2e=${E2E_STATUS} visual=${VISUAL_STATUS} verification=${VERIFICATION_STATUS}"
 
       - name: Upload verified evidence
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: verified-evidence
           path: frontend/public/evidence/latest-validation.json
 
-      # ─── Diagnostic artifacts (always) ──────────────────────────────
-      - name: Upload diagnostic Playwright report
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-production
+          path: frontend/npm-audit-production.json
+
+      # ─── Diagnostic artifacts ───────────────────────────────────────
+      - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: diagnostic-playwright-report
           path: frontend/playwright-report/
 
-      - name: Upload failure screenshots
+      - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -274,26 +294,62 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for Vercel deployment
+      - name: Wait for correct Vercel deployment
         run: |
-          echo "Waiting for Vercel to deploy commit ${{ github.sha }}..."
+          EXPECTED_SHA="${{ github.sha }}"
+          echo "Waiting for Vercel to deploy commit ${EXPECTED_SHA}..."
           for i in $(seq 1 30); do
-            if curl -fsS https://vantiops-360.vercel.app > /dev/null 2>&1 && \
-               curl -fsS https://vantiops-360.vercel.app/api/health > /dev/null 2>&1; then
-              echo "Production is available (attempt $i)"
-              exit 0
+            HEALTH=$(curl -fsS https://vantiops-360.vercel.app/api/health 2>/dev/null || echo "")
+            if [ -n "$HEALTH" ]; then
+              DEPLOYED_SHA=$(echo "$HEALTH" | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).deploymentCommit}catch(e){''}" 2>/dev/null || echo "")
+              DB_CONNECTED=$(echo "$HEALTH" | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).database.connected}catch(e){false}" 2>/dev/null || echo "false")
+              STATUS=$(echo "$HEALTH" | node -p "try{JSON.parse(require('fs').readFileSync(0,'utf8')).status}catch(e){''}" 2>/dev/null || echo "")
+
+              if [ "$DEPLOYED_SHA" = "$EXPECTED_SHA" ] && [ "$DB_CONNECTED" = "true" ] && [ "$STATUS" = "healthy" -o "$STATUS" = "degraded" ]; then
+                echo "Production deployed commit ${DEPLOYED_SHA} — status: ${STATUS}, DB: connected"
+                exit 0
+              fi
+              echo "Attempt $i/30 — deployed: ${DEPLOYED_SHA:-unknown}, expected: ${EXPECTED_SHA}, status: ${STATUS:-unknown}"
+            else
+              echo "Attempt $i/30 — health endpoint not responding"
             fi
-            echo "Attempt $i/30 — waiting 10s..."
             sleep 10
           done
-          echo "Production did not become available after 30 attempts"
+          echo "Production did not deploy expected commit after 30 attempts"
           exit 1
 
-      - name: Playwright production smoke
+      - name: Playwright production E2E
+        id: prod_e2e
         env:
           PLAYWRIGHT_BASE_URL: https://vantiops-360.vercel.app
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npx playwright test --grep-invert "Visual Regression"
+
+      - name: Visual Regression (production)
+        id: prod_visual
+        env:
+          PLAYWRIGHT_BASE_URL: https://vantiops-360.vercel.app
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: npx playwright test tests/e2e/visual-regression.spec.ts
+
+      - name: Generate production evidence
+        if: always()
+        run: |
+          cat > production-evidence.json <<EOF
+          {
+            "expectedCommit": "${{ github.sha }}",
+            "e2eStatus": "${{ steps.prod_e2e.outcome }}",
+            "visualRegressionStatus": "${{ steps.prod_visual.outcome }}",
+            "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+      - name: Upload production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence
+          path: frontend/production-evidence.json
 
       - name: Upload production Playwright report
         if: always()
