@@ -180,7 +180,7 @@ erDiagram
         uuid id PK
         varchar radicado UK "VARCHAR(50)"
         varchar pqr_id FK "VARCHAR(50)"
-        varchar current_state "Solicitada|En_Revision|Aprobada|Ejecutada|Cerrada|Rechazada"
+        varchar current_state "Solicitada|En_Revision|Aprobada|En_Ejecucion|Cerrada|Rechazada"
         uuid requested_by FK
         timestamptz created_at
         timestamptz updated_at
@@ -342,7 +342,7 @@ erDiagram
 | `app_users` → `sessions` | 1:N | Un usuario puede tener múltiples sesiones activas |
 | `roles` → `role_permissions` | 1:N | Un rol otorga múltiples permisos |
 | `permissions` → `role_permissions` | 1:N | Un permiso puede asignarse a múltiples roles |
-| `partners` → `partner_authorized_emails` | 1:N | Un socio autoriza múltiples emails/dominios |
+| `partners` → `partner_authorized_emails` | 1:N (max 1 ACTIVE) | Un socio puede tener múltiples emails históricos, pero **máximo 1 con is_active=true** (enforced por partial unique index `idx_partner_single_active_email`) |
 | `partners` → `partner_applications` | 1:N | Un socio puede enviar múltiples aplicaciones |
 | `partner_applications` → `partner_application_versions` | 1:N | Una aplicación tiene múltiples versiones |
 | `partner_applications` → `approval_steps` | 1:N | Una aplicación requiere múltiples pasos de aprobación |
@@ -369,12 +369,15 @@ erDiagram
 - **Expiración 72h**: Cada `approval_step` expira automáticamente tras 72 horas
 - **Justificación mínima**: 10 caracteres requeridos al aprobar o rechazar
 - **Roles aprobadores**: Solo `LEGAL_APPROVER` y `VP_APPROVER`
+- **Secuencia obligatoria (PARTNER_ONBOARDING)**: step_order 1 = LEGAL_APPROVER debe aprobarse antes de que VP_APPROVER pueda actuar
+- **Operaciones soportadas**: PARTNER_ONBOARDING, PRODUCTION_MIGRATION, RBAC_CHANGE, DATA_DELETION, SECURITY_CONFIG_CHANGE
 
 ### Anulaciones (Máquina de Estados)
-- **6 estados**: Solicitada → En_Revisión → Aprobada → Ejecutada → Cerrada | Rechazada
+- **6 estados**: Solicitada → En_Revision → Aprobada → En_Ejecucion → Cerrada | Rechazada
 - **Estados terminales**: `Cerrada` y `Rechazada` no tienen transiciones salientes
 - **Justificación obligatoria**: Mínimo 10 caracteres en cada transición
 - **Auditoría completa**: Cada transición se registra en `cancellation_state_history`
+- **Validación de correo**: Requiere partnerId + senderEmail verificados contra el email activo del partner
 
 ### Auditoría
 - **Append-only**: No se permiten operaciones UPDATE ni DELETE sobre `audit_events`
@@ -399,6 +402,7 @@ erDiagram
 | `user_roles` | `idx_user_active_role` | `user_id` (unique) | Enforce max 1 rol activo |
 | `role_permissions` | `idx_role_permissions_permission_id` | `permission_id` | Búsqueda inversa de permisos |
 | `partners` | `idx_partners_status` | `status` | Filtrado por estado |
+| `partner_authorized_emails` | `idx_partner_single_active_email` | `partner_id` (partial, WHERE is_active=true) | **Max 1 email activo por partner** |
 | `partner_authorized_emails` | `idx_partner_emails_email` | `email` | Validación de autenticación |
 | `approval_steps` | `idx_approval_steps_expires_at` | `expires_at` (parcial) | Chequeo de expiración |
 | `cancellation_requests` | `idx_cancellation_state` | `current_state` | Filtrado por estado |
