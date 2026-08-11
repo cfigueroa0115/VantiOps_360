@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { validatePartnerEmail, logPartnerEmailDenied } from "@/lib/server/partner-email-validator";
 
 export const dynamic = "force-dynamic";
 
@@ -255,6 +256,25 @@ export async function POST(request: NextRequest) {
 
   const pqrId = body.pqrId as string | undefined;
   const justification = body.justification as string | undefined;
+  const partnerId = body.partnerId as string | undefined;
+  const senderEmail = body.senderEmail as string | undefined;
+
+  // --- Partner Email Validation (when request comes from a partner) ---
+  if (partnerId && senderEmail) {
+    const validation = await validatePartnerEmail(partnerId, senderEmail);
+    if (!validation.authorized) {
+      await logPartnerEmailDenied(partnerId, senderEmail || "", validation.reason || "unknown");
+      return NextResponse.json(
+        {
+          error: {
+            code: "FORBIDDEN",
+            message: `Partner email validation failed: ${validation.reason}. The sender email must match the active authorized email for the partner.`,
+          },
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   // Validate required fields
   if (!pqrId) {
