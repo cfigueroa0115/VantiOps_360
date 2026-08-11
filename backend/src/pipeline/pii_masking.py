@@ -68,9 +68,7 @@ class PIIMasker:
                           Defaults to DEFAULT_PII_PATTERNS if not provided.
         """
         patterns = pii_patterns if pii_patterns is not None else DEFAULT_PII_PATTERNS
-        self._compiled_patterns = [
-            re.compile(pattern, re.IGNORECASE) for pattern in patterns
-        ]
+        self._compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
 
     @property
     def patterns(self) -> list[re.Pattern]:
@@ -168,8 +166,7 @@ class PIIMasker:
                     # Masking failed - quarantine this record
                     reason = f"Masking failed for field '{col_name}': {e}"
                     logger.error(
-                        f"PII masking failure at row {row_idx}, "
-                        f"field '{col_name}': {e}"
+                        f"PII masking failure at row {row_idx}, " f"field '{col_name}': {e}"
                     )
                     failed_records.append(
                         QuarantinedRecord(
@@ -190,9 +187,7 @@ class PIIMasker:
 
         # Exclude quarantined rows from output
         if failed_row_indices:
-            keep_mask = [
-                i not in failed_row_indices for i in range(len(result_df))
-            ]
+            keep_mask = [i not in failed_row_indices for i in range(len(result_df))]
             result_df = result_df.filter(pl.Series("_keep", keep_mask))
 
         return MaskingResult(masked_df=result_df, failed_records=failed_records)

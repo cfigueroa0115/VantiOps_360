@@ -24,17 +24,10 @@ from typing import Any, Callable
 
 import polars as pl
 
-from core.retry import is_transient_error, retry_policy
+from core.retry import retry_policy
 from ingestion.excel_adapter import ExcelIngestionAdapter
 from pipeline.models import BatchStatus, IngestionBatch
 from pipeline.schemas import PQRSchema
-from profiling.detectors import (
-    calculate_null_stats,
-    detect_outliers_iqr,
-    find_duplicates,
-)
-from profiling.type_inference import infer_types
-from profiling.validators import find_semantic_similarities, validate_dates
 from quality.models import QualityReport, QualityScore
 from quality.report_generator import QualityReportGenerator
 from quality.score_computer import QualityScoreComputer
@@ -244,15 +237,11 @@ class PipelineOrchestrator:
                     )
                     time.sleep(wait_time)
                 else:
-                    logger.error(
-                        f"Operation failed after {max_retries + 1} attempts: {e}"
-                    )
+                    logger.error(f"Operation failed after {max_retries + 1} attempts: {e}")
 
         raise last_exception  # type: ignore[misc]
 
-    def quarantine_record(
-        self, record: dict[str, Any], rule_id: str, reason: str
-    ) -> None:
+    def quarantine_record(self, record: dict[str, Any], rule_id: str, reason: str) -> None:
         """Isolate a failed record to the quarantine Parquet file.
 
         Appends the record with rule_id, reason, and quarantine_timestamp to the
@@ -316,7 +305,8 @@ class PipelineOrchestrator:
 
         try:
             # Attempt full schema validation
-            PQRSchema.validate(df)
+            # Pandera accepts a Polars DataFrame at runtime, but its type stub expects LazyFrame.
+            PQRSchema.validate(df)  # pyright: ignore[reportArgumentType]
             # If no exception, all records are valid
             return df, 0
         except Exception as schema_error:
@@ -329,7 +319,8 @@ class PipelineOrchestrator:
         for i in range(df.height):
             row_df = df.slice(i, 1)
             try:
-                PQRSchema.validate(row_df)
+                # Pandera accepts DataFrame at runtime; stub expects LazyFrame.
+                PQRSchema.validate(row_df)  # pyright: ignore[reportArgumentType]
                 valid_indices.append(i)
             except Exception as e:
                 # Validation errors go directly to quarantine (no retry - Requirement 10.4)
@@ -354,7 +345,9 @@ class PipelineOrchestrator:
 
         return valid_df, quarantined_count
 
-    def update_control_table(self, batch: IngestionBatch, stages_completed: list[str] | None = None) -> None:
+    def update_control_table(
+        self, batch: IngestionBatch, stages_completed: list[str] | None = None
+    ) -> None:
         """Append or update batch information in the JSON control table.
 
         Records the batch with the enhanced schema including per-stage tracking:
@@ -391,9 +384,7 @@ class PipelineOrchestrator:
 
         # Build the enhanced batch record
         completed_at = (
-            batch.ingestion_timestamp.isoformat()
-            if batch.status == BatchStatus.COMPLETED
-            else None
+            batch.ingestion_timestamp.isoformat() if batch.status == BatchStatus.COMPLETED else None
         )
         # Calculate started_at from ingestion_timestamp
         started_at = batch.ingestion_timestamp.isoformat()
@@ -516,9 +507,7 @@ class PipelineOrchestrator:
             sheets = _ingest_file()
 
             if not sheets:
-                raise ValueError(
-                    f"No data sheets found in '{source_path.name}'."
-                )
+                raise ValueError(f"No data sheets found in '{source_path.name}'.")
 
             # Combine all sheets into a single DataFrame for processing
             dfs = list(sheets.values())

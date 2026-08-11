@@ -1,20 +1,11 @@
 {
-  "commitSha": "036f917",
-  "workflowStatus": "pending",
-  "buildDate": "2026-08-03T12:45:00Z",
-  "frontendTests": {
-    "status": "passed",
-    "total": 427
-  },
-  "backendTests": {
-    "status": "passed",
-    "total": 1070
-  },
-  "e2eTests": {
-    "status": "not_available",
-    "total": null
-  },
-  "coverage": null,
-  "productionSmoke": "not_available",
-  "dataProvenance": "REAL_DATA"
+  "commitHash": null,
+  "generatedAt": null,
+  "source": "github-actions",
+  "workflowStatus": "unavailable",
+  "qualityJobStatus": "unavailable",
+  "productionSmokeStatus": "unavailable",
+  "backendTests": null,
+  "frontendTests": null,
+  "coverage": null
 }

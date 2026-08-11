@@ -10,8 +10,6 @@ Validates:
 import os
 from unittest.mock import patch
 
-import pytest
-
 
 class TestParetoHighConcentrationThreshold:
     """Tests for the PARETO_HIGH_CONCENTRATION_THRESHOLD configuration."""
@@ -23,7 +21,9 @@ class TestParetoHighConcentrationThreshold:
             os.environ.pop("PARETO_HIGH_CONCENTRATION_THRESHOLD", None)
             # Re-import to pick up default
             import importlib
+
             import api.routes as routes_module
+
             importlib.reload(routes_module)
             assert routes_module.PARETO_HIGH_CONCENTRATION_THRESHOLD == 0.40
 
@@ -31,7 +31,9 @@ class TestParetoHighConcentrationThreshold:
         """Threshold should be configurable via environment variable."""
         with patch.dict(os.environ, {"PARETO_HIGH_CONCENTRATION_THRESHOLD": "0.50"}):
             import importlib
+
             import api.routes as routes_module
+
             importlib.reload(routes_module)
             assert routes_module.PARETO_HIGH_CONCENTRATION_THRESHOLD == 0.50
 
@@ -39,7 +41,9 @@ class TestParetoHighConcentrationThreshold:
         """Threshold should accept various decimal values."""
         with patch.dict(os.environ, {"PARETO_HIGH_CONCENTRATION_THRESHOLD": "0.25"}):
             import importlib
+
             import api.routes as routes_module
+
             importlib.reload(routes_module)
             assert routes_module.PARETO_HIGH_CONCENTRATION_THRESHOLD == 0.25
 
@@ -53,12 +57,14 @@ class TestParetoConcentrationFields:
         cum = 0.0
         for i, pct in enumerate(percentages):
             cum += pct
-            rows.append({
-                "causa": f"cause_{i}",
-                "count": int(pct * 10),  # arbitrary count
-                "percentage": pct,
-                "cumulative_pct": round(cum, 2),
-            })
+            rows.append(
+                {
+                    "causa": f"cause_{i}",
+                    "count": int(pct * 10),  # arbitrary count
+                    "percentage": pct,
+                    "cumulative_pct": round(cum, 2),
+                }
+            )
         return rows
 
     def _enrich_rows(self, rows: list[dict], threshold: float = 0.40) -> list[dict]:
@@ -152,6 +158,7 @@ class TestParetoRetryPolicyIntegration:
     def test_chart_pareto_has_retry_decorator(self):
         """_chart_pareto should be decorated with retry_policy."""
         from api.routes import _chart_pareto
+
         # Functions decorated with @wraps preserve __wrapped__ or can be checked
         # The retry_policy wraps the function, so __name__ is preserved
         assert _chart_pareto.__name__ == "_chart_pareto"

@@ -16,14 +16,13 @@ Requirements: 9.2, 9.3
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from statistics.descriptive import MIN_GROUP_SIZE
+from typing import cast
 
 import numpy as np
 import polars as pl
 from scipy import stats
-
-from statistics.descriptive import MIN_GROUP_SIZE
-
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -233,7 +232,21 @@ def chi_square_test(contingency_df: pl.DataFrame) -> TestResult:
     """
     # Extract numeric columns only (exclude string label columns)
     numeric_cols = [
-        c for c in contingency_df.columns if contingency_df[c].dtype in (pl.Int64, pl.Int32, pl.Int16, pl.Int8, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64, pl.Float32, pl.Float64)
+        c
+        for c in contingency_df.columns
+        if contingency_df[c].dtype
+        in (
+            pl.Int64,
+            pl.Int32,
+            pl.Int16,
+            pl.Int8,
+            pl.UInt8,
+            pl.UInt16,
+            pl.UInt32,
+            pl.UInt64,
+            pl.Float32,
+            pl.Float64,
+        )
     ]
 
     if not numeric_cols:
@@ -241,9 +254,13 @@ def chi_square_test(contingency_df: pl.DataFrame) -> TestResult:
 
     observed = contingency_df.select(numeric_cols).to_numpy()
 
-    chi2_stat, p_value, dof, _ = stats.chi2_contingency(observed)
+    chi2_result = stats.chi2_contingency(observed)
+    # chi2_contingency returns (statistic, pvalue, dof, expected_freq)
+    chi2_stat = float(cast(float, chi2_result[0]))
+    p_value = float(cast(float, chi2_result[1]))
+    dof = int(cast(int, chi2_result[2]))
 
-    p_value_rounded = round(float(p_value), 4)
+    p_value_rounded = round(p_value, 4)
     is_significant = p_value_rounded < 0.05
 
     if is_significant:
@@ -261,9 +278,9 @@ def chi_square_test(contingency_df: pl.DataFrame) -> TestResult:
 
     return TestResult(
         test_name="chi_square",
-        statistic=round(float(chi2_stat), 4),
+        statistic=round(chi2_stat, 4),
         p_value=p_value_rounded,
-        degrees_of_freedom=int(dof),
+        degrees_of_freedom=dof,
         is_significant=is_significant,
         description=description,
     )
@@ -344,7 +361,6 @@ def two_proportion_z_test(n1: int, p1: float, n2: int, p2: float) -> TestResult:
     )
 
 
-
 # ---------------------------------------------------------------------------
 # Shapiro-Wilk Normality Test
 # ---------------------------------------------------------------------------
@@ -384,7 +400,9 @@ def shapiro_wilk_test(data: pl.Series) -> NormalityTestResult:
         )
 
     values = non_null.to_numpy()
-    stat, p_value = stats.shapiro(values)
+    stat_result = stats.shapiro(values)
+    stat = float(stat_result.statistic)
+    p_value = float(stat_result.pvalue)
 
     p_value_rounded = round(float(p_value), 4)
     is_normal = p_value_rounded >= 0.05
@@ -417,9 +435,7 @@ def shapiro_wilk_test(data: pl.Series) -> NormalityTestResult:
 # ---------------------------------------------------------------------------
 
 
-def mean_confidence_interval(
-    data: pl.Series, confidence: float = 0.95
-) -> MeanConfidenceInterval:
+def mean_confidence_interval(data: pl.Series, confidence: float = 0.95) -> MeanConfidenceInterval:
     """Compute a confidence interval for the population mean using t-distribution.
 
     Parameters

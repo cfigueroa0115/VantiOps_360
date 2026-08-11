@@ -6,12 +6,12 @@ Requirements: REQ-13.1, REQ-13.2, REQ-13.6
 """
 
 from auth.rbac import (
-    Role,
-    Permission,
     PERMISSIONS,
+    Permission,
+    Role,
+    get_allowed_permissions,
     is_authorized,
     validate_role,
-    get_allowed_permissions,
 )
 
 __all__ = [

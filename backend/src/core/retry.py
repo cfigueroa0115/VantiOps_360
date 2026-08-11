@@ -23,11 +23,11 @@ Non-transient errors (zero retries, propagate immediately):
   - Any error not in the transient classification
 """
 
+import logging
 import random
 import time
-import logging
 from functools import wraps
-from typing import Callable, TypeVar, Any
+from typing import Any, Callable, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ def compute_delay(attempt: int, base_delay: float, max_delay: float, jitter: flo
 
     The final delay is clamped to a minimum of 0.
     """
-    exponential = base_delay * (2 ** attempt)
+    exponential = base_delay * (2**attempt)
     capped = min(exponential, max_delay)
     jittered = capped + random.uniform(-jitter, jitter)
     return max(0.0, jittered)

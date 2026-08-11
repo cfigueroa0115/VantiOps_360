@@ -6,7 +6,8 @@ Property-based tests for Annulation state machine (Properties 2 and 3).
 Uses Hypothesis to verify:
 
 Property 2 — Annulation state machine transition validity:
-- P2a: For any (state, target) pair NOT in VALID_TRANSITIONS, transition() returns error with code 422
+- P2a: For any (state, target) pair NOT in VALID_TRANSITIONS,
+       transition() returns error with code 422
 - P2b: For any (state, target) pair IN VALID_TRANSITIONS with authorized role, transition() succeeds
 - P2c: Terminal states (Cerrada, Rechazada) always return 422 regardless of target
 - P2d: get_valid_transitions returns empty list for terminal states
@@ -22,23 +23,21 @@ Property 3 — Annulation transition requires valid justification and produces a
 
 from __future__ import annotations
 
-import string
 from datetime import datetime
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 
 from annulations.state_machine import (
-    AnnulationState,
-    AuditEntry,
     MIN_JUSTIFICATION_LENGTH,
     TERMINAL_STATES,
     VALID_TRANSITIONS,
+    AnnulationState,
+    AuditEntry,
     get_valid_transitions,
     transition,
 )
 from auth.rbac import Role
-
 
 # ===========================================================================
 # Shared Strategies
@@ -82,11 +81,7 @@ def _get_authorized_role_for_transition(
 
 def _get_invalid_pairs() -> list[tuple[str, str]]:
     """Return all (state, target) pairs that are NOT valid transitions."""
-    all_pairs = [
-        (s1.value, s2.value)
-        for s1 in AnnulationState
-        for s2 in AnnulationState
-    ]
+    all_pairs = [(s1.value, s2.value) for s1 in AnnulationState for s2 in AnnulationState]
     valid_set = {(f.value, t.value) for (f, t) in VALID_TRANSITIONS.keys()}
     return [(f, t) for (f, t) in all_pairs if (f, t) not in valid_set]
 
@@ -103,7 +98,10 @@ _invalid_transition_pairs = st.sampled_from(_INVALID_PAIRS)
 
 
 class TestP2aInvalidTransitionReturns422:
-    """P2a: For any (state, target) pair NOT in VALID_TRANSITIONS, transition() returns error with code 422."""
+    """P2a: For any (state, target) pair NOT in VALID_TRANSITIONS.
+
+    transition() returns error with code 422.
+    """
 
     @given(
         pair=_invalid_transition_pairs,
@@ -125,8 +123,7 @@ class TestP2aInvalidTransitionReturns422:
         )
 
         assert result.success is False, (
-            f"Transition from '{current_state}' to '{target_state}' should fail "
-            f"but succeeded"
+            f"Transition from '{current_state}' to '{target_state}' should fail " f"but succeeded"
         )
         assert result.error is not None
         # Invalid transitions must produce 422 (role authorization 403 only applies
@@ -138,7 +135,10 @@ class TestP2aInvalidTransitionReturns422:
 
 
 class TestP2bValidTransitionSucceeds:
-    """P2b: For any (state, target) pair IN VALID_TRANSITIONS with authorized role, transition() succeeds."""
+    """P2b: For any (state, target) pair IN VALID_TRANSITIONS.
+
+    With authorized role, transition() succeeds.
+    """
 
     @given(
         pair=_valid_transition_pairs,
@@ -313,9 +313,9 @@ class TestP2eNewStateMatchesTarget:
             current_state=current_state,
         )
 
-        assert result.success is True, (
-            f"Expected success for valid transition but got error: {result.error}"
-        )
+        assert (
+            result.success is True
+        ), f"Expected success for valid transition but got error: {result.error}"
         assert result.new_state == target_state, (
             f"new_state should be '{target_state}' but got '{result.new_state}' "
             f"for transition '{current_state}' -> '{target_state}'"
@@ -344,9 +344,7 @@ class TestP2eNewStateMatchesTarget:
         )
 
         assert result.success is True
-        assert result.new_state is not None, (
-            "new_state must not be None on successful transition"
-        )
+        assert result.new_state is not None, "new_state must not be None on successful transition"
 
 
 # ===========================================================================
@@ -448,12 +446,12 @@ class TestP3aShortJustificationRejected:
             f"(stripped len={len(justification.strip())})"
         )
         assert result.error is not None
-        assert result.error.code == 400, (
-            f"Expected error code 400 for short justification, got {result.error.code}"
-        )
-        assert result.audit_entry is None, (
-            "No audit entry should be produced for a rejected transition"
-        )
+        assert (
+            result.error.code == 400
+        ), f"Expected error code 400 for short justification, got {result.error.code}"
+        assert (
+            result.audit_entry is None
+        ), "No audit entry should be produced for a rejected transition"
 
     @given(
         cancellation_id=uuids,
@@ -549,9 +547,7 @@ class TestP3bValidJustificationProducesAudit:
             f"from={from_state}, to={to_state}, role={role}. "
             f"Error: {result.error}"
         )
-        assert result.audit_entry is not None, (
-            "A successful transition must produce an audit_entry"
-        )
+        assert result.audit_entry is not None, "A successful transition must produce an audit_entry"
         assert isinstance(result.audit_entry, AuditEntry)
 
 
@@ -590,44 +586,38 @@ class TestP3cAuditEntryContainsRequiredFields:
         assert entry is not None
 
         # cancellation_id
-        assert entry.cancellation_id == cancellation_id, (
-            f"Expected cancellation_id='{cancellation_id}', got '{entry.cancellation_id}'"
-        )
+        assert (
+            entry.cancellation_id == cancellation_id
+        ), f"Expected cancellation_id='{cancellation_id}', got '{entry.cancellation_id}'"
 
         # from_state
-        assert entry.from_state == from_state, (
-            f"Expected from_state='{from_state}', got '{entry.from_state}'"
-        )
+        assert (
+            entry.from_state == from_state
+        ), f"Expected from_state='{from_state}', got '{entry.from_state}'"
 
         # to_state
-        assert entry.to_state == to_state, (
-            f"Expected to_state='{to_state}', got '{entry.to_state}'"
-        )
+        assert entry.to_state == to_state, f"Expected to_state='{to_state}', got '{entry.to_state}'"
 
         # user_id
-        assert entry.user_id == user_id, (
-            f"Expected user_id='{user_id}', got '{entry.user_id}'"
-        )
+        assert entry.user_id == user_id, f"Expected user_id='{user_id}', got '{entry.user_id}'"
 
         # user_role
-        assert entry.user_role == role, (
-            f"Expected user_role='{role}', got '{entry.user_role}'"
-        )
+        assert entry.user_role == role, f"Expected user_role='{role}', got '{entry.user_role}'"
 
         # justification (stripped)
-        assert entry.justification == justification.strip(), (
-            f"Expected justification='{justification.strip()}', got '{entry.justification}'"
-        )
+        assert (
+            entry.justification == justification.strip()
+        ), f"Expected justification='{justification.strip()}', got '{entry.justification}'"
 
         # timestamp: must be a valid ISO 8601 datetime string
-        assert entry.timestamp is not None and len(entry.timestamp) > 0, (
-            "Audit entry timestamp must not be empty"
-        )
+        assert (
+            entry.timestamp is not None and len(entry.timestamp) > 0
+        ), "Audit entry timestamp must not be empty"
         # Verify it parses as a valid datetime
         parsed_ts = datetime.fromisoformat(entry.timestamp)
-        assert parsed_ts is not None, (
-            f"Audit entry timestamp '{entry.timestamp}' is not a valid ISO datetime"
-        )
+        assert (
+            parsed_ts is not None
+        ), f"Audit entry timestamp '{entry.timestamp}' is not a valid ISO datetime"
 
 
 class TestP3dJustificationStrippedButUnchanged:
@@ -672,9 +662,9 @@ class TestP3dJustificationStrippedButUnchanged:
 
         # It must NOT be further modified (e.g., no lowercasing, no truncation)
         # The content between leading/trailing whitespace must be preserved exactly
-        assert expected in justification, (
-            "The stripped justification must be a substring of the original"
-        )
+        assert (
+            expected in justification
+        ), "The stripped justification must be a substring of the original"
 
     @given(
         cancellation_id=uuids,
@@ -712,9 +702,7 @@ class TestP3dJustificationStrippedButUnchanged:
             current_state=from_state,
         )
 
-        assert result.success is True, (
-            f"Should succeed. Error: {result.error}"
-        )
+        assert result.success is True, f"Should succeed. Error: {result.error}"
         entry = result.audit_entry
         assert entry is not None
 

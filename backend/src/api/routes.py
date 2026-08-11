@@ -23,8 +23,8 @@ from api.models import (
     ChartDataResponse,
     ChartMetadata,
     FeatureImportanceItem,
-    Finding,
     FilterOptionsResponse,
+    Finding,
     KPIResponse,
     ModelMetrics,
     QualityDimensions,
@@ -96,7 +96,7 @@ def _execute_query(sql: str, params: list | None = None) -> list[dict[str, Any]]
             result = con.execute(sql, params)
         else:
             result = con.execute(sql)
-        columns = [desc[0] for desc in result.description]
+        columns = [desc[0] for desc in result.description]  # type: ignore[union-attr]
         rows = result.fetchall()
         return [dict(zip(columns, row)) for row in rows]
     finally:
@@ -173,9 +173,7 @@ async def get_kpis(filters: FilterParams = Depends(parse_filters)) -> KPIRespons
     """
     cause_rows = _execute_query(cause_sql, params)
     total = row["total_pqr"] or 1
-    main_cause_share = round(
-        (cause_rows[0]["cnt"] / total * 100) if cause_rows else 0.0, 1
-    )
+    main_cause_share = round((cause_rows[0]["cnt"] / total * 100) if cause_rows else 0.0, 1)
 
     # Quality issues percentage (records with null motivo_cierre or null marcacion)
     quality_sql = f"""
@@ -305,9 +303,7 @@ async def get_chart_data(
         raise HTTPException(status_code=400, detail=f"Unknown chart type: {chart_type}")
 
     data = handler(base, params)
-    record_count = _execute_scalar(
-        f"SELECT COUNT(*) FROM ({base})", params
-    )
+    record_count = _execute_scalar(f"SELECT COUNT(*) FROM ({base})", params)
 
     return ChartDataResponse(
         chart_type=chart_type.value,
@@ -360,13 +356,13 @@ def _chart_pareto(base: str, params: list) -> list[dict]:
         threshold = PARETO_HIGH_CONCENTRATION_THRESHOLD
 
         for i, row in enumerate(rows):
-            cause_pct = row["percentage"] / 100.0
             # high_concentration: true only for the top cause when it exceeds threshold
             is_high_concentration = (i == 0) and (top_cause_pct > threshold)
             row["high_concentration"] = is_high_concentration
             row["concentration_pct"] = row["percentage"]
             # analysis_level: statistical_concentration by default
-            # (causal_hypothesis requires triangulation; validated_root_cause requires expert validation)
+            # (causal_hypothesis requires triangulation;
+            # validated_root_cause requires expert validation)
             row["analysis_level"] = "statistical_concentration"
 
     return rows

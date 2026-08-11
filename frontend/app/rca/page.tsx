@@ -119,21 +119,10 @@ export default function RCAPage() {
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
-            {PARETO_DATA.map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="w-64 text-sm text-gray-700 truncate">{item.cause}</span>
-                <div className="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
-                    style={{ width: `${item.pct * 2}%` }}
-                  />
-                  <span className="absolute right-2 top-1 text-xs font-medium text-gray-600">
-                    {item.pct}% (acum: {item.cumulative}%)
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
+            <p className="text-sm text-amber-700">
+              No fue posible consultar los datos del análisis Pareto. Reintente la consulta.
+            </p>
           </div>
         )}
       </div>

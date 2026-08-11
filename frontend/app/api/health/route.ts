@@ -45,6 +45,7 @@ interface HealthResult {
   uptime: string;
   uptimeMs: number;
   timestamp: string;
+  deploymentCommit: string | null;
   database: { connected: boolean; latencyMs: number };
   degradedMode: {
     active: boolean;
@@ -163,6 +164,7 @@ export async function GET() {
     uptime: getUptimeString(uptimeMs),
     uptimeMs,
     timestamp: new Date().toISOString(),
+    deploymentCommit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     database: {
       connected: dbConnected,
       latencyMs: dbLatencyMs,

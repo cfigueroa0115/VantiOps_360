@@ -12,22 +12,18 @@ Requirements: 22.1, 22.2, 22.3, 22.4
 """
 
 import json
-import os
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 
 from communications.email_mgr import (
+    MAX_DIRECTORY_SIZE,
     EmailDirectory,
     EmailEntry,
     EmailStatus,
     ThrottledSender,
-    MAX_DIRECTORY_SIZE,
-    MAX_EMAILS_PER_MINUTE,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -61,7 +57,11 @@ def populated_directory(temp_storage: Path, temp_audit_dir: Path) -> EmailDirect
     """Create an EmailDirectory pre-populated with 5 entries."""
     # Seed the JSON file
     emails = [
-        {"email": f"user{i}@vanti.com.co", "status": "activo", "updated_at": "2024-01-01T00:00:00+00:00"}
+        {
+            "email": f"user{i}@vanti.com.co",
+            "status": "activo",
+            "updated_at": "2024-01-01T00:00:00+00:00",
+        }
         for i in range(5)
     ]
     data = {"emails": emails, "total": 5, "updated_at": "2024-01-01T00:00:00+00:00"}
@@ -255,10 +255,18 @@ class TestEmailDirectoryBasic:
         """Directory rejects additions beyond MAX_DIRECTORY_SIZE (REQ-22.1)."""
         # Pre-seed a nearly-full directory
         emails = [
-            {"email": f"u{i}@test.com", "status": "activo", "updated_at": "2024-01-01T00:00:00+00:00"}
+            {
+                "email": f"u{i}@test.com",
+                "status": "activo",
+                "updated_at": "2024-01-01T00:00:00+00:00",
+            }
             for i in range(MAX_DIRECTORY_SIZE)
         ]
-        data = {"emails": emails, "total": MAX_DIRECTORY_SIZE, "updated_at": "2024-01-01T00:00:00+00:00"}
+        data = {
+            "emails": emails,
+            "total": MAX_DIRECTORY_SIZE,
+            "updated_at": "2024-01-01T00:00:00+00:00",
+        }
         temp_storage.parent.mkdir(parents=True, exist_ok=True)
         temp_storage.write_text(json.dumps(data), encoding="utf-8")
 
@@ -282,9 +290,7 @@ class TestBulkOperations:
     def test_activate_emails_requires_system_admin(self, populated_directory: EmailDirectory):
         """Non-SYSTEM_ADMIN role is denied bulk activate."""
         with pytest.raises(PermissionError, match="not authorized"):
-            populated_directory.activate_emails(
-                ["user0@vanti.com.co"], admin_id="ANALYST"
-            )
+            populated_directory.activate_emails(["user0@vanti.com.co"], admin_id="ANALYST")
 
     def test_deactivate_emails_requires_system_admin(self, populated_directory: EmailDirectory):
         """Non-SYSTEM_ADMIN role is denied bulk deactivate."""
@@ -326,16 +332,12 @@ class TestBulkOperations:
 
     def test_activate_already_active_returns_zero(self, populated_directory: EmailDirectory):
         """Activating already-active emails does not count them."""
-        count = populated_directory.activate_emails(
-            ["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN"
-        )
+        count = populated_directory.activate_emails(["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN")
         assert count == 0
 
     def test_deactivate_already_inactive_returns_zero(self, populated_directory: EmailDirectory):
         """Deactivating already-inactive emails does not count them."""
-        populated_directory.deactivate_emails(
-            ["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN"
-        )
+        populated_directory.deactivate_emails(["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN")
         count = populated_directory.deactivate_emails(
             ["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN"
         )
@@ -370,9 +372,7 @@ class TestSendEmail:
 
     def test_send_to_inactive_recipient_fails(self, populated_directory: EmailDirectory):
         """Sending to an inactive recipient is rejected."""
-        populated_directory.deactivate_emails(
-            ["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN"
-        )
+        populated_directory.deactivate_emails(["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN")
         result = populated_directory.send_email(
             to="user0@vanti.com.co",
             subject="Test",
@@ -429,7 +429,9 @@ class TestSendEmail:
 class TestAuditLogging:
     """Tests verifying all operations produce audit events."""
 
-    def test_send_email_produces_audit_event(self, populated_directory: EmailDirectory, temp_audit_dir: Path):
+    def test_send_email_produces_audit_event(
+        self, populated_directory: EmailDirectory, temp_audit_dir: Path
+    ):
         """send_email logs a communication to audit_events."""
         populated_directory.send_email(
             to="user0@vanti.com.co",
@@ -450,14 +452,12 @@ class TestAuditLogging:
         assert event["details"]["subject"] == "Audit Test"
         assert event["details"]["delivery_status"] == "sent"
 
-    def test_bulk_activate_produces_audit_event(self, populated_directory: EmailDirectory, temp_audit_dir: Path):
+    def test_bulk_activate_produces_audit_event(
+        self, populated_directory: EmailDirectory, temp_audit_dir: Path
+    ):
         """Bulk activate logs to audit."""
-        populated_directory.deactivate_emails(
-            ["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN"
-        )
-        populated_directory.activate_emails(
-            ["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN"
-        )
+        populated_directory.deactivate_emails(["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN")
+        populated_directory.activate_emails(["user0@vanti.com.co"], admin_id="SYSTEM_ADMIN")
 
         content = temp_audit_dir.read_text()
         events = [json.loads(line) for line in content.strip().split("\n") if line.strip()]
@@ -465,7 +465,9 @@ class TestAuditLogging:
         assert len(activate_events) >= 1
         assert activate_events[-1]["details"]["activated"] == 1
 
-    def test_bulk_deactivate_produces_audit_event(self, populated_directory: EmailDirectory, temp_audit_dir: Path):
+    def test_bulk_deactivate_produces_audit_event(
+        self, populated_directory: EmailDirectory, temp_audit_dir: Path
+    ):
         """Bulk deactivate logs to audit."""
         populated_directory.deactivate_emails(
             ["user0@vanti.com.co", "user1@vanti.com.co"], admin_id="SYSTEM_ADMIN"
@@ -498,12 +500,12 @@ class TestAuditLogging:
         assert len(throttled_events) >= 1
         assert throttled_events[-1]["details"]["reason"] == "rate_limit_exceeded"
 
-    def test_denied_bulk_operation_produces_audit_event(self, populated_directory: EmailDirectory, temp_audit_dir: Path):
+    def test_denied_bulk_operation_produces_audit_event(
+        self, populated_directory: EmailDirectory, temp_audit_dir: Path
+    ):
         """A denied bulk operation logs to audit (REQ-22.4)."""
         with pytest.raises(PermissionError):
-            populated_directory.activate_emails(
-                ["user0@vanti.com.co"], admin_id="ANALYST"
-            )
+            populated_directory.activate_emails(["user0@vanti.com.co"], admin_id="ANALYST")
 
         content = temp_audit_dir.read_text()
         events = [json.loads(line) for line in content.strip().split("\n") if line.strip()]
@@ -532,16 +534,18 @@ class TestPermissions:
 
     def test_various_roles_denied_bulk_activate(self, populated_directory: EmailDirectory):
         """Multiple non-admin roles are denied bulk activate."""
-        for role in ["ANALYST", "AUDITOR", "INTERN_READONLY", "CONTRACTOR_OPERATOR", "BUSINESS_OWNER"]:
+        for role in [
+            "ANALYST",
+            "AUDITOR",
+            "INTERN_READONLY",
+            "CONTRACTOR_OPERATOR",
+            "BUSINESS_OWNER",
+        ]:
             with pytest.raises(PermissionError):
-                populated_directory.activate_emails(
-                    ["user0@vanti.com.co"], admin_id=role
-                )
+                populated_directory.activate_emails(["user0@vanti.com.co"], admin_id=role)
 
     def test_various_roles_denied_bulk_deactivate(self, populated_directory: EmailDirectory):
         """Multiple non-admin roles are denied bulk deactivate."""
         for role in ["ANALYST", "AUDITOR", "INTERN_READONLY", "PARTNER_OPERATOR"]:
             with pytest.raises(PermissionError):
-                populated_directory.deactivate_emails(
-                    ["user0@vanti.com.co"], admin_id=role
-                )
+                populated_directory.deactivate_emails(["user0@vanti.com.co"], admin_id=role)

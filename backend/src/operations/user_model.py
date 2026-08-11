@@ -82,13 +82,9 @@ def check_capacity(role: str, current_active: int) -> bool:
         False
     """
     if role not in USER_CAPACITY:
-        raise ValueError(
-            f"Unknown role '{role}'. Valid roles: {list(USER_CAPACITY.keys())}"
-        )
+        raise ValueError(f"Unknown role '{role}'. Valid roles: {list(USER_CAPACITY.keys())}")
     if current_active < 0:
-        raise ValueError(
-            f"current_active must be non-negative, got {current_active}"
-        )
+        raise ValueError(f"current_active must be non-negative, got {current_active}")
 
     max_capacity = USER_CAPACITY[role]
     return current_active < max_capacity
@@ -245,7 +241,9 @@ def process_expirations(users: list[dict[str, Any]]) -> list[str]:
                 details={
                     "deactivated_user_id": user_id,
                     "role": role,
-                    "expires_at": expires_at.isoformat() if isinstance(expires_at, datetime) else str(expires_at),
+                    "expires_at": expires_at.isoformat()
+                    if isinstance(expires_at, datetime)
+                    else str(expires_at),
                     "reason": "automatic_expiration",
                     "email": user.get("email"),
                 },
@@ -253,7 +251,9 @@ def process_expirations(users: list[dict[str, Any]]) -> list[str]:
 
             logger.info(
                 "User %s (role=%s) deactivated due to expiration at %s",
-                user_id, role, expires_at,
+                user_id,
+                role,
+                expires_at,
             )
 
     return deactivated_ids

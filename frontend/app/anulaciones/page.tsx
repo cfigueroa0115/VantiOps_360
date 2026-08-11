@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileX2, ArrowRight, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { FileX2, ArrowRight, CheckCircle2 } from "lucide-react";
 
 const STATES = [
-  { key: "SOLICITADA", label: "Solicitada", color: "bg-gray-500" },
-  { key: "EN_REVISION", label: "En Revisión", color: "bg-amber-500" },
-  { key: "APROBADA", label: "Aprobada", color: "bg-emerald-500" },
-  { key: "RECHAZADA", label: "Rechazada", color: "bg-red-500" },
-  { key: "EN_EJECUCION", label: "En Ejecución", color: "bg-teal-500" },
-  { key: "CERRADA", label: "Cerrada", color: "bg-slate-500" },
+  { key: "SOLICITADA", label: "Solicitada", color: "bg-gray-500", terminal: false },
+  { key: "EN_REVISION", label: "En Revisión", color: "bg-amber-500", terminal: false },
+  { key: "APROBADA", label: "Aprobada", color: "bg-emerald-500", terminal: false },
+  { key: "RECHAZADA", label: "Rechazada", color: "bg-red-500", terminal: true },
+  { key: "EN_EJECUCION", label: "En Ejecución", color: "bg-teal-500", terminal: false },
+  { key: "CERRADA", label: "Cerrada", color: "bg-slate-500", terminal: true },
 ];
 
 const DEMO_CASES = [
@@ -24,29 +24,34 @@ const DEMO_CASES = [
 function StateMachineViz() {
   return (
     <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 overflow-x-auto">
-      <div className="flex items-center gap-1 min-w-[800px] justify-center flex-wrap">
-        {/* Main flow */}
-        <StateNode label="SOLICITADA" color="bg-gray-500" />
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="EN_REVISION" color="bg-amber-500" />
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <div className="flex flex-col items-center gap-1">
-          <StateNode label="APROBADA" color="bg-emerald-500" />
-          <span className="text-[9px] text-gray-400">ó</span>
-          <StateNode label="RECHAZADA" color="bg-red-500" />
+      <div className="flex flex-col items-center gap-4 min-w-[600px]">
+        {/* Main happy path: Solicitada → En Revisión → Aprobada → En Ejecución → Cerrada */}
+        <div className="flex items-center gap-2 justify-center">
+          <StateNode label="Solicitada" color="bg-gray-500" />
+          <ArrowRight size={16} className="text-gray-400 shrink-0" />
+          <StateNode label="En Revisión" color="bg-amber-500" />
+          <ArrowRight size={16} className="text-gray-400 shrink-0" />
+          <StateNode label="Aprobada" color="bg-emerald-500" />
+          <ArrowRight size={16} className="text-gray-400 shrink-0" />
+          <StateNode label="En Ejecución" color="bg-teal-500" />
+          <ArrowRight size={16} className="text-gray-400 shrink-0" />
+          <StateNode label="Cerrada" color="bg-slate-500" terminal />
         </div>
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="EN_EJECUCION" color="bg-teal-500" />
-        <ArrowRight size={16} className="text-gray-400 shrink-0" />
-        <StateNode label="CERRADA" color="bg-slate-500" />
+        {/* Rejection branch from En Revisión */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-500 mr-1">Desde &quot;En Revisión&quot;:</span>
+          <ArrowRight size={16} className="text-red-300 shrink-0" />
+          <StateNode label="Rechazada" color="bg-red-500" terminal />
+          <span className="text-[10px] text-gray-500 ml-2">(estado terminal)</span>
+        </div>
       </div>
     </div>
   );
 }
 
-function StateNode({ label, color }: { label: string; color: string }) {
+function StateNode({ label, color, terminal }: { label: string; color: string; terminal?: boolean }) {
   return (
-    <div className={`${color} text-white text-[9px] font-bold px-2 py-1.5 rounded-md whitespace-nowrap`}>
+    <div className={`${color} text-white text-[10px] font-bold px-2.5 py-1.5 rounded-md whitespace-nowrap ${terminal ? "ring-2 ring-offset-1 ring-gray-400" : ""}`}>
       {label}
     </div>
   );
@@ -88,14 +93,19 @@ export default function AnulacionesPage() {
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Flujo de Estados</h2>
         <StateMachineViz />
-        <div className="mt-4 grid grid-cols-3 md:grid-cols-5 gap-2">
+        <div className="mt-4 grid grid-cols-3 md:grid-cols-6 gap-2">
           {STATES.map((s) => (
             <div key={s.key} className="flex items-center gap-1.5">
               <div className={`w-3 h-3 rounded-full ${s.color}`} />
-              <span className="text-[10px] text-gray-600">{s.label}</span>
+              <span className="text-[10px] text-gray-600">
+                {s.label}{s.terminal ? " ●" : ""}
+              </span>
             </div>
           ))}
         </div>
+        <p className="mt-3 text-xs text-gray-700 font-medium" data-testid="terminal-states-note">
+          Los estados Rechazada y Cerrada son terminales.
+        </p>
       </div>
 
       {/* Demo Form */}
@@ -104,7 +114,7 @@ export default function AnulacionesPage() {
         {submitted ? (
           <div className="flex items-center gap-2 text-green-600 bg-green-50 border border-green-200 rounded-lg p-4">
             <CheckCircle2 size={20} />
-            <span className="text-sm font-medium">Solicitud registrada exitosamente. Estado: RECEIVED</span>
+            <span className="text-sm font-medium">Solicitud registrada exitosamente. Estado: Solicitada</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">

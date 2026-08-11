@@ -13,8 +13,7 @@ Requirements: 11.3
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
+from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -114,9 +113,7 @@ class FailureMode:
         for attr_name in ("severity", "occurrence", "detection"):
             value = getattr(self, attr_name)
             if not (1 <= value <= 5):
-                raise ValueError(
-                    f"{attr_name} must be between 1 and 5, got {value}"
-                )
+                raise ValueError(f"{attr_name} must be between 1 and 5, got {value}")
         self.rpn = self.severity * self.occurrence * self.detection
 
 
@@ -239,9 +236,7 @@ def five_whys(
         ),
         WhyLevel(
             level=2,
-            question=(
-                "¿Por qué los clientes perciben bajo valor en Servihogar?"
-            ),
+            question=("¿Por qué los clientes perciben bajo valor en Servihogar?"),
             answer=(
                 "Porque no existe un paso de retención ni comunicación "
                 "proactiva de beneficios antes de procesar la cancelación."
@@ -254,9 +249,7 @@ def five_whys(
         ),
         WhyLevel(
             level=3,
-            question=(
-                "¿Por qué no existe un paso de retención en el proceso?"
-            ),
+            question=("¿Por qué no existe un paso de retención en el proceso?"),
             answer=(
                 "Porque el proceso de cancelación fue diseñado para "
                 "cumplimiento operativo sin métricas de retención ni "
@@ -270,9 +263,7 @@ def five_whys(
         ),
         WhyLevel(
             level=4,
-            question=(
-                "¿Por qué el proceso carece de herramientas de retención?"
-            ),
+            question=("¿Por qué el proceso carece de herramientas de retención?"),
             answer=(
                 "Porque el sistema CRM legado no soporta lógica de "
                 "decisión contextual ni integración con catálogos de "
@@ -286,9 +277,7 @@ def five_whys(
         ),
         WhyLevel(
             level=5,
-            question=(
-                "¿Por qué el CRM no fue modernizado para soportar retención?"
-            ),
+            question=("¿Por qué el CRM no fue modernizado para soportar retención?"),
             answer=(
                 "Porque históricamente la cancelación se trató como un "
                 "proceso de bajo impacto y no se priorizó inversión en "
@@ -304,8 +293,7 @@ def five_whys(
         WhyLevel(
             level=6,
             question=(
-                "¿Por qué no se midió previamente el impacto financiero "
-                "de las cancelaciones?"
+                "¿Por qué no se midió previamente el impacto financiero " "de las cancelaciones?"
             ),
             answer=(
                 "Porque no existían herramientas de analytics ni "
@@ -414,9 +402,7 @@ def lean_wastes(
     return [
         LeanWaste(
             waste_type="Transporte",
-            description=(
-                "Movimiento innecesario de información entre sistemas y áreas."
-            ),
+            description=("Movimiento innecesario de información entre sistemas y áreas."),
             examples=[
                 "Reenvío de solicitud entre agente de call center y back office",
                 "Transferencia manual de datos entre CRM y sistema de facturación",
@@ -429,9 +415,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Inventario",
-            description=(
-                "Acumulación de solicitudes pendientes sin procesar."
-            ),
+            description=("Acumulación de solicitudes pendientes sin procesar."),
             examples=[
                 "Cola de cancelaciones pendientes de validación",
                 "Backlog de notificaciones no enviadas al cliente",
@@ -444,9 +428,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Movimiento",
-            description=(
-                "Esfuerzo adicional del agente para completar el proceso."
-            ),
+            description=("Esfuerzo adicional del agente para completar el proceso."),
             examples=[
                 "Navegación entre múltiples pantallas del CRM",
                 "Búsqueda manual de datos del contrato en otro sistema",
@@ -459,9 +441,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Espera",
-            description=(
-                "Tiempo muerto donde la solicitud no avanza."
-            ),
+            description=("Tiempo muerto donde la solicitud no avanza."),
             examples=[
                 "Espera de aprobación de supervisor para ejecutar cancelación",
                 "Cliente en espera mientras agente consulta sistema",
@@ -474,9 +454,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Sobreproducción",
-            description=(
-                "Generación de outputs que no son requeridos o consumidos."
-            ),
+            description=("Generación de outputs que no son requeridos o consumidos."),
             examples=[
                 "Reportes duplicados generados para distintas áreas",
                 "Notificaciones redundantes al cliente por múltiples canales",
@@ -489,9 +467,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Sobreprocesamiento",
-            description=(
-                "Pasos del proceso que exceden lo necesario para el resultado."
-            ),
+            description=("Pasos del proceso que exceden lo necesario para el resultado."),
             examples=[
                 "Validación manual de identidad cuando ya se autenticó por IVR",
                 "Doble verificación de elegibilidad por agente y supervisor",
@@ -504,9 +480,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Defectos",
-            description=(
-                "Errores que requieren retrabajo o generan insatisfacción."
-            ),
+            description=("Errores que requieren retrabajo o generan insatisfacción."),
             examples=[
                 "Registro con campos incompletos que requiere re-contacto",
                 "Clasificación incorrecta de causa/motivo de cancelación",
@@ -521,9 +495,7 @@ def lean_wastes(
         ),
         LeanWaste(
             waste_type="Talento subutilizado",
-            description=(
-                "Capacidades del personal no aprovechadas en el proceso."
-            ),
+            description=("Capacidades del personal no aprovechadas en el proceso."),
             examples=[
                 "Agentes con habilidades de retención sin script ni empowerment",
                 "Analistas de datos sin acceso a información estructurada",
@@ -641,8 +613,7 @@ def _default_failure_modes() -> list[FailureMode]:
         FailureMode(
             mode="Tiempo de espera excesivo por aprobación",
             effect=(
-                "Incumplimiento de SLA de atención; insatisfacción "
-                "del cliente y escalamiento."
+                "Incumplimiento de SLA de atención; insatisfacción " "del cliente y escalamiento."
             ),
             severity=3,
             occurrence=4,
