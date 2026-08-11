@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +42,9 @@ function isValidISODate(dateStr: string): boolean {
  * Requirements: 14.1, 14.2, 14.3, 14.4, 14.5
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  // Extract role from request headers (set by middleware or JWT validation)
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!AUDIT_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {

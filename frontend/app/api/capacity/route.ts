@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -150,8 +151,9 @@ function computeTeamBreakdown(config: {
  * Requirements: 20.1, 20.2, 20.3
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!CAPACITY_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {

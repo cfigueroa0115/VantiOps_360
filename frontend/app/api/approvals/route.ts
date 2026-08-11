@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +67,9 @@ const MIN_JUSTIFICATION_LENGTH = 10;
  * Requirements: 15.1, 15.2, 15.3, 15.4
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!APPROVALS_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {
@@ -258,9 +260,10 @@ export async function GET(request: NextRequest) {
  * Requirements: 15.1, 15.2, 15.3, 15.4
  */
 export async function POST(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
-  const userId = request.headers.get("x-user-id") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
+  const userId = identity.userId;
 
   if (!APPROVALS_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(

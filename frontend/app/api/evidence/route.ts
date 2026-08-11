@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 import {
   getCommitHash,
   getStackVersions,
@@ -50,8 +51,9 @@ const EVIDENCE_ALLOWED_ROLES = new Set([
  * Requirements: 29.1, 29.2, 29.3, 29.4
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!EVIDENCE_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {

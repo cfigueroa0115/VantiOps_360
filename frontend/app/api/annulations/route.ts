@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
 import { validatePartnerEmail, logPartnerEmailDenied } from "@/lib/server/partner-email-validator";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -63,8 +64,9 @@ const MIN_JUSTIFICATION_LENGTH = 10;
  * Requirements: 16.1, 16.4
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!LIST_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {
@@ -226,9 +228,10 @@ export async function GET(request: NextRequest) {
  * Requirements: 16.1, 16.2, 16.5, 16.6
  */
 export async function POST(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
-  const userId = request.headers.get("x-user-id") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
+  const userId = identity.userId;
 
   if (!CREATE_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
