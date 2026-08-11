@@ -108,9 +108,10 @@ class TestMigrationStructure:
     def test_migration_files_exist(self):
         """Migration directory contains at least the expected number of files."""
         assert MIGRATIONS_DIR.exists(), f"Migrations directory not found: {MIGRATIONS_DIR}"
-        assert len(MIGRATION_FILES) >= EXPECTED_MIN_COUNT, (
-            f"Expected at least {EXPECTED_MIN_COUNT} migration files, found {len(MIGRATION_FILES)}: "
-            f"{[f.name for f in MIGRATION_FILES]}"
+        actual = len(MIGRATION_FILES)
+        assert actual >= EXPECTED_MIN_COUNT, (
+            f"Expected at least {EXPECTED_MIN_COUNT} migration files, "
+            f"found {actual}: {[f.name for f in MIGRATION_FILES]}"
         )
 
     def test_contains_up_section(self, migration_file: Path, migration_content: str):
