@@ -95,11 +95,12 @@ export async function getVerifiedIdentity(request: NextRequest): Promise<AuthIde
  * Gets the user role from the request.
  * 
  * Strategy:
- * 1. If JWT_SECRET is configured, verify the JWT and extract role from it (secure)
- * 2. If no JWT_SECRET (development/POC), fall back to x-user-role header
- *    BUT this fallback is clearly documented as insecure and for POC only
+ * 1. If JWT_SECRET is configured, verify the JWT and extract role from it (SECURE)
+ * 2. If no JWT_SECRET AND NODE_ENV=test, allow header-based identity (TESTING ONLY)
+ * 3. Otherwise FAIL CLOSED — no authentication possible
  * 
- * In production with JWT_SECRET set, client-spoofed headers are ignored.
+ * In production/preview with JWT_SECRET set, client-spoofed headers are ALWAYS ignored.
+ * Without JWT_SECRET in non-test environments, returns unauthorized.
  */
 export async function getRequestIdentity(request: NextRequest): Promise<AuthIdentity> {
   const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "";
@@ -109,8 +110,13 @@ export async function getRequestIdentity(request: NextRequest): Promise<AuthIden
     return getVerifiedIdentity(request);
   }
 
-  // POC fallback: when no JWT_SECRET is set (development mode only)
-  // In this mode, headers are accepted but this is NOT secure
+  // FAIL CLOSED: in non-test environments without JWT_SECRET, deny all
+  const isTestEnv = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  if (!isTestEnv) {
+    return { role: "", userId: "", verified: false };
+  }
+
+  // TEST-ONLY fallback: accept headers for unit test mocking
   const role = request.headers.get("x-user-role") || "";
   const userId = request.headers.get("x-user-id") || "";
   
