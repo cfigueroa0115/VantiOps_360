@@ -569,6 +569,32 @@ async function handleApproveReject(
       );
     }
 
+    // Enforce sequential approval: VP cannot approve before Legal (REQ-15.5)
+    if (step.approver_role === "VP_APPROVER") {
+      const priorSteps = await query<{ status: string }>(
+        `SELECT s2.status FROM approval_steps s2
+         WHERE s2.application_id = (SELECT application_id FROM approval_steps WHERE id = $1)
+         AND s2.step_order < (SELECT step_order FROM approval_steps WHERE id = $1)
+         AND s2.approver_role = 'LEGAL_APPROVER'`,
+        [approvalId]
+      );
+      // Only enforce if a Legal step exists for this application
+      if (priorSteps.length > 0) {
+        const legalNotApproved = priorSteps.some((s) => s.status !== "approved");
+        if (legalNotApproved) {
+          return NextResponse.json(
+            {
+              error: {
+                code: "SEQUENTIAL_VIOLATION",
+                message: "VP approval requires prior Legal approval. Legal step must be approved first.",
+              },
+            },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     // Update the approval step
     await query(
       `UPDATE approval_steps
