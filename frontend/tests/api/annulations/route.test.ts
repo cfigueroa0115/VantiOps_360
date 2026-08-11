@@ -6,6 +6,12 @@ vi.mock("@/lib/server/database", () => ({
   query: vi.fn(),
 }));
 
+// Mock partner email validator
+vi.mock("@/lib/server/partner-email-validator", () => ({
+  validatePartnerEmail: vi.fn().mockResolvedValue({ authorized: true, partnerId: "p-1", partnerName: "Test" }),
+  logPartnerEmailDenied: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { GET, POST } from "@/app/api/annulations/route";
 import { query } from "@/lib/server/database";
 
@@ -261,7 +267,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "INTERN_READONLY", "x-user-id": "user@test.com" },
-      body: { pqrId: "pqr-1", justification: "Valid justification for this request" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1", justification: "Valid justification for this request" },
     });
 
     const res = await POST(req);
@@ -275,7 +281,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "ANALYST", "x-user-id": "user@test.com" },
-      body: { pqrId: "pqr-1", justification: "Valid justification for this request" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1", justification: "Valid justification for this request" },
     });
 
     const res = await POST(req);
@@ -286,7 +292,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { justification: "Valid justification for this request" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", justification: "Valid justification for this request" },
     });
 
     const res = await POST(req);
@@ -301,7 +307,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { pqrId: "pqr-1" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1" },
     });
 
     const res = await POST(req);
@@ -316,7 +322,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { pqrId: "pqr-1", justification: "short" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1", justification: "short" },
     });
 
     const res = await POST(req);
@@ -332,7 +338,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "BUSINESS_OWNER", "x-user-id": "owner@vanti.com.co" },
-      body: { pqrId: "pqr-1", justification: "123456789" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1", justification: "123456789" },
     });
 
     const res = await POST(req);
@@ -374,7 +380,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { pqrId: "pqr-1", justification: "Valid justification for this cancellation request" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1", justification: "Valid justification for this cancellation request" },
     });
 
     const res = await POST(req);
@@ -403,7 +409,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "BUSINESS_OWNER", "x-user-id": "owner@vanti.com.co" },
-      body: { pqrId: "pqr-2", justification: "Business reason for cancellation" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-2", justification: "Business reason for cancellation" },
     });
 
     const res = await POST(req);
@@ -429,7 +435,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { pqrId: "pqr-audit", justification: "Justification for audit test case" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-audit", justification: "Justification for audit test case" },
     });
 
     await POST(req);
@@ -447,7 +453,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { pqrId: "pqr-1", justification: "Valid justification for this request" },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-1", justification: "Valid justification for this request" },
     });
 
     const res = await POST(req);
@@ -473,7 +479,7 @@ describe("POST /api/annulations", () => {
     const req = createRequest("/api/annulations", {
       method: "POST",
       headers: { "x-user-role": "SYSTEM_ADMIN", "x-user-id": "admin@vanti.com.co" },
-      body: { pqrId: "pqr-trim", justification: "   Justification with leading spaces   " },
+      body: { partnerId: "p-1", senderEmail: "test@partner.co", pqrId: "pqr-trim", justification: "   Justification with leading spaces   " },
     });
 
     const res = await POST(req);
