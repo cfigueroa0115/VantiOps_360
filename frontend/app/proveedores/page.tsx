@@ -177,7 +177,7 @@ export default function ProveedoresPage() {
         <h3 className="font-semibold text-gray-800 text-sm mb-2">Metodología</h3>
         <ul className="text-xs text-gray-600 space-y-1">
           <li>• Escala de calificación: 1-10 por criterio</li>
-          <li>• Pesos definidos por comité evaluador (VP Operaciones + Dirección Técnica)</li>
+          <li>• Ponderaciones propuestas para el ejercicio, sujetas a validación con los stakeholders responsables de la contratación</li>
           <li>• Evaluación basada en RFI, demo técnica y referencias comerciales</li>
           <li>• Score final = Σ (calificación × peso) para cada proveedor</li>
         </ul>

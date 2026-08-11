@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import { ArrowRightLeft, Play, CheckCircle2, AlertTriangle, XCircle, Clock } from "lucide-react";
 
 const STAGES = [
-  { key: "discovery", label: "Discovery", description: "Identificación de fuentes y esquemas" },
-  { key: "profiling", label: "Profiling", description: "Análisis estadístico y detección de anomalías" },
-  { key: "mapping", label: "Mapping", description: "Transformación y mapeo de campos" },
-  { key: "quality_gate", label: "Quality Gate", description: "Validación de reglas de calidad" },
-  { key: "load", label: "Load", description: "Carga a destino (Neon PostgreSQL)" },
-  { key: "reconciliation", label: "Reconciliation", description: "Verificación de integridad post-carga" },
+  { key: "snapshot", label: "Snapshot", description: "Tomar snapshot y hash de la fuente Excel legado" },
+  { key: "profiling", label: "Profiling", description: "Análisis estadístico, detección de anomalías y tipos" },
+  { key: "normalization", label: "Normalización", description: "Limpieza, deduplicación y normalización sin afectar operación" },
+  { key: "staging", label: "Staging + Cuarentena", description: "Carga a staging, cuarentena de inconsistencias" },
+  { key: "dualrun", label: "Dual-Run", description: "Operación paralela: fuente antigua + destino nuevo" },
+  { key: "delta", label: "Delta Final", description: "Congelamiento de ventana mínima y carga de cambios recientes" },
+  { key: "reconciliation", label: "Reconciliación", description: "Verificación de integridad, checksums y conteos" },
+  { key: "cutover", label: "Cutover", description: "Cambio de fuente operativa con rollback disponible" },
 ];
 
 const INITIAL_STATS = {
@@ -71,7 +73,8 @@ export default function MigracionPage() {
     <div className="p-6 space-y-6">
       {/* Banner */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-sm text-amber-800">
-        Datos simulados exclusivamente para demostración conceptual.
+        Simulación conceptual del proceso de migración del Maestro de Aliados (600 registros desde Excel legado).
+        No ejecuta migración productiva.
       </div>
 
       {/* Header */}
@@ -80,8 +83,8 @@ export default function MigracionPage() {
           <ArrowRightLeft size={20} className="text-cyan-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Migración de Datos</h1>
-          <p className="text-sm text-gray-500">Simulación conceptual independiente de migración de registros PQR</p>
+          <h1 className="text-2xl font-bold text-gray-900">Migración Maestro Vantilisto</h1>
+          <p className="text-sm text-gray-500">Estrategia controlada de migración desde Excel legado hacia el modelo estructurado de VantiOps 360</p>
         </div>
       </div>
 
@@ -221,7 +224,8 @@ export default function MigracionPage() {
 
       {/* Disclaimer */}
       <p className="text-xs text-gray-500 italic text-center">
-        Simulación conceptual de la estrategia de migración. No ejecuta una migración productiva ni modifica registros existentes.
+        Simulación conceptual de la estrategia de migración Near-Zero Downtime del Maestro Vantilisto (600 registros de aliados desde Excel legado).
+        No ejecuta una migración productiva ni modifica registros existentes. Los 51.008 registros PQR se encuentran en la base analítica separada.
       </p>
     </div>
   );
