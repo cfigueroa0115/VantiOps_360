@@ -22,6 +22,7 @@ const VALID_OPERATIONS = new Set([
   "RBAC_CHANGE",
   "DATA_DELETION",
   "SECURITY_CONFIG_CHANGE",
+  "PARTNER_ONBOARDING",
 ]);
 
 /**
@@ -32,7 +33,14 @@ const OPERATION_APPROVER_MAP: Record<string, string[]> = {
   RBAC_CHANGE: ["LEGAL_APPROVER", "VP_APPROVER"],
   DATA_DELETION: ["LEGAL_APPROVER"],
   SECURITY_CONFIG_CHANGE: ["LEGAL_APPROVER", "VP_APPROVER"],
+  PARTNER_ONBOARDING: ["LEGAL_APPROVER", "VP_APPROVER"],
 };
+
+/**
+ * Operations that require sequential multi-step approval.
+ * For these, step_order 1 = LEGAL_APPROVER must be approved before step_order 2 = VP_APPROVER.
+ */
+const SEQUENTIAL_OPERATIONS = new Set(["PARTNER_ONBOARDING", "RBAC_CHANGE", "SECURITY_CONFIG_CHANGE"]);
 
 /**
  * 72-hour expiration in milliseconds (REQ-15.4).
@@ -390,20 +398,43 @@ async function handleCreateRequest(
 
     const applicationId = appResult[0].id;
 
-    // Create approval step
-    const stepResult = await query<{
-      id: string;
-      created_at: string;
-      expires_at: string;
-    }>(
-      `INSERT INTO approval_steps
-         (application_id, step_order, approver_role, status, justification, expires_at)
-       VALUES ($1, 1, $2, 'pending', $3, $4)
-       RETURNING id, created_at, expires_at`,
-      [applicationId, approverRole, justification, expiresAt.toISOString()]
-    );
+    // Create approval steps (sequential operations get Legal + VP)
+    const roles = OPERATION_APPROVER_MAP[operation] || [approverRole];
+    const isSequential = SEQUENTIAL_OPERATIONS.has(operation);
 
-    const step = stepResult[0];
+    let primaryStep: { id: string; created_at: string; expires_at: string };
+
+    if (isSequential && roles.length > 1) {
+      // Create Legal step first (step_order 1)
+      const legalResult = await query<{ id: string; created_at: string; expires_at: string }>(
+        `INSERT INTO approval_steps
+           (application_id, step_order, approver_role, status, justification, expires_at)
+         VALUES ($1, 1, 'LEGAL_APPROVER', 'pending', $2, $3)
+         RETURNING id, created_at, expires_at`,
+        [applicationId, justification, expiresAt.toISOString()]
+      );
+      primaryStep = legalResult[0];
+
+      // Create VP step (step_order 2) — blocked until Legal approves
+      await query(
+        `INSERT INTO approval_steps
+           (application_id, step_order, approver_role, status, justification, expires_at)
+         VALUES ($1, 2, 'VP_APPROVER', 'pending', $2, $3)`,
+        [applicationId, justification, expiresAt.toISOString()]
+      );
+    } else {
+      // Single-step approval
+      const stepResult = await query<{ id: string; created_at: string; expires_at: string }>(
+        `INSERT INTO approval_steps
+           (application_id, step_order, approver_role, status, justification, expires_at)
+         VALUES ($1, 1, $2, 'pending', $3, $4)
+         RETURNING id, created_at, expires_at`,
+        [applicationId, approverRole, justification, expiresAt.toISOString()]
+      );
+      primaryStep = stepResult[0];
+    }
+
+    const step = primaryStep;
 
     // Log approval event
     await query(
