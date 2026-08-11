@@ -59,16 +59,45 @@ function StateNode({ label, color, terminal }: { label: string; color: string; t
 
 export default function AnulacionesPage() {
   const [formState, setFormState] = useState({
-    clientName: "",
-    service: "",
-    reason: "",
+    partnerId: "",
+    senderEmail: "",
+    pqrId: "",
+    justification: "",
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; message: string; radicado?: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/annulations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-role": "BUSINESS_OWNER", "x-user-id": formState.senderEmail },
+        body: JSON.stringify({
+          partnerId: formState.partnerId,
+          senderEmail: formState.senderEmail,
+          pqrId: formState.pqrId,
+          justification: formState.justification,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setResult({ type: "success", message: `Solicitud radicada exitosamente. Estado: Solicitada`, radicado: data.data?.radicado });
+        setFormState({ partnerId: "", senderEmail: "", pqrId: "", justification: "" });
+      } else {
+        const code = data.error?.code || res.status;
+        const msg = data.error?.message || "Error desconocido";
+        setResult({ type: "error", message: `[${code}] ${msg}` });
+      }
+    } catch (err) {
+      setResult({ type: "error", message: "Error de red. Verifique conectividad." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -108,64 +137,78 @@ export default function AnulacionesPage() {
         </p>
       </div>
 
-      {/* Demo Form */}
+      {/* Solicitud Form — Connected to API */}
       <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Solicitud de Anulación (Demo)</h2>
-        {submitted ? (
-          <div className="flex items-center gap-2 text-green-600 bg-green-50 border border-green-200 rounded-lg p-4">
-            <CheckCircle2 size={20} />
-            <span className="text-sm font-medium">Solicitud registrada exitosamente. Estado: Solicitada</span>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Solicitud de Anulación (POC)</h2>
+        {result && (
+          <div className={`flex items-center gap-2 mb-4 rounded-lg p-4 border ${
+            result.type === "success" ? "text-green-600 bg-green-50 border-green-200" : "text-red-600 bg-red-50 border-red-200"
+          }`}>
+            {result.type === "success" ? <CheckCircle2 size={20} /> : <FileX2 size={20} />}
+            <div>
+              <span className="text-sm font-medium">{result.message}</span>
+              {result.radicado && <p className="text-xs mt-0.5 font-mono">{result.radicado}</p>}
+            </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del Cliente</label>
-              <input
-                type="text"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ej: María García"
-                value={formState.clientName}
-                onChange={(e) => setFormState({ ...formState, clientName: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Servicio</label>
-              <select
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formState.service}
-                onChange={(e) => setFormState({ ...formState, service: e.target.value })}
-                required
-              >
-                <option value="">Seleccionar...</option>
-                <option value="Servihogar Plus">Servihogar Plus</option>
-                <option value="Servihogar Básico">Servihogar Básico</option>
-                <option value="Gas Natural Residencial">Gas Natural Residencial</option>
-                <option value="Gas Comercial">Gas Comercial</option>
-                <option value="Revisión Técnica">Revisión Técnica</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Motivo</label>
-              <input
-                type="text"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ej: No utiliza el servicio"
-                value={formState.reason}
-                onChange={(e) => setFormState({ ...formState, reason: e.target.value })}
-                required
-              />
-            </div>
-            <div className="md:col-span-3">
-              <button
-                type="submit"
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Registrar Solicitud
-              </button>
-            </div>
-          </form>
         )}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Partner ID</label>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="UUID del aliado"
+              value={formState.partnerId}
+              onChange={(e) => setFormState({ ...formState, partnerId: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Correo Remitente</label>
+            <input
+              type="email"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="correo@aliado.co"
+              value={formState.senderEmail}
+              onChange={(e) => setFormState({ ...formState, senderEmail: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">PQR / Referencia</label>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="PQR-001"
+              value={formState.pqrId}
+              onChange={(e) => setFormState({ ...formState, pqrId: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Justificación (mín. 10 caracteres)</label>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Motivo detallado de la solicitud"
+              value={formState.justification}
+              onChange={(e) => setFormState({ ...formState, justification: e.target.value })}
+              required
+              minLength={10}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className={`px-5 py-2 text-white text-sm font-medium rounded-lg transition-colors ${
+                loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {loading ? "Procesando..." : "Radicar Solicitud"}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Cases Table */}
