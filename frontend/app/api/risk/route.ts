@@ -6,10 +6,11 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/risk
  *
- * Delegates to the same canonical risk model source as /api/risk/model.
+ * Legacy endpoint — delegates to the same canonical risk model source as /api/risk/model.
  * Single source of truth: data/curated/risk_model_results.json
  *
- * No hardcoded metrics. No separate data source.
+ * Returns 503 RISK_MODEL_UNAVAILABLE if the artifact is missing, invalid, or incomplete.
+ * No hardcoded metrics. No separate data source. No fallback values.
  */
 export async function GET() {
   const result = await loadRiskModelFile();
@@ -24,17 +25,17 @@ export async function GET() {
   const data = result.data;
 
   return NextResponse.json({
-    modelType: data.model_type ?? "unknown",
+    modelType: data.model_type,
     metrics: {
-      precision: data.metrics?.precision ?? null,
-      recall: data.metrics?.recall ?? null,
-      f1Score: data.metrics?.f1_score ?? null,
-      rocAuc: data.metrics?.roc_auc ?? null,
+      precision: data.metrics.precision,
+      recall: data.metrics.recall,
+      f1Score: data.metrics.f1_score,
+      rocAuc: data.metrics.roc_auc,
     },
     featureImportance: (data.feature_importance ?? []).slice(0, 10),
-    p90Threshold: data.p90_threshold ?? null,
-    trainingSize: data.training_size ?? null,
-    testSize: data.test_size ?? null,
+    p90Threshold: data.p90_threshold,
+    trainingSize: data.training_size,
+    testSize: data.test_size,
     classBalance: data.class_balance ?? null,
     disclaimer: "Analytical demonstration derived from assessment dataset. Not a production-grade model.",
     dataProvenance: "DERIVED_DATA",

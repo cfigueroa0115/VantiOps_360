@@ -36,7 +36,7 @@ describe("GET /api/risk/model", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 404 MODEL_NOT_TRAINED when file does not exist", async () => {
+  it("returns 503 RISK_MODEL_UNAVAILABLE when file does not exist", async () => {
     mockLoadRiskModelFile.mockResolvedValue({
       ok: false,
       error: "NOT_FOUND",
@@ -46,12 +46,11 @@ describe("GET /api/risk/model", () => {
     const response = await GET();
     const body = await response.json();
 
-    expect(response.status).toBe(404);
-    expect(body.error.code).toBe("MODEL_NOT_TRAINED");
-    expect(body.error.message).toContain("not available");
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("RISK_MODEL_UNAVAILABLE");
   });
 
-  it("returns 500 when file contains invalid JSON", async () => {
+  it("returns 503 when file contains invalid JSON", async () => {
     mockLoadRiskModelFile.mockResolvedValue({
       ok: false,
       error: "PARSE_ERROR",
@@ -61,40 +60,23 @@ describe("GET /api/risk/model", () => {
     const response = await GET();
     const body = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(body.error.code).toBe("INTERNAL_ERROR");
-    expect(body.error.message).toContain("invalid JSON");
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("RISK_MODEL_UNAVAILABLE");
   });
 
-  it("returns 500 when a metric is out of [0, 1] range", async () => {
-    const invalidData = {
-      ...validModelData,
-      metrics: { ...validModelData.metrics, precision: 1.5 },
-    };
-    mockLoadRiskModelFile.mockResolvedValue({ ok: true, data: invalidData });
+  it("returns 503 when validation fails (VALIDATION_ERROR)", async () => {
+    mockLoadRiskModelFile.mockResolvedValue({
+      ok: false,
+      error: "VALIDATION_ERROR",
+      message: "metrics.precision must be a finite number in [0, 1], got: 1.5",
+    });
 
     const response = await GET();
     const body = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.message).toContain("precision");
-    expect(body.error.message).toContain("[0, 1]");
-  });
-
-  it("returns 500 when a metric is negative", async () => {
-    const invalidData = {
-      ...validModelData,
-      metrics: { ...validModelData.metrics, recall: -0.1 },
-    };
-    mockLoadRiskModelFile.mockResolvedValue({ ok: true, data: invalidData });
-
-    const response = await GET();
-    const body = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.message).toContain("recall");
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("RISK_MODEL_UNAVAILABLE");
+    expect(body.error.message).toContain("VALIDATION_ERROR");
   });
 
   it("returns 200 with properly transformed data when file is valid", async () => {
@@ -139,7 +121,7 @@ describe("GET /api/risk/model", () => {
     expect(body.dataProvenance).toBe("DERIVED_DATA");
   });
 
-  it("handles file read errors (non-ENOENT) with 500", async () => {
+  it("returns 503 on file read error (non-ENOENT)", async () => {
     mockLoadRiskModelFile.mockResolvedValue({
       ok: false,
       error: "READ_ERROR",
@@ -149,32 +131,22 @@ describe("GET /api/risk/model", () => {
     const response = await GET();
     const body = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(body.error.code).toBe("INTERNAL_ERROR");
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("RISK_MODEL_UNAVAILABLE");
   });
 
-  it("handles missing optional fields gracefully", async () => {
-    const minimalData = {
-      metrics: {
-        precision: 0.5,
-        recall: 0.5,
-        f1_score: 0.5,
-        roc_auc: 0.5,
-      },
-    };
-    mockLoadRiskModelFile.mockResolvedValue({ ok: true, data: minimalData });
+  it("does NOT apply fallback defaults — modelType comes from artifact", async () => {
+    mockLoadRiskModelFile.mockResolvedValue({ ok: true, data: validModelData });
 
     const response = await GET();
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    // modelType must be the exact value from the artifact, not a default
     expect(body.modelType).toBe("logistic_regression");
-    expect(body.featureImportance).toEqual([]);
-    expect(body.trainingSize).toBe(0);
-    expect(body.testSize).toBe(0);
-    expect(body.limitations).toEqual([]);
-    expect(body.lastTrainedAt).toBeNull();
-    expect(body.modelVersion).toBe("1.0.0");
-    expect(body.dataProvenance).toBe("DERIVED_DATA");
+    // Metrics must be exact artifact values, not 0
+    expect(body.metrics.precision).not.toBe(0);
+    expect(body.metrics.recall).not.toBe(0);
+    expect(body.metrics.f1Score).not.toBe(0);
+    expect(body.metrics.rocAuc).not.toBe(0);
   });
 });
