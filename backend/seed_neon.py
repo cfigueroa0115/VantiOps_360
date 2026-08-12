@@ -24,6 +24,25 @@ if not DATABASE_URL:
     print("Or on Windows: set DATABASE_URL=postgresql://...")
     sys.exit(1)
 
+
+def assert_safe_seed_environment():
+    """Refuse to run destructive seed operations in production."""
+    env = (
+        os.getenv("VERCEL_ENV")
+        or os.getenv("APP_ENV")
+        or os.getenv("ENVIRONMENT")
+        or ""
+    ).lower()
+    if env in {"production", "prod"}:
+        raise RuntimeError(
+            "DESTRUCTIVE SEED OPERATION REFUSED: "
+            "Cannot execute DROP TABLE in production environment. "
+            f"Detected environment: {env}"
+        )
+
+
+assert_safe_seed_environment()
+
 # Path to curated Parquet
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CURATED_FILE = PROJECT_ROOT / "data" / "curated" / "pqr_curated.parquet"
