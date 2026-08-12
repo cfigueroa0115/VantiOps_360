@@ -4,20 +4,16 @@ import { loadRiskModelFile } from "@/lib/server/risk-model-loader";
 export const dynamic = "force-dynamic";
 
 /**
- * Validates that a metric value is within the valid [0, 1] range.
- */
-function isValidMetric(value: unknown): value is number {
-  return typeof value === "number" && value >= 0 && value <= 1;
-}
-
-/**
  * GET /api/risk/model
  *
  * Reads `data/curated/risk_model_results.json` from the project root and returns
  * the risk model results with provenance metadata and disclaimer.
  *
- * Returns 404 with code MODEL_NOT_TRAINED if the file does not exist.
- * Returns 500 if the file exists but contains invalid data.
+ * Returns 503 RISK_MODEL_UNAVAILABLE if the artifact is missing, unreadable,
+ * unparseable, or fails strict validation.
+ *
+ * No fallback values. No ?? 0. No default model type.
+ * Incomplete artifact = 503.
  *
  * Requirements: 7.3, 7.4, 7.5, 3.3
  */
@@ -25,68 +21,33 @@ export async function GET() {
   const result = await loadRiskModelFile();
 
   if (!result.ok) {
-    if (result.error === "NOT_FOUND") {
-      return NextResponse.json(
-        {
-          error: {
-            code: "MODEL_NOT_TRAINED",
-            message: "Risk model results not available. The model has not been trained yet.",
-          },
-        },
-        { status: 404 }
-      );
-    }
-
-    if (result.error === "PARSE_ERROR") {
-      console.error("Risk model file parse error: invalid JSON");
-      return NextResponse.json(
-        { error: { code: "INTERNAL_ERROR", message: "Risk model results file contains invalid JSON" } },
-        { status: 500 }
-      );
-    }
-
-    console.error("Risk model file read error:", result.message);
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: "Failed to read risk model results" } },
-      { status: 500 }
+      {
+        error: {
+          code: "RISK_MODEL_UNAVAILABLE",
+          message: `Analytical risk model result is unavailable. Reason: ${result.error} — ${result.message}`,
+        },
+      },
+      { status: 503 }
     );
   }
 
   const data = result.data;
 
-  // Validate metrics are in [0, 1] range
-  const metrics = data.metrics;
-  if (metrics) {
-    const metricFields = ["precision", "recall", "f1_score", "roc_auc"] as const;
-    for (const field of metricFields) {
-      const value = metrics[field];
-      if (value !== undefined && !isValidMetric(value)) {
-        return NextResponse.json(
-          {
-            error: {
-              code: "VALIDATION_ERROR",
-              message: `Metric '${field}' has invalid value ${value}. Must be in range [0, 1].`,
-            },
-          },
-          { status: 500 }
-        );
-      }
-    }
-  }
-
-  // Build the response following the RiskModelResponse contract from design doc
+  // Build the response — all values come directly from the validated artifact.
+  // No fallback defaults are applied.
   const response = {
-    modelType: data.model_type ?? "logistic_regression",
+    modelType: data.model_type,
     metrics: {
-      precision: data.metrics?.precision ?? 0,
-      recall: data.metrics?.recall ?? 0,
-      f1Score: data.metrics?.f1_score ?? 0,
-      rocAuc: data.metrics?.roc_auc ?? 0,
+      precision: data.metrics.precision,
+      recall: data.metrics.recall,
+      f1Score: data.metrics.f1_score,
+      rocAuc: data.metrics.roc_auc,
     },
     featureImportance: data.feature_importance ?? [],
-    p90Threshold: data.p90_threshold ?? 0,
-    trainingSize: data.training_size ?? 0,
-    testSize: data.test_size ?? 0,
+    p90Threshold: data.p90_threshold,
+    trainingSize: data.training_size,
+    testSize: data.test_size,
     classBalance: data.class_balance ?? {},
     limitations: data.limitations ?? [],
     disclaimer:
