@@ -75,7 +75,7 @@ export default function AnulacionesPage() {
     try {
       const res = await fetch("/api/annulations", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-user-role": "BUSINESS_OWNER", "x-user-id": formState.senderEmail },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           partnerId: formState.partnerId,
           senderEmail: formState.senderEmail,
@@ -88,10 +88,14 @@ export default function AnulacionesPage() {
       if (res.ok) {
         setResult({ type: "success", message: `Solicitud radicada exitosamente. Estado: Solicitada`, radicado: data.data?.radicado });
         setFormState({ partnerId: "", senderEmail: "", pqrId: "", justification: "" });
+      } else if (res.status === 401 || res.status === 403) {
+        const msg = data.error?.message || "Acceso no autorizado";
+        setResult({ type: "error", message: `Acceso denegado: ${msg}` });
+      } else if (res.status === 422) {
+        setResult({ type: "error", message: `Transición no válida: ${data.error?.message || "Estado no permite esta operación"}` });
       } else {
-        const code = data.error?.code || res.status;
-        const msg = data.error?.message || "Error desconocido";
-        setResult({ type: "error", message: `[${code}] ${msg}` });
+        const msg = data.error?.message || "Error en la solicitud";
+        setResult({ type: "error", message: msg });
       }
     } catch (err) {
       setResult({ type: "error", message: "Error de red. Verifique conectividad." });
@@ -251,7 +255,9 @@ export default function AnulacionesPage() {
 
       {/* Disclaimer */}
       <p className="text-xs text-gray-500 italic text-center">
-        Demostración conceptual del flujo. La lógica backend contiene validación de transiciones, roles y auditoría; esta interfaz no está conectada a sistemas productivos de Vanti.
+        Simulación del canal de entrada. La persistencia y transición protegida requiere identidad autenticada (JWT).
+        En una implementación productiva, el remitente se obtendría del canal confiable de email/API,
+        no de un campo definido por el cliente. Prototipo independiente — no conectado a sistemas productivos de Vanti.
       </p>
     </div>
   );
