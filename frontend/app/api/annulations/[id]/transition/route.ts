@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -96,9 +97,10 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  // --- Extract user info from headers ---
-  const userRole = request.headers.get("x-user-role") || "";
-  const userId = request.headers.get("x-user-id") || "";
+  // --- Extract user info from verified identity ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
+  const userId = identity.userId;
 
   // --- Validate role is a known role ---
   if (!ALL_VALID_ROLES.has(userRole)) {

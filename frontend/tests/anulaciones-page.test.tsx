@@ -47,7 +47,7 @@ describe("AnulacionesPage", () => {
   it("displays the conceptual disclaimer", () => {
     render(<AnulacionesPage />);
     expect(
-      screen.getByText(/no está conectada a sistemas productivos/i)
+      screen.getByText(/no conectado a sistemas productivos/i)
     ).toBeInTheDocument();
   });
 

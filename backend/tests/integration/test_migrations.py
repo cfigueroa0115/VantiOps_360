@@ -21,7 +21,7 @@ import pytest
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "database" / "migrations"
 MIGRATION_FILES = sorted([f for f in MIGRATIONS_DIR.glob("*.sql") if re.match(r"^\d{3}_", f.name)])
-EXPECTED_COUNT = 13
+EXPECTED_MIN_COUNT = 14  # Grows as migrations are added; validates at least this many exist
 
 # Tables created per migration (manually mapped from file content)
 # Used to verify FK references only point to tables from earlier migrations.
@@ -39,6 +39,7 @@ TABLES_BY_MIGRATION: dict[str, list[str]] = {
     "011": ["migration_batches", "migration_records"],
     "012": ["documents", "document_versions"],
     "013": ["operational_businesses"],
+    "014": [],  # adds unique index on partner_authorized_emails, no new tables
 }
 
 
@@ -105,11 +106,12 @@ class TestMigrationStructure:
     """Verify each migration file has proper UP/DOWN structure."""
 
     def test_migration_files_exist(self):
-        """All 13 migration files exist in the migrations directory."""
+        """Migration directory contains at least the expected number of files."""
         assert MIGRATIONS_DIR.exists(), f"Migrations directory not found: {MIGRATIONS_DIR}"
-        assert len(MIGRATION_FILES) == EXPECTED_COUNT, (
-            f"Expected {EXPECTED_COUNT} migration files, found {len(MIGRATION_FILES)}: "
-            f"{[f.name for f in MIGRATION_FILES]}"
+        actual = len(MIGRATION_FILES)
+        assert actual >= EXPECTED_MIN_COUNT, (
+            f"Expected at least {EXPECTED_MIN_COUNT} migration files, "
+            f"found {actual}: {[f.name for f in MIGRATION_FILES]}"
         )
 
     def test_contains_up_section(self, migration_file: Path, migration_content: str):
@@ -245,9 +247,9 @@ class TestMigrationOrdering:
     """Verify migration files are numbered sequentially and FK dependencies are correct."""
 
     def test_sequential_numbering(self):
-        """Migration files are numbered sequentially from 001 to 013."""
+        """Migration files are numbered sequentially without gaps."""
         numbers = [_get_migration_number(f) for f in MIGRATION_FILES]
-        expected = list(range(1, EXPECTED_COUNT + 1))
+        expected = list(range(1, len(MIGRATION_FILES) + 1))
         assert numbers == expected, (
             f"Migration files are not sequentially numbered. "
             f"Found: {numbers}, Expected: {expected}"

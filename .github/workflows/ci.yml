@@ -36,7 +36,8 @@ jobs:
         working-directory: backend
 
       - name: Python Tests (pytest)
-        run: python -m pytest tests -q
+        id: pytest
+        run: python -m pytest tests --junitxml=pytest-results.xml -q
         working-directory: backend
 
       # ─── Frontend ────────────────────────────────────────────────────
@@ -68,11 +69,12 @@ jobs:
         working-directory: frontend
 
       - name: Frontend Unit Tests
-        run: npm run test
+        id: vitest
+        run: npx vitest run --reporter=json --outputFile=vitest-results.json
         working-directory: frontend
 
       - name: Frontend Coverage
-        run: npm run test:coverage
+        run: npx vitest run --coverage --coverage.reporter=json-summary
         working-directory: frontend
 
       - name: Frontend Build
@@ -158,7 +160,9 @@ jobs:
         id: e2e
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-        run: npx playwright test --grep-invert "Visual Regression"
+        run: |
+          set -o pipefail
+          npx playwright test --grep-invert "Visual Regression" --reporter=json | cat > playwright-e2e-results.json
         working-directory: frontend
 
       - name: Visual Regression
@@ -168,11 +172,12 @@ jobs:
         run: |
           BASELINE_COUNT=$(find tests/e2e/visual-regression.spec.ts-snapshots/ -name "*.png" 2>/dev/null | wc -l)
           if [ "$BASELINE_COUNT" -lt 9 ]; then
-            echo "::warning::Visual regression baselines not found ($BASELINE_COUNT/9). Run generate-baselines workflow to create them."
+            echo "::warning::Visual regression baselines not found ($BASELINE_COUNT/9)."
             echo "VISUAL_UNAVAILABLE=true" >> "$GITHUB_ENV"
-            exit 0
+            exit 1
           fi
-          npx playwright test tests/e2e/visual-regression.spec.ts
+          set -o pipefail
+          npx playwright test tests/e2e/visual-regression.spec.ts --reporter=json | cat > playwright-visual-results.json
         working-directory: frontend
 
       # ─── Evidence ───────────────────────────────────────────────────
@@ -181,27 +186,32 @@ jobs:
         working-directory: frontend
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          RUN_ID="${{ github.run_id }}"
           GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           E2E_STATUS="${{ steps.e2e.outcome }}"
           VISUAL_STATUS="${{ steps.visual.outcome }}"
+          if [ "${VISUAL_UNAVAILABLE}" = "true" ]; then VISUAL_STATUS="unavailable"; fi
 
-          if [ "${VISUAL_UNAVAILABLE}" = "true" ]; then
-            VISUAL_STATUS="unavailable"
+          # Parse backend results from JUnit XML
+          BE_PASSED=0; BE_SKIPPED=0; BE_FAILED=0; BE_TOTAL=0
+          if [ -f "../backend/pytest-results.xml" ]; then
+            BE_TOTAL=$(grep -oP 'tests="\K\d+' ../backend/pytest-results.xml | head -1 || echo 0)
+            BE_FAILED=$(grep -oP 'failures="\K\d+' ../backend/pytest-results.xml | head -1 || echo 0)
+            BE_SKIPPED=$(grep -oP 'skipped="\K\d+' ../backend/pytest-results.xml | head -1 || echo 0)
+            BE_PASSED=$((BE_TOTAL - BE_FAILED - BE_SKIPPED))
           fi
 
-          if [ "$E2E_STATUS" = "success" ] && [ "$VISUAL_STATUS" = "success" ]; then
-            VERIFICATION_STATUS="success"
-          elif [ "$VISUAL_STATUS" = "unavailable" ] && [ "$E2E_STATUS" = "success" ]; then
-            VERIFICATION_STATUS="partial"
-          else
-            VERIFICATION_STATUS="failed"
+          # Parse frontend results from Vitest JSON
+          FE_PASSED=0; FE_FAILED=0; FE_TOTAL=0
+          if [ -f "vitest-results.json" ]; then
+            FE_PASSED=$(node -p "JSON.parse(require('fs').readFileSync('vitest-results.json','utf8')).numPassedTests" 2>/dev/null || echo 0)
+            FE_FAILED=$(node -p "JSON.parse(require('fs').readFileSync('vitest-results.json','utf8')).numFailedTests" 2>/dev/null || echo 0)
+            FE_TOTAL=$(node -p "JSON.parse(require('fs').readFileSync('vitest-results.json','utf8')).numTotalTests" 2>/dev/null || echo 0)
           fi
 
-          STMT_PCT="null"
-          BRANCH_PCT="null"
-          FUNC_PCT="null"
-          LINE_PCT="null"
+          # Parse coverage from coverage-summary.json
+          STMT_PCT="null"; BRANCH_PCT="null"; FUNC_PCT="null"; LINE_PCT="null"
           if [ -f "coverage/coverage-summary.json" ]; then
             STMT_PCT=$(node -p "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total.statements.pct")
             BRANCH_PCT=$(node -p "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total.branches.pct")
@@ -209,29 +219,120 @@ jobs:
             LINE_PCT=$(node -p "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json','utf8')).total.lines.pct")
           fi
 
-          cat > public/evidence/latest-validation.json <<EOF
-          {
-            "commitHash": "${COMMIT_SHA}",
-            "generatedAt": "${GENERATED_AT}",
-            "source": "github-actions",
-            "workflowStatus": "${{ job.status }}",
-            "qualityJobStatus": "${{ job.status }}",
-            "e2eStatus": "${E2E_STATUS}",
-            "visualRegressionStatus": "${VISUAL_STATUS}",
-            "verificationStatus": "${VERIFICATION_STATUS}",
-            "productionSmokeStatus": "pending",
-            "backendTests": null,
-            "frontendTests": null,
-            "coverage": {
-              "statements": ${STMT_PCT},
-              "branches": ${BRANCH_PCT},
-              "functions": ${FUNC_PCT},
-              "lines": ${LINE_PCT}
-            }
-          }
-          EOF
+          # Parse npm audit production
+          AUDIT_CRITICAL=0; AUDIT_HIGH=0; AUDIT_MODERATE=0; AUDIT_LOW=0
+          if [ -f "npm-audit-production.json" ]; then
+            AUDIT_CRITICAL=$(node -p "try{JSON.parse(require('fs').readFileSync('npm-audit-production.json','utf8')).metadata.vulnerabilities.critical}catch(e){0}" 2>/dev/null || echo 0)
+            AUDIT_HIGH=$(node -p "try{JSON.parse(require('fs').readFileSync('npm-audit-production.json','utf8')).metadata.vulnerabilities.high}catch(e){0}" 2>/dev/null || echo 0)
+            AUDIT_MODERATE=$(node -p "try{JSON.parse(require('fs').readFileSync('npm-audit-production.json','utf8')).metadata.vulnerabilities.moderate}catch(e){0}" 2>/dev/null || echo 0)
+            AUDIT_LOW=$(node -p "try{JSON.parse(require('fs').readFileSync('npm-audit-production.json','utf8')).metadata.vulnerabilities.low}catch(e){0}" 2>/dev/null || echo 0)
+          fi
 
-          echo "Evidence: e2e=${E2E_STATUS} visual=${VISUAL_STATUS} verification=${VERIFICATION_STATUS}"
+          # Parse E2E results from Playwright JSON
+          E2E_PASSED=0; E2E_FAILED=0; E2E_SKIPPED=0; E2E_TOTAL=0
+          if [ -f "playwright-e2e-results.json" ]; then
+            E2E_PASSED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));const s=r.stats||{};console.log(s.expected||0)" 2>/dev/null || echo 0)
+            E2E_FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));const s=r.stats||{};console.log(s.unexpected||0)" 2>/dev/null || echo 0)
+            E2E_SKIPPED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));const s=r.stats||{};console.log(s.skipped||0)" 2>/dev/null || echo 0)
+            E2E_TOTAL=$((E2E_PASSED + E2E_FAILED + E2E_SKIPPED))
+            echo "E2E parsed: passed=$E2E_PASSED failed=$E2E_FAILED skipped=$E2E_SKIPPED total=$E2E_TOTAL"
+          else
+            echo "WARNING: playwright-e2e-results.json not found"
+            ls -la playwright-*.json 2>/dev/null || echo "No playwright JSON files found"
+          fi
+
+          # Parse Visual Regression results from Playwright JSON
+          VR_PASSED=0; VR_FAILED=0; VR_SKIPPED=0; VR_TOTAL=0
+          if [ -f "playwright-visual-results.json" ]; then
+            VR_PASSED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));const s=r.stats||{};console.log(s.expected||0)" 2>/dev/null || echo 0)
+            VR_FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));const s=r.stats||{};console.log(s.unexpected||0)" 2>/dev/null || echo 0)
+            VR_SKIPPED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));const s=r.stats||{};console.log(s.skipped||0)" 2>/dev/null || echo 0)
+            VR_TOTAL=$((VR_PASSED + VR_FAILED + VR_SKIPPED))
+            echo "Visual parsed: passed=$VR_PASSED failed=$VR_FAILED skipped=$VR_SKIPPED total=$VR_TOTAL"
+          else
+            echo "WARNING: playwright-visual-results.json not found"
+          fi
+
+          # Visual regression baselines from filesystem
+          VR_BASELINES=$(find tests/e2e/visual-regression.spec.ts-snapshots/ -name "*.png" 2>/dev/null | wc -l)
+
+          # Determine verification status
+          if [ "$E2E_STATUS" = "success" ] && [ "$VISUAL_STATUS" = "success" ] && [ "$FE_FAILED" = "0" ] && [ "$BE_FAILED" = "0" ]; then
+            VERIFICATION_STATUS="success"
+          elif [ "$VISUAL_STATUS" = "unavailable" ] && [ "$E2E_STATUS" = "success" ]; then
+            VERIFICATION_STATUS="partial"
+          else
+            VERIFICATION_STATUS="failed"
+          fi
+
+          node -e "
+          const evidence = {
+            runId: ${RUN_ID},
+            commitHash: '${COMMIT_SHA}',
+            generatedAt: '${GENERATED_AT}',
+            source: 'github-actions',
+            workflowStatus: '${{ job.status }}',
+            qualityJobStatus: '${{ job.status }}',
+            backendTests: { passed: ${BE_PASSED}, skipped: ${BE_SKIPPED}, failed: ${BE_FAILED}, total: ${BE_TOTAL} },
+            frontendTests: { passed: ${FE_PASSED}, failed: ${FE_FAILED}, total: ${FE_TOTAL} },
+            e2e: { passed: ${E2E_PASSED}, skipped: ${E2E_SKIPPED}, failed: ${E2E_FAILED}, total: ${E2E_TOTAL}, status: '${E2E_STATUS}' },
+            visualRegression: { passed: ${VR_PASSED}, failed: ${VR_FAILED}, skipped: ${VR_SKIPPED}, total: ${VR_TOTAL}, baselinesPresent: ${VR_BASELINES}, baselinesRequired: 9, status: '${VISUAL_STATUS}' },
+            coverage: { statements: ${STMT_PCT}, branches: ${BRANCH_PCT}, functions: ${FUNC_PCT}, lines: ${LINE_PCT} },
+            npmAuditProduction: { critical: ${AUDIT_CRITICAL}, high: ${AUDIT_HIGH}, moderate: ${AUDIT_MODERATE}, low: ${AUDIT_LOW} },
+            productionSmoke: { status: 'pending' },
+            verificationStatus: '${VERIFICATION_STATUS}'
+          };
+          require('fs').writeFileSync('public/evidence/latest-validation.json', JSON.stringify(evidence, null, 2));
+          console.log('Evidence generated:', JSON.stringify({verification: evidence.verificationStatus, be: evidence.backendTests.passed, fe: evidence.frontendTests.passed, coverage: evidence.coverage.statements}));
+          "
+
+      - name: Evidence Integrity Gate
+        if: success()
+        working-directory: frontend
+        run: |
+          EXPECTED_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          node -e "
+          const e = JSON.parse(require('fs').readFileSync('public/evidence/latest-validation.json','utf8'));
+          const errors = [];
+          const expected = '${EXPECTED_SHA}';
+          if (e.commitHash !== expected) errors.push('commitHash mismatch: got ' + e.commitHash + ' expected ' + expected);
+          if (!e.backendTests || e.backendTests.total === 0) errors.push('backend total = 0');
+          if (e.backendTests && e.backendTests.passed === 0) errors.push('backend passed = 0');
+          if (e.backendTests && e.backendTests.failed !== 0) errors.push('backend failed = ' + e.backendTests.failed);
+          if (!e.frontendTests || e.frontendTests.total === 0) errors.push('frontend total = 0');
+          if (e.frontendTests && e.frontendTests.passed === 0) errors.push('frontend passed = 0');
+          if (e.frontendTests && e.frontendTests.failed !== 0) errors.push('frontend failed = ' + e.frontendTests.failed);
+          if (!e.e2e || e.e2e.total === 0) errors.push('e2e total = 0');
+          if (e.e2e && e.e2e.passed === 0) errors.push('e2e passed = 0');
+          if (e.e2e && e.e2e.failed !== 0) errors.push('e2e failed = ' + e.e2e.failed);
+          if (e.e2e && e.e2e.status !== 'success') errors.push('e2e status = ' + e.e2e.status);
+          if (!e.visualRegression || e.visualRegression.total === 0) errors.push('visual total = 0');
+          if (e.visualRegression && e.visualRegression.passed === 0) errors.push('visual passed = 0');
+          if (e.visualRegression && e.visualRegression.failed !== 0) errors.push('visual failed = ' + e.visualRegression.failed);
+          if (e.visualRegression && e.visualRegression.status !== 'success') errors.push('visual status = ' + e.visualRegression.status);
+          if (e.visualRegression && e.visualRegression.baselinesPresent !== e.visualRegression.baselinesRequired) errors.push('baselines mismatch: ' + e.visualRegression.baselinesPresent + '/' + e.visualRegression.baselinesRequired);
+          if (!e.coverage || e.coverage.statements === null || !Number.isFinite(e.coverage.statements)) errors.push('coverage.statements invalid');
+          if (!e.coverage || e.coverage.branches === null || !Number.isFinite(e.coverage.branches)) errors.push('coverage.branches invalid');
+          if (!e.coverage || e.coverage.functions === null || !Number.isFinite(e.coverage.functions)) errors.push('coverage.functions invalid');
+          if (!e.coverage || e.coverage.lines === null || !Number.isFinite(e.coverage.lines)) errors.push('coverage.lines invalid');
+          if (e.npmAuditProduction && e.npmAuditProduction.critical > 0) errors.push('critical vulnerabilities = ' + e.npmAuditProduction.critical);
+          if (e.workflowStatus !== 'success') errors.push('workflowStatus = ' + e.workflowStatus);
+          if (e.qualityJobStatus !== 'success') errors.push('qualityJobStatus = ' + e.qualityJobStatus);
+          if (e.verificationStatus !== 'success') errors.push('verificationStatus = ' + e.verificationStatus);
+          if (errors.length > 0) {
+            console.error('EVIDENCE INTEGRITY FAILED:');
+            errors.forEach(err => console.error('  - ' + err));
+            process.exit(1);
+          }
+          console.log('Evidence Integrity Gate: PASSED');
+          console.log('  commitHash: ' + e.commitHash);
+          console.log('  backend: ' + e.backendTests.passed + '/' + e.backendTests.total);
+          console.log('  frontend: ' + e.frontendTests.passed + '/' + e.frontendTests.total);
+          console.log('  e2e: ' + e.e2e.passed + '/' + e.e2e.total);
+          console.log('  visual: ' + e.visualRegression.passed + '/' + e.visualRegression.total);
+          console.log('  coverage: ' + e.coverage.statements + '%');
+          console.log('  verification: ' + e.verificationStatus);
+          "
 
       - name: Upload verified evidence
         if: always()

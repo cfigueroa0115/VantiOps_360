@@ -22,8 +22,8 @@ VantiOps 360 integra un frontend de visualización (Next.js) con un motor analí
 |------|---------|--------|
 | A | Datos y análisis (Pareto, ETL, Risk, Stats) | Implementado |
 | B | Seguridad y gobernanza (RBAC, Audit, Annulations) | Implementado |
-| C | Operaciones (Migration, Capacity, Conceptual Designs) | En progreso |
-| D | Calidad y despliegue (CI/CD, Evidence, Compliance) | Pendiente |
+| C | Operaciones (Migration, Capacity, Conceptual Designs) | Completado |
+| D | Calidad y despliegue (CI/CD, Evidence, Compliance) | Completado |
 
 ---
 
@@ -64,7 +64,7 @@ VantiOps 360 integra un frontend de visualización (Next.js) con un motor analí
 
 | Capa | Tecnología | Versión |
 |------|------------|---------|
-| Frontend | Next.js + React + TypeScript | 14.2.21 / 18.3.1 / 5.7.3 |
+| Frontend | Next.js + React + TypeScript | 14.2.35 / 18.3.1 / 5.7.3 |
 | UI | Tailwind CSS + Radix UI + Recharts | 3.4.17 / latest / 2.15.0 |
 | Base de Datos | Neon PostgreSQL (serverless) | — |
 | DB Driver | @neondatabase/serverless | ^1.1.0 |
@@ -156,7 +156,8 @@ uvicorn src.api.main:app --reload --port 8000
 - **Motor**: Neon PostgreSQL (serverless)
 - **Tabla principal**: `pqr_records` (PROTEGIDA — no modificar)
 - **Tablas nuevas**: RBAC, audit, annulations, migrations, partners, documents
-- **Migraciones**: `database/migrations/` (001–013, con UP/DOWN)
+- **Migraciones**: `database/migrations/` (001–014, con UP/DOWN)
+  - 014: Partial unique index para max 1 email activo por partner
 - **Seeder**: `backend/seed_neon.py`
 
 ### Migraciones
@@ -168,7 +169,8 @@ database/migrations/
 ├── 001_create_roles.sql
 ├── 002_create_users.sql
 ├── ...
-└── 013_create_operational_businesses.sql
+├── 013_create_operational_businesses.sql
+└── 014_enforce_single_active_email.sql
 ```
 
 > ❌ Operaciones destructivas prohibidas: `DROP TABLE`, `TRUNCATE`, `DELETE` sin `WHERE`
@@ -272,6 +274,9 @@ database/migrations/
 ## Seguridad
 
 - **RBAC**: 11 roles con permisos granulares (ver Lista Maestra)
+- **JWT Fail-Closed**: Identidad derivada exclusivamente de JWT firmado server-side; headers del cliente ignorados en producción
+- **Partner Email**: Un solo email activo por aliado (partial unique index), validación exacta para anulaciones
+- **Onboarding**: Legal→VP secuencial obligatorio para PARTNER_ONBOARDING
 - **Audit**: Logs inmutables (append-only), retención 12 meses
 - **Secretos**: Solo via variables de entorno, nunca en código
 - **Email**: Validación de dominio corporativo (@vanti.com.co)
@@ -316,7 +321,7 @@ Archivo: `.github/workflows/ci.yml`
 Condiciones para merge:
 1. ✅ CI verde (todos los pasos pasan)
 2. ✅ Preview validado en Vercel
-3. ✅ Regresión aprobada (sin diferencia visual > 0.1%)
+3. ✅ Regresión visual aprobada (maxDiffPixelRatio=0.02, tolerancia 2%)
 
 ---
 

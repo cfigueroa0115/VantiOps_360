@@ -56,7 +56,59 @@ export default function OperacionesPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Torre de Control — Operaciones</h1>
-          <p className="text-sm text-gray-500">KPIs sintéticos y semáforos operativos</p>
+          <p className="text-sm text-gray-500">Simulación basada en contexto del assessment</p>
+        </div>
+      </div>
+
+      {/* Assessment Context */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+        <h2 className="text-sm font-semibold text-slate-800 mb-3">Contexto Operacional del Assessment</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+          <div className="bg-white rounded-lg p-3 border border-slate-100">
+            <p className="text-2xl font-bold text-slate-900">12</p>
+            <p className="text-slate-600">Personas internas</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-slate-100">
+            <p className="text-2xl font-bold text-slate-900">20</p>
+            <p className="text-slate-600">Contratistas</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-slate-100">
+            <p className="text-2xl font-bold text-slate-900">10</p>
+            <p className="text-slate-600">Negocios soportados</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-slate-100">
+            <p className="text-2xl font-bold text-amber-700">65%</p>
+            <p className="text-slate-600">ANS actual</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 text-xs text-slate-600">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={12} className="text-amber-500 mt-0.5 shrink-0" />
+            <span>~2.000 correos/mes gestionados manualmente</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={12} className="text-amber-500 mt-0.5 shrink-0" />
+            <span>Cambio próximo del contratista de Back Office</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={12} className="text-amber-500 mt-0.5 shrink-0" />
+            <span>Procesos manuales en SAP</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={12} className="text-amber-500 mt-0.5 shrink-0" />
+            <span>3 ingenieros nuevos con menos de 2 meses</span>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-slate-200">
+          <p className="text-[10px] text-slate-500 font-medium">Capacidades tecnológicas propuestas:</p>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {["SAP GUI Scripting", "Power Automate", "R", "Automatización", "Analítica"].map((cap) => (
+              <span key={cap} className="text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-600">
+                {cap}
+              </span>
+            ))}
+          </div>
+          <p className="text-[9px] text-slate-400 mt-1 italic">Propuesta de evolución — no implementado en producción actualmente</p>
         </div>
       </div>
 

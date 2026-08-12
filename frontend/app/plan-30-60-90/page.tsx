@@ -25,7 +25,7 @@ const PHASES: Phase[] = [
     objective: "Contener la crisis operativa, reducir backlog y establecer visibilidad",
     deliverables: [
       { item: "War Room diario con métricas de backlog y ANS", done: true },
-      { item: "Inventario completo de PQR abiertas (51.008 registros de la base suministrada)", done: true },
+      { item: "Análisis integral de la base PQR suministrada: 51.008 registros", done: true },
       { item: "Priorización de backlog por severidad y antigüedad", done: true },
       { item: "Dashboard operativo en tiempo real", done: true },
       { item: "Modelo de riesgo para predicción de incumplimiento", done: true },
@@ -67,7 +67,7 @@ const PHASES: Phase[] = [
       { item: "Modelo de mejora continua (PDCA) implementado", done: false },
       { item: "Canales digitales de autoservicio activos", done: false },
       { item: "Scoring predictivo integrado en workflow", done: false },
-      { item: "Reducción de ANS de 65% a 85% objetivo", done: false },
+      { item: "Incremento del cumplimiento de ANS del 65% hacia ≥85% durante estabilización", done: false },
       { item: "Onboarding de aliados estratégicos completado", done: false },
       { item: "Roadmap de automatización a 6 meses definido", done: false },
     ],
@@ -163,7 +163,7 @@ export default function Plan306090Page() {
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Métricas de Éxito al Día 90</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "ANS", current: "65%", target: "85%", icon: "📊" },
+            { label: "ANS", current: "65%", target: "≥85%", icon: "📊" },
             { label: "Backlog", current: "387", target: "< 50", icon: "📋" },
             { label: "Automatización", current: "0%", target: "40%", icon: "🤖" },
             { label: "Calidad Datos", current: "87%", target: "95%", icon: "✅" },

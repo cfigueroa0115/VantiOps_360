@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ const VALID_OPERATIONS = new Set([
   "RBAC_CHANGE",
   "DATA_DELETION",
   "SECURITY_CONFIG_CHANGE",
+  "PARTNER_ONBOARDING",
 ]);
 
 /**
@@ -31,7 +33,14 @@ const OPERATION_APPROVER_MAP: Record<string, string[]> = {
   RBAC_CHANGE: ["LEGAL_APPROVER", "VP_APPROVER"],
   DATA_DELETION: ["LEGAL_APPROVER"],
   SECURITY_CONFIG_CHANGE: ["LEGAL_APPROVER", "VP_APPROVER"],
+  PARTNER_ONBOARDING: ["LEGAL_APPROVER", "VP_APPROVER"],
 };
+
+/**
+ * Operations that require sequential multi-step approval.
+ * For these, step_order 1 = LEGAL_APPROVER must be approved before step_order 2 = VP_APPROVER.
+ */
+const SEQUENTIAL_OPERATIONS = new Set(["PARTNER_ONBOARDING", "RBAC_CHANGE", "SECURITY_CONFIG_CHANGE"]);
 
 /**
  * 72-hour expiration in milliseconds (REQ-15.4).
@@ -66,8 +75,9 @@ const MIN_JUSTIFICATION_LENGTH = 10;
  * Requirements: 15.1, 15.2, 15.3, 15.4
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!APPROVALS_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {
@@ -258,9 +268,10 @@ export async function GET(request: NextRequest) {
  * Requirements: 15.1, 15.2, 15.3, 15.4
  */
 export async function POST(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
-  const userId = request.headers.get("x-user-id") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
+  const userId = identity.userId;
 
   if (!APPROVALS_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
@@ -316,6 +327,15 @@ async function handleCreateRequest(
   const operation = body.operation as string;
   const approverRole = body.approverRole as string;
   const justification = body.justification as string;
+  const partnerId = body.partnerId as string | undefined;
+
+  // For PARTNER_ONBOARDING, partnerId is mandatory
+  if (operation === "PARTNER_ONBOARDING" && !partnerId) {
+    return NextResponse.json(
+      { error: { code: "VALIDATION_ERROR", message: "partnerId is required for PARTNER_ONBOARDING operations" } },
+      { status: 400 }
+    );
+  }
 
   // Validate operation type (REQ-15.3)
   if (!operation || !VALID_OPERATIONS.has(operation)) {
@@ -362,15 +382,39 @@ async function handleCreateRequest(
   const expiresAt = new Date(now.getTime() + EXPIRATION_MS);
 
   try {
+    // Determine partner_id for the application
+    let resolvedPartnerId: string;
+    if (partnerId) {
+      // Validate partner exists
+      const partnerCheck = await query<{ id: string }>(
+        "SELECT id FROM partners WHERE id = $1",
+        [partnerId]
+      );
+      if (!partnerCheck.length) {
+        return NextResponse.json(
+          { error: { code: "VALIDATION_ERROR", message: "Partner not found" } },
+          { status: 400 }
+        );
+      }
+      resolvedPartnerId = partnerCheck[0].id;
+    } else {
+      // Non-partner operations: use first available partner (legacy fallback)
+      const fallback = await query<{ id: string }>("SELECT id FROM partners LIMIT 1");
+      if (!fallback.length) {
+        return NextResponse.json(
+          { error: { code: "INTERNAL_ERROR", message: "No partners available" } },
+          { status: 500 }
+        );
+      }
+      resolvedPartnerId = fallback[0].id;
+    }
+
     // Create a partner_application record for the operation
     const appResult = await query<{ id: string }>(
       `INSERT INTO partner_applications (partner_id, application_type, status, submitted_at)
-       VALUES (
-         (SELECT id FROM partners LIMIT 1),
-         $1, 'submitted', NOW()
-       )
+       VALUES ($1, $2, 'submitted', NOW())
        RETURNING id`,
-      [operation]
+      [resolvedPartnerId, operation]
     );
 
     if (!appResult.length) {
@@ -387,20 +431,43 @@ async function handleCreateRequest(
 
     const applicationId = appResult[0].id;
 
-    // Create approval step
-    const stepResult = await query<{
-      id: string;
-      created_at: string;
-      expires_at: string;
-    }>(
-      `INSERT INTO approval_steps
-         (application_id, step_order, approver_role, status, justification, expires_at)
-       VALUES ($1, 1, $2, 'pending', $3, $4)
-       RETURNING id, created_at, expires_at`,
-      [applicationId, approverRole, justification, expiresAt.toISOString()]
-    );
+    // Create approval steps (sequential operations get Legal + VP)
+    const roles = OPERATION_APPROVER_MAP[operation] || [approverRole];
+    const isSequential = SEQUENTIAL_OPERATIONS.has(operation);
 
-    const step = stepResult[0];
+    let primaryStep: { id: string; created_at: string; expires_at: string };
+
+    if (isSequential && roles.length > 1) {
+      // Create Legal step first (step_order 1)
+      const legalResult = await query<{ id: string; created_at: string; expires_at: string }>(
+        `INSERT INTO approval_steps
+           (application_id, step_order, approver_role, status, justification, expires_at)
+         VALUES ($1, 1, 'LEGAL_APPROVER', 'pending', $2, $3)
+         RETURNING id, created_at, expires_at`,
+        [applicationId, justification, expiresAt.toISOString()]
+      );
+      primaryStep = legalResult[0];
+
+      // Create VP step (step_order 2) — blocked until Legal approves
+      await query(
+        `INSERT INTO approval_steps
+           (application_id, step_order, approver_role, status, justification, expires_at)
+         VALUES ($1, 2, 'VP_APPROVER', 'pending', $2, $3)`,
+        [applicationId, justification, expiresAt.toISOString()]
+      );
+    } else {
+      // Single-step approval
+      const stepResult = await query<{ id: string; created_at: string; expires_at: string }>(
+        `INSERT INTO approval_steps
+           (application_id, step_order, approver_role, status, justification, expires_at)
+         VALUES ($1, 1, $2, 'pending', $3, $4)
+         RETURNING id, created_at, expires_at`,
+        [applicationId, approverRole, justification, expiresAt.toISOString()]
+      );
+      primaryStep = stepResult[0];
+    }
+
+    const step = primaryStep;
 
     // Log approval event
     await query(
@@ -564,6 +631,32 @@ async function handleApproveReject(
         },
         { status: 403 }
       );
+    }
+
+    // Enforce sequential approval: VP cannot approve before Legal (REQ-15.5)
+    if (step.approver_role === "VP_APPROVER") {
+      const priorSteps = await query<{ status: string }>(
+        `SELECT s2.status FROM approval_steps s2
+         WHERE s2.application_id = (SELECT application_id FROM approval_steps WHERE id = $1)
+         AND s2.step_order < (SELECT step_order FROM approval_steps WHERE id = $1)
+         AND s2.approver_role = 'LEGAL_APPROVER'`,
+        [approvalId]
+      );
+      // Only enforce if a Legal step exists for this application
+      if (priorSteps.length > 0) {
+        const legalNotApproved = priorSteps.some((s) => s.status !== "approved");
+        if (legalNotApproved) {
+          return NextResponse.json(
+            {
+              error: {
+                code: "SEQUENTIAL_VIOLATION",
+                message: "VP approval requires prior Legal approval. Legal step must be approved first.",
+              },
+            },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     // Update the approval step

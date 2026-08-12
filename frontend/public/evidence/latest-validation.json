@@ -1,11 +1,49 @@
 {
-  "commitHash": null,
-  "generatedAt": null,
+  "runId": 31597780979,
+  "commitHash": "3454b902b106d0335511b779f83593dacfccb377",
+  "generatedAt": "2026-08-12T12:48:26Z",
   "source": "github-actions",
-  "workflowStatus": "unavailable",
-  "qualityJobStatus": "unavailable",
-  "productionSmokeStatus": "unavailable",
-  "backendTests": null,
-  "frontendTests": null,
-  "coverage": null
+  "workflowStatus": "success",
+  "qualityJobStatus": "success",
+  "backendTests": {
+    "passed": 1078,
+    "skipped": 26,
+    "failed": 0,
+    "total": 1104
+  },
+  "frontendTests": {
+    "passed": 483,
+    "failed": 0,
+    "total": 483
+  },
+  "e2e": {
+    "passed": 25,
+    "skipped": 0,
+    "failed": 0,
+    "total": 25,
+    "status": "success"
+  },
+  "visualRegression": {
+    "passed": 9,
+    "failed": 0,
+    "baselinesPresent": 9,
+    "baselinesRequired": 9,
+    "status": "success"
+  },
+  "coverage": {
+    "statements": 84.16,
+    "branches": 78.04,
+    "functions": 77.83,
+    "lines": 85.46
+  },
+  "npmAuditProduction": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 0,
+    "low": 0
+  },
+  "productionSmoke": {
+    "status": "pending"
+  },
+  "verificationStatus": "success"
 }

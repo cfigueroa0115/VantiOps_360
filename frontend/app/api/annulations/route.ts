@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/server/database";
+import { validatePartnerEmail, logPartnerEmailDenied } from "@/lib/server/partner-email-validator";
+import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -62,8 +64,9 @@ const MIN_JUSTIFICATION_LENGTH = 10;
  * Requirements: 16.1, 16.4
  */
 export async function GET(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
   if (!LIST_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
       {
@@ -225,9 +228,10 @@ export async function GET(request: NextRequest) {
  * Requirements: 16.1, 16.2, 16.5, 16.6
  */
 export async function POST(request: NextRequest) {
-  // --- RBAC Check ---
-  const userRole = request.headers.get("x-user-role") || "";
-  const userId = request.headers.get("x-user-id") || "";
+  // --- RBAC Check (identity from verified JWT or POC fallback) ---
+  const identity = await getRequestIdentity(request);
+  const userRole = identity.role;
+  const userId = identity.userId;
 
   if (!CREATE_ALLOWED_ROLES.has(userRole)) {
     return NextResponse.json(
@@ -255,6 +259,36 @@ export async function POST(request: NextRequest) {
 
   const pqrId = body.pqrId as string | undefined;
   const justification = body.justification as string | undefined;
+  const partnerId = body.partnerId as string | undefined;
+  const senderEmail = body.senderEmail as string | undefined;
+
+  // --- Partner + Email Validation (MANDATORY for annulation requests) ---
+  if (!partnerId) {
+    return NextResponse.json(
+      { error: { code: "PARTNER_ID_REQUIRED", message: "partnerId is required for annulation requests" } },
+      { status: 400 }
+    );
+  }
+  if (!senderEmail) {
+    return NextResponse.json(
+      { error: { code: "SENDER_EMAIL_REQUIRED", message: "senderEmail is required for annulation requests" } },
+      { status: 400 }
+    );
+  }
+
+  const validation = await validatePartnerEmail(partnerId, senderEmail);
+  if (!validation.authorized) {
+    await logPartnerEmailDenied(partnerId, senderEmail, validation.reason || "unknown");
+    return NextResponse.json(
+      {
+        error: {
+          code: "FORBIDDEN",
+          message: `Partner email validation failed: ${validation.reason}. The sender email must match the active authorized email for the partner.`,
+        },
+      },
+      { status: 403 }
+    );
+  }
 
   // Validate required fields
   if (!pqrId) {

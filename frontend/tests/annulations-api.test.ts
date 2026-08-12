@@ -5,9 +5,16 @@ import { NextRequest } from "next/server";
  * Mock the database query function used by the annulations routes.
  */
 const mockQuery = vi.hoisted(() => vi.fn());
+const mockValidatePartnerEmail = vi.hoisted(() => vi.fn());
+const mockLogPartnerEmailDenied = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/server/database", () => ({
   query: mockQuery,
+}));
+
+vi.mock("@/lib/server/partner-email-validator", () => ({
+  validatePartnerEmail: mockValidatePartnerEmail,
+  logPartnerEmailDenied: mockLogPartnerEmailDenied,
 }));
 
 import { GET, POST } from "@/app/api/annulations/route";
@@ -36,6 +43,8 @@ function createPostRequest(
   role: string = "SYSTEM_ADMIN",
   userId: string = "admin@vanti.com.co"
 ): NextRequest {
+  // Include partnerId and senderEmail by default (required fields)
+  const fullBody = { partnerId: "p-1", senderEmail: "test@partner.co", ...body };
   return new NextRequest("http://localhost:3000/api/annulations", {
     method: "POST",
     headers: {
@@ -43,7 +52,7 @@ function createPostRequest(
       "x-user-id": userId,
       "content-type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(fullBody),
   });
 }
 
@@ -253,6 +262,9 @@ describe("GET /api/annulations", () => {
 describe("POST /api/annulations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: partner email validation passes
+    mockValidatePartnerEmail.mockResolvedValue({ authorized: true, partnerId: "p-1", partnerName: "Test Partner" });
+    mockLogPartnerEmailDenied.mockResolvedValue(undefined);
   });
 
   describe("RBAC authorization", () => {
