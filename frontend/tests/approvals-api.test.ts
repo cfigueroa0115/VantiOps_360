@@ -277,6 +277,8 @@ describe("POST /api/approvals - Create Request", () => {
   });
 
   it("returns 201 for a valid approval request", async () => {
+    // Mock partner fallback query
+    mockQuery.mockResolvedValueOnce([{ id: "p-fallback" }]);
     // Mock creating partner_application
     mockQuery.mockResolvedValueOnce([{ id: "app-001" }]);
     // Mock creating approval_step

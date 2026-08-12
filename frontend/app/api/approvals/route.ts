@@ -327,6 +327,15 @@ async function handleCreateRequest(
   const operation = body.operation as string;
   const approverRole = body.approverRole as string;
   const justification = body.justification as string;
+  const partnerId = body.partnerId as string | undefined;
+
+  // For PARTNER_ONBOARDING, partnerId is mandatory
+  if (operation === "PARTNER_ONBOARDING" && !partnerId) {
+    return NextResponse.json(
+      { error: { code: "VALIDATION_ERROR", message: "partnerId is required for PARTNER_ONBOARDING operations" } },
+      { status: 400 }
+    );
+  }
 
   // Validate operation type (REQ-15.3)
   if (!operation || !VALID_OPERATIONS.has(operation)) {
@@ -373,15 +382,39 @@ async function handleCreateRequest(
   const expiresAt = new Date(now.getTime() + EXPIRATION_MS);
 
   try {
+    // Determine partner_id for the application
+    let resolvedPartnerId: string;
+    if (partnerId) {
+      // Validate partner exists
+      const partnerCheck = await query<{ id: string }>(
+        "SELECT id FROM partners WHERE id = $1",
+        [partnerId]
+      );
+      if (!partnerCheck.length) {
+        return NextResponse.json(
+          { error: { code: "VALIDATION_ERROR", message: "Partner not found" } },
+          { status: 400 }
+        );
+      }
+      resolvedPartnerId = partnerCheck[0].id;
+    } else {
+      // Non-partner operations: use first available partner (legacy fallback)
+      const fallback = await query<{ id: string }>("SELECT id FROM partners LIMIT 1");
+      if (!fallback.length) {
+        return NextResponse.json(
+          { error: { code: "INTERNAL_ERROR", message: "No partners available" } },
+          { status: 500 }
+        );
+      }
+      resolvedPartnerId = fallback[0].id;
+    }
+
     // Create a partner_application record for the operation
     const appResult = await query<{ id: string }>(
       `INSERT INTO partner_applications (partner_id, application_type, status, submitted_at)
-       VALUES (
-         (SELECT id FROM partners LIMIT 1),
-         $1, 'submitted', NOW()
-       )
+       VALUES ($1, $2, 'submitted', NOW())
        RETURNING id`,
-      [operation]
+      [resolvedPartnerId, operation]
     );
 
     if (!appResult.length) {
