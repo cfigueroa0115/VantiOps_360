@@ -49,9 +49,13 @@ interface ValidationData {
   verificationStatus?: string;
   e2eStatus?: string;
   visualRegressionStatus?: string;
-  backendTests?: { total?: number; passed?: number; status?: string } | null;
-  frontendTests?: { total?: number; passed?: number; status?: string } | null;
+  backendTests?: { total?: number; passed?: number; skipped?: number; failed?: number; status?: string } | null;
+  frontendTests?: { total?: number; passed?: number; failed?: number; status?: string } | null;
+  e2e?: { total?: number; passed?: number; failed?: number; status?: string } | null;
   coverage?: { statements?: number; branches?: number; functions?: number; lines?: number } | number | null;
+  visualRegression?: { status?: string; baselinesPresent?: number; baselinesRequired?: number } | null;
+  productionSmoke?: { status?: string } | null;
+  lastVerifiedCiSnapshot?: { runId?: number; commitHash?: string; generatedAt?: string };
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────
@@ -105,7 +109,7 @@ export default function EvidenciaPage() {
             setValidationStatus("unavailable");
           } else if (vs === "failure") {
             setValidationStatus("failure");
-          } else if (!data.commitHash && data.workflowStatus === "unavailable") {
+          } else if (!data.commitHash && !data.lastVerifiedCiSnapshot?.commitHash && data.workflowStatus === "unavailable") {
             setValidationStatus("unavailable");
           } else {
             setValidationStatus("unavailable");
@@ -285,9 +289,9 @@ export default function EvidenciaPage() {
             }
           />
           <StatusCard
-            label="CI Commit"
-            status={validation?.commitHash ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
-            value={validation?.commitHash || (validationStatus === "pending" ? "Verificando..." : "No disponible")}
+            label="CI Verificado"
+            status={validation?.lastVerifiedCiSnapshot?.commitHash || validation?.commitHash ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
+            value={validation?.lastVerifiedCiSnapshot?.commitHash || validation?.commitHash || (validationStatus === "pending" ? "Verificando..." : "No disponible")}
             mono
           />
           <StatusCard

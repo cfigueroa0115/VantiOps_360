@@ -28,10 +28,10 @@
     "status": "passed"
   },
   "coverage": {
-    "statements": 83.78,
-    "branches": 77.96,
-    "functions": 77.31,
-    "lines": 85.16
+    "statements": 84.16,
+    "branches": 78.04,
+    "functions": 77.83,
+    "lines": 85.46
   },
   "visualRegression": {
     "status": "unavailable",

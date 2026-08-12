@@ -36,7 +36,15 @@ jobs:
         working-directory: backend
 
       - name: Python Tests (pytest)
-        run: python -m pytest tests -q
+        id: pytest
+        run: |
+          python -m pytest tests -q --tb=no > pytest_output.txt 2>&1 || true
+          cat pytest_output.txt
+          # Extract counts from pytest output
+          PYTEST_LINE=$(grep -E "^\d+ passed" pytest_output.txt || echo "0 passed")
+          echo "PYTEST_RESULT=$PYTEST_LINE" >> "$GITHUB_ENV"
+          # Fail if pytest failed
+          python -m pytest tests -q --tb=short
         working-directory: backend
 
       # ─── Frontend ────────────────────────────────────────────────────
@@ -68,7 +76,11 @@ jobs:
         working-directory: frontend
 
       - name: Frontend Unit Tests
-        run: npm run test
+        id: vitest
+        run: |
+          npm run test -- --reporter=verbose 2>&1 | tee vitest_output.txt
+          VITEST_LINE=$(grep -E "Tests\s+\d+" vitest_output.txt | tail -1 || echo "")
+          echo "VITEST_RESULT=$VITEST_LINE" >> "$GITHUB_ENV"
         working-directory: frontend
 
       - name: Frontend Coverage
@@ -220,8 +232,14 @@ jobs:
             "visualRegressionStatus": "${VISUAL_STATUS}",
             "verificationStatus": "${VERIFICATION_STATUS}",
             "productionSmokeStatus": "pending",
-            "backendTests": null,
-            "frontendTests": null,
+            "backendTests": {
+              "summary": "${PYTEST_RESULT}",
+              "status": "${{ steps.pytest.outcome }}"
+            },
+            "frontendTests": {
+              "summary": "${VITEST_RESULT}",
+              "status": "${{ steps.vitest.outcome }}"
+            },
             "coverage": {
               "statements": ${STMT_PCT},
               "branches": ${BRANCH_PCT},

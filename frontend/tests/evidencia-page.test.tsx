@@ -121,7 +121,7 @@ describe("EvidenciaPage", () => {
       return mockValidationSuccess();
     });
     await waitFor(() => {
-      expect(screen.getByTestId("status-ci-commit")).toHaveTextContent("abc1234");
+      expect(screen.getByTestId("status-ci-verificado")).toHaveTextContent("abc1234");
     });
   });
 
@@ -131,7 +131,7 @@ describe("EvidenciaPage", () => {
       return mockValidationUnavailable();
     });
     await waitFor(() => {
-      expect(screen.getByTestId("status-ci-commit")).toHaveTextContent("No disponible");
+      expect(screen.getByTestId("status-ci-verificado")).toHaveTextContent("No disponible");
       expect(screen.getByTestId("status-frontend-tests")).toHaveTextContent("No disponible");
       expect(screen.getByTestId("status-backend-tests")).toHaveTextContent("No disponible");
       expect(screen.getByTestId("status-coverage")).toHaveTextContent("No disponible");

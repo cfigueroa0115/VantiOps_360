@@ -70,7 +70,7 @@ Aplicada en Neon. Verificada: 0 violaciones.
 | Suite | Resultado |
 |-------|-----------|
 | Backend (pytest) | 1078 passed, 26 skipped, 0 failed |
-| Frontend (vitest) | 476 passed, 0 failed |
+| Frontend (vitest) | 483 passed, 0 failed |
 | E2E (playwright) | 25 passed, 0 skipped |
 | Security (auth-context) | 11 passed |
 
@@ -78,10 +78,10 @@ Aplicada en Neon. Verificada: 0 violaciones.
 
 | Métrica | Valor |
 |---------|-------|
-| Statements | 83.78% |
-| Branches | 77.96% |
-| Functions | 77.31% |
-| Lines | 85.16% |
+| Statements | 84.16% |
+| Branches | 78.04% |
+| Functions | 77.83% |
+| Lines | 85.46% |
 
 ## npm audit (producción)
 
