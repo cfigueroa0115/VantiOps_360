@@ -1,31 +1,34 @@
 {
-  "lastVerifiedCiSnapshot": {
-    "runId": 31546026148,
-    "commitHash": "45702f7e670cf056cce4d8653b94732a09518da8",
-    "generatedAt": "2026-08-11T22:47:00Z",
-    "source": "github-actions",
-    "workflowStatus": "success",
-    "qualityJobStatus": "success"
-  },
+  "runId": 31597780979,
+  "commitHash": "3454b902b106d0335511b779f83593dacfccb377",
+  "generatedAt": "2026-08-12T12:48:26Z",
+  "source": "github-actions",
+  "workflowStatus": "success",
+  "qualityJobStatus": "success",
   "backendTests": {
-    "total": 1078,
     "passed": 1078,
     "skipped": 26,
     "failed": 0,
-    "status": "passed"
+    "total": 1104
   },
   "frontendTests": {
-    "total": 476,
-    "passed": 476,
+    "passed": 483,
     "failed": 0,
-    "status": "passed"
+    "total": 483
   },
   "e2e": {
-    "total": 25,
     "passed": 25,
-    "failed": 0,
     "skipped": 0,
-    "status": "passed"
+    "failed": 0,
+    "total": 25,
+    "status": "success"
+  },
+  "visualRegression": {
+    "passed": 9,
+    "failed": 0,
+    "baselinesPresent": 9,
+    "baselinesRequired": 9,
+    "status": "success"
   },
   "coverage": {
     "statements": 84.16,
@@ -33,16 +36,14 @@
     "functions": 77.83,
     "lines": 85.46
   },
-  "visualRegression": {
-    "status": "unavailable",
-    "reason": "Linux baselines not yet generated (0/9). Requires generate-baselines workflow execution.",
-    "baselinesPresent": 0,
-    "baselinesRequired": 9
+  "npmAuditProduction": {
+    "critical": 0,
+    "high": 3,
+    "moderate": 0,
+    "low": 0
   },
   "productionSmoke": {
-    "status": "pending",
-    "reason": "Executes on push to main after merge"
+    "status": "pending"
   },
-  "verificationStatus": "partial",
-  "note": "Visual regression is unavailable due to missing Linux baselines. All other controls passed. This is NOT presented as full success."
+  "verificationStatus": "success"
 }

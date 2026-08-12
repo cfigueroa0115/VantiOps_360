@@ -71,8 +71,10 @@ Aplicada en Neon. Verificada: 0 violaciones.
 |-------|-----------|
 | Backend (pytest) | 1078 passed, 26 skipped, 0 failed |
 | Frontend (vitest) | 483 passed, 0 failed |
-| E2E (playwright) | 25 passed, 0 skipped |
+| E2E (playwright) | 25 passed, 0 skipped, 0 failed |
+| Visual Regression | 9 passed, 0 failed (9/9 Linux baselines) |
 | Security (auth-context) | 11 passed |
+| PARTNER_ONBOARDING | 7 passed |
 
 ## Coverage
 
@@ -86,17 +88,17 @@ Aplicada en Neon. Verificada: 0 violaciones.
 ## npm audit (producción)
 
 - critical: 0
-- high: 3 (PostCSS/Next.js — requiere migración a Next 16, deuda técnica registrada)
+- high: 3 (PostCSS path traversal + nanoid — all resolve through next@16.3.0 which is semver-major)
 - moderate: 0
 - low: 0
 
-Plan de remediación: actualización a Next.js 15/16 en un ciclo posterior de mantenimiento mayor.
+**nanoid analysis:** nanoid@3.3.18 (latest 3.x) is a transitive dep of PostCSS 8.4.x, which is locked by Next.js 14. `npm audit fix` without `--force` reports "up to date" — no compatible fix exists without upgrading Next.js to 16 (breaking change). Documented as residual risk requiring future major framework upgrade.
 
 ## Visual Regression
 
-- Status: **unavailable**
-- Baselines Linux: 0/9 (requiere ejecutar generate-baselines.yml workflow)
-- No se presenta como aprobado
+- Status: **success** (9/9 passed)
+- Baselines: Linux (generated via generate-baselines.yml workflow, reviewed and committed)
+- Threshold: MAX_DIFF_PIXEL_RATIO = 0.02
 
 ## Production Smoke
 
