@@ -289,7 +289,7 @@ export default function EvidenciaPage() {
             }
           />
           <StatusCard
-            label="CI Verificado"
+            label="Snapshot CI publicado"
             status={validation?.lastVerifiedCiSnapshot?.commitHash || validation?.commitHash ? "success" : validationStatus === "pending" ? "pending" : "unavailable"}
             value={validation?.lastVerifiedCiSnapshot?.commitHash || validation?.commitHash || (validationStatus === "pending" ? "Verificando..." : "No disponible")}
             mono

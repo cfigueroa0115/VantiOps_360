@@ -169,7 +169,8 @@ database/migrations/
 ├── 001_create_roles.sql
 ├── 002_create_users.sql
 ├── ...
-└── 013_create_operational_businesses.sql
+├── 013_create_operational_businesses.sql
+└── 014_enforce_single_active_email.sql
 ```
 
 > ❌ Operaciones destructivas prohibidas: `DROP TABLE`, `TRUNCATE`, `DELETE` sin `WHERE`
@@ -320,7 +321,7 @@ Archivo: `.github/workflows/ci.yml`
 Condiciones para merge:
 1. ✅ CI verde (todos los pasos pasan)
 2. ✅ Preview validado en Vercel
-3. ✅ Regresión aprobada (sin diferencia visual > 0.1%)
+3. ✅ Regresión visual aprobada (maxDiffPixelRatio=0.02, tolerancia 2%)
 
 ---
 

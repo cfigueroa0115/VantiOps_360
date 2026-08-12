@@ -92,7 +92,9 @@ Aplicada en Neon. Verificada: 0 violaciones.
 - moderate: 0
 - low: 0
 
-**nanoid analysis:** nanoid@3.3.18 (latest 3.x) is a transitive dep of PostCSS 8.4.x, which is locked by Next.js 14. `npm audit fix` without `--force` reports "up to date" — no compatible fix exists without upgrading Next.js to 16 (breaking change). Documented as residual risk requiring future major framework upgrade.
+**nanoid:** RESUELTO. Actualizado de 3.3.16 a 3.3.18 mediante `npm update nanoid` (patch compatible). Advisory nanoid eliminado del reporte de producción.
+
+**Residual:** Las 2 vulnerabilidades HIGH corresponden exclusivamente a PostCSS (GHSA-6g55-p6wh-862q, GHSA-fxqj-rqcc-2cmp) embebido en Next.js 14. La corrección requiere Next.js 16 (major upgrade posterior).
 
 ## Visual Regression
 
