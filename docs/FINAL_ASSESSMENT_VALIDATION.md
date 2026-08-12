@@ -88,7 +88,7 @@ Aplicada en Neon. Verificada: 0 violaciones.
 ## npm audit (producción)
 
 - critical: 0
-- high: 3 (PostCSS path traversal + nanoid — all resolve through next@16.3.0 which is semver-major)
+- high: 2 (PostCSS path traversal — requires next@16.3.0 which is semver-major)
 - moderate: 0
 - low: 0
 
@@ -116,12 +116,11 @@ Aplicada en Neon. Verificada: 0 violaciones.
 
 ## Limitaciones Reales
 
-- Visual regression requiere baselines Linux (generate-baselines workflow)
 - Production smoke pendiente de merge
-- JWT_SECRET y DATABASE_URL deben configurarse en Preview Vercel manualmente
-- npm audit high: PostCSS en Next.js 14 (fix requiere major upgrade)
+- npm audit high: 2 PostCSS path-traversal advisories in Next.js 14 (fix requires Next 16 major upgrade)
 - Onboarding UX es conceptual, no productivo
 - No integrado con sistemas reales de Vanti
+- JWT runtime test limited to unit suite — no safe token issuance in Preview without additional infra
 
 ## Producción
 
