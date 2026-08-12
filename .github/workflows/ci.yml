@@ -231,19 +231,26 @@ jobs:
           # Parse E2E results from Playwright JSON
           E2E_PASSED=0; E2E_FAILED=0; E2E_SKIPPED=0; E2E_TOTAL=0
           if [ -f "playwright-e2e-results.json" ]; then
-            E2E_PASSED=$(node -p "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));r.suites.reduce((a,s)=>a+s.specs.filter(t=>t.tests.some(tt=>tt.status==='expected')).length,0)" 2>/dev/null || echo 0)
-            E2E_FAILED=$(node -p "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));r.suites.reduce((a,s)=>a+s.specs.filter(t=>t.tests.some(tt=>tt.status==='unexpected')).length,0)" 2>/dev/null || echo 0)
-            E2E_SKIPPED=$(node -p "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));r.suites.reduce((a,s)=>a+s.specs.filter(t=>t.tests.some(tt=>tt.status==='skipped')).length,0)" 2>/dev/null || echo 0)
+            E2E_PASSED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));const s=r.stats||{};console.log(s.expected||0)" 2>/dev/null || echo 0)
+            E2E_FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));const s=r.stats||{};console.log(s.unexpected||0)" 2>/dev/null || echo 0)
+            E2E_SKIPPED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-e2e-results.json','utf8'));const s=r.stats||{};console.log(s.skipped||0)" 2>/dev/null || echo 0)
             E2E_TOTAL=$((E2E_PASSED + E2E_FAILED + E2E_SKIPPED))
+            echo "E2E parsed: passed=$E2E_PASSED failed=$E2E_FAILED skipped=$E2E_SKIPPED total=$E2E_TOTAL"
+          else
+            echo "WARNING: playwright-e2e-results.json not found"
+            ls -la playwright-*.json 2>/dev/null || echo "No playwright JSON files found"
           fi
 
           # Parse Visual Regression results from Playwright JSON
           VR_PASSED=0; VR_FAILED=0; VR_SKIPPED=0; VR_TOTAL=0
           if [ -f "playwright-visual-results.json" ]; then
-            VR_PASSED=$(node -p "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));r.suites.reduce((a,s)=>a+s.specs.filter(t=>t.tests.some(tt=>tt.status==='expected')).length,0)" 2>/dev/null || echo 0)
-            VR_FAILED=$(node -p "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));r.suites.reduce((a,s)=>a+s.specs.filter(t=>t.tests.some(tt=>tt.status==='unexpected')).length,0)" 2>/dev/null || echo 0)
-            VR_SKIPPED=$(node -p "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));r.suites.reduce((a,s)=>a+s.specs.filter(t=>t.tests.some(tt=>tt.status==='skipped')).length,0)" 2>/dev/null || echo 0)
+            VR_PASSED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));const s=r.stats||{};console.log(s.expected||0)" 2>/dev/null || echo 0)
+            VR_FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));const s=r.stats||{};console.log(s.unexpected||0)" 2>/dev/null || echo 0)
+            VR_SKIPPED=$(node -e "const r=JSON.parse(require('fs').readFileSync('playwright-visual-results.json','utf8'));const s=r.stats||{};console.log(s.skipped||0)" 2>/dev/null || echo 0)
             VR_TOTAL=$((VR_PASSED + VR_FAILED + VR_SKIPPED))
+            echo "Visual parsed: passed=$VR_PASSED failed=$VR_FAILED skipped=$VR_SKIPPED total=$VR_TOTAL"
+          else
+            echo "WARNING: playwright-visual-results.json not found"
           fi
 
           # Visual regression baselines from filesystem
