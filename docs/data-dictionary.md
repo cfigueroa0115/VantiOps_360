@@ -33,7 +33,8 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 
 **Database:** Neon PostgreSQL  
 **Status:** ✅ Operational (protected — no destructive modifications allowed)  
-**Record count:** ~600 records (master data)  
+**Record count:** 51,008 registros del dataset Entrada_PQRs suministrado para el assessment  
+**Note:** Estos datos corresponden al dataset suministrado para la prueba técnica. No representan una integración productiva en tiempo real con sistemas internos de Grupo Vanti.
 **Indexes:** `causa`, `estado`, `empresa`, `canal_atencion`, `fecha_creacion`, `tiempo_gestion_dias`
 
 ---

@@ -13,7 +13,7 @@ interface KPI {
 }
 
 const KPIS: KPI[] = [
-  { label: "ANS Cumplimiento", value: "65%", target: "≥ 90%", unit: "", status: "red", trend: "down" },
+  { label: "ANS Cumplimiento", value: "65%", target: "≥ 85% (meta propuesta)", unit: "", status: "red", trend: "down" },
   { label: "Demanda Mensual", value: 1240, target: "≤ 1000", unit: "PQR", status: "red", trend: "up" },
   { label: "Backlog Actual", value: 387, target: "≤ 100", unit: "casos", status: "red", trend: "up" },
   { label: "Capacidad Instalada", value: "78%", target: "≤ 85%", unit: "", status: "amber", trend: "stable" },
@@ -154,7 +154,7 @@ export default function OperacionesPage() {
         <div>
           <p className="font-semibold text-red-800 text-sm">Alerta Operativa</p>
           <p className="text-xs text-red-700 mt-1">
-            ANS por debajo del objetivo (65% vs 90% meta). Backlog acumulado en áreas de Servihogar y Gas Residencial. 
+            ANS por debajo del objetivo (65% actual vs ≥85% meta propuesta). Backlog acumulado en áreas de Servihogar y Gas Residencial. 
             Se recomienda activar war room y plan de contingencia inmediato.
           </p>
         </div>
