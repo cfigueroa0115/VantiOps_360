@@ -160,15 +160,15 @@ jobs:
         id: e2e
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-e2e-results.json
-        run: npx playwright test --grep-invert "Visual Regression" --reporter=json
+        run: |
+          set -o pipefail
+          npx playwright test --grep-invert "Visual Regression" --reporter=json | cat > playwright-e2e-results.json
         working-directory: frontend
 
       - name: Visual Regression
         id: visual
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-visual-results.json
         run: |
           BASELINE_COUNT=$(find tests/e2e/visual-regression.spec.ts-snapshots/ -name "*.png" 2>/dev/null | wc -l)
           if [ "$BASELINE_COUNT" -lt 9 ]; then
@@ -176,7 +176,8 @@ jobs:
             echo "VISUAL_UNAVAILABLE=true" >> "$GITHUB_ENV"
             exit 1
           fi
-          npx playwright test tests/e2e/visual-regression.spec.ts --reporter=json
+          set -o pipefail
+          npx playwright test tests/e2e/visual-regression.spec.ts --reporter=json | cat > playwright-visual-results.json
         working-directory: frontend
 
       # ─── Evidence ───────────────────────────────────────────────────
