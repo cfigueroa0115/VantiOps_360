@@ -338,6 +338,8 @@ jobs:
       - name: Risk Data Truth Gate
         if: success()
         working-directory: frontend
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
         run: |
           echo "═══════════════════════════════════════════════"
           echo "  RISK DATA TRUTH GATE"

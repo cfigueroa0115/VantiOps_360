@@ -14,7 +14,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 
 | Category | Code | Description |
 |----------|------|-------------|
-| Real Data | `REAL_DATA` | Data sourced from actual Vanti operational systems (Excel PQR files ingested via ETL pipeline and stored in Neon PostgreSQL) |
+| Real Data | `REAL_DATA` | Data contained in the dataset Entrada_PQRs supplied for the technical assessment, ingested via ETL pipeline and stored in Neon PostgreSQL |
 | Derived Data | `DERIVED_DATA` | Data computed from real data through verifiable transformations (statistics, scores, model outputs) |
 | Simulated Data | `SIMULATED_DATA` | Synthetically generated data for testing, demos, or development (preserves statistical distributions but contains no real customer information) |
 | Conceptual Design | `CONCEPTUAL_DESIGN` | Documented technical design representing a planned future solution not yet connected to production systems |
@@ -62,7 +62,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `fecha_creacion` |
 | **Type** | `DATE` (PostgreSQL) / `date` (Python) |
 | **Description** | Date when the PQR (Petición, Queja, Reclamo) was created/registered in the system. Represents the start of the management lifecycle. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Non-nullable. Must be ≥ 2020-01-01. Format: ISO-8601 date (`YYYY-MM-DD`). |
 | **Example** | `2023-05-15` |
@@ -76,7 +76,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `fecha_cierre` |
 | **Type** | `DATE` (PostgreSQL) / `date` (Python) |
 | **Description** | Date when the PQR was closed/resolved. Null for records that remain open or in process. Used together with `fecha_creacion` to derive `tiempo_gestion_dias`. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Nullable (null for open/in-process PQRs). When present, must be ≥ `fecha_creacion`. |
 | **Example** | `2023-05-22`, `null` |
@@ -90,7 +90,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `estado` |
 | **Type** | `VARCHAR(50)` (PostgreSQL) / `str` (Python) |
 | **Description** | Current status of the PQR in its lifecycle. Normalized to lowercase with underscores replacing spaces during ETL ingestion. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Non-nullable. Must be one of: `cerrado`, `en_proceso`, `abierto`. |
 | **Example** | `cerrado` |
@@ -104,7 +104,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `causa` |
 | **Type** | `TEXT` (PostgreSQL) / `str` (Python) |
 | **Description** | Root cause category assigned to the PQR. Used as the primary dimension for Pareto analysis and statistical concentration detection. Critical field for the Motor_Pareto (single source of truth for cause identification). |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Non-nullable. Free text, indexed for query performance. |
 | **Example** | `Cancela Servihogar a solicitud cliente`, `Facturacion`, `Revision instalaciones internas` |
@@ -118,7 +118,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `canal_atencion` |
 | **Type** | `VARCHAR(100)` (PostgreSQL) / `str` (Python) |
 | **Description** | Communication channel through which the PQR was received. Used for channel distribution analysis and operational capacity planning. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Non-nullable. Expected values include: `telefono`, `verbal`, `escrito`, `web`, `presencial`, `email`. |
 | **Example** | `telefono` |
@@ -132,7 +132,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `empresa` |
 | **Type** | `VARCHAR(200)` (PostgreSQL) / `str` (Python) |
 | **Description** | Company/business unit within the Vanti group that the PQR is associated with. Used for segmentation and organizational filtering. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Non-nullable. Expected values include: `Vanti S.A. ESP`, `Vanti Gas`, `Servihogar`. |
 | **Example** | `Vanti S.A. ESP` |
@@ -146,7 +146,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `resultado` |
 | **Type** | `VARCHAR(100)` (PostgreSQL) / `str` (Python) |
 | **Description** | Resolution result of the PQR. Indicates how the case was resolved (favorable to client, unfavorable, withdrawn, transferred, or pending). |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Nullable (null for PQRs still in process). Expected values include: `accede`, `no_accede`, `desistimiento`, `traslado`, `pendiente`. |
 | **Example** | `accede`, `no_accede`, `null` |
@@ -160,7 +160,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `unidad_responsable` |
 | **Type** | `VARCHAR(200)` (PostgreSQL) / `str` (Python) |
 | **Description** | Organizational unit responsible for managing/resolving the PQR. Used for workload distribution analysis and capacity model. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Nullable (~10% null rate expected). Free text identifying the responsible unit. |
 | **Example** | `Unidad Operativa Norte`, `Unidad Comercial`, `null` |
@@ -174,7 +174,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `marcacion` |
 | **Type** | `VARCHAR(100)` (PostgreSQL) / `str` (Python) |
 | **Description** | Classification marking indicating the priority or recurrence pattern of the PQR. Used for prioritization and trend analysis. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Nullable (~15% null rate expected). Expected values include: `primera_vez`, `reiterativa`, `urgente`, `seguimiento`, `normal`. |
 | **Example** | `primera_vez`, `reiterativa`, `null` |
@@ -188,7 +188,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `motivo_cierre` |
 | **Type** | `TEXT` (PostgreSQL) / `str` (Python) |
 | **Description** | Reason/justification for closing the PQR. Only populated for PQRs with `estado = 'cerrado'`. Provides context for resolution analysis. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Nullable (null for open/in-process PQRs). Required when `estado = 'cerrado'`. |
 | **Example** | `Solicitud procesada exitosamente`, `Cliente confirma resolucion`, `null` |
@@ -202,7 +202,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `tiempo_gestion_dias` |
 | **Type** | `DOUBLE PRECISION` (PostgreSQL) / `float` (Python) |
 | **Description** | Management time in days from PQR creation to closure. Primary metric for operational performance analysis. Used for descriptive statistics (mean, median, P90, P95, max, stddev) and inferential statistics (Shapiro-Wilk normality test, 95% CI). |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations). May be derived from `fecha_cierre - fecha_creacion` in some contexts. |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment. May be derived from `fecha_cierre - fecha_creacion` in some contexts. |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Nullable (null for open PQRs). When present, must be ≥ 0. Numeric mean ~6.32 days, stddev ~4.5 days. |
 | **Example** | `5.0`, `12.75`, `0.5` |
@@ -216,7 +216,7 @@ This document defines the data dictionary for the `pqr_records` table in the Neo
 | **Name** | `tipo_pqr` |
 | **Type** | `VARCHAR(50)` (PostgreSQL) / `str` (Python) |
 | **Description** | Type classification of the PQR according to Colombian regulatory framework: Petición (request), Queja (complaint), or Reclamo (claim). Determines regulatory response timelines and handling procedures. |
-| **Origin** | Original PQR registration system (Excel source files from Vanti operations) |
+| **Origin** | Dataset Entrada_PQRs supplied for the assessment |
 | **Classification** | `REAL_DATA` |
 | **Validation Rule** | Non-nullable. Must be one of: `peticion`, `queja`, `reclamo`. |
 | **Example** | `peticion` |
