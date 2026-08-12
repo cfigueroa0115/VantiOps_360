@@ -25,21 +25,7 @@ if not DATABASE_URL:
     sys.exit(1)
 
 
-def assert_safe_seed_environment():
-    """Refuse to run destructive seed operations in production."""
-    env = (
-        os.getenv("VERCEL_ENV")
-        or os.getenv("APP_ENV")
-        or os.getenv("ENVIRONMENT")
-        or ""
-    ).lower()
-    if env in {"production", "prod"}:
-        raise RuntimeError(
-            "DESTRUCTIVE SEED OPERATION REFUSED: "
-            "Cannot execute DROP TABLE in production environment. "
-            f"Detected environment: {env}"
-        )
-
+from src.safety.seed_guard import assert_safe_seed_environment
 
 assert_safe_seed_environment()
 
