@@ -1,18 +1,42 @@
 import { NextResponse } from "next/server";
+import { loadRiskModelFile } from "@/lib/server/risk-model-loader";
 
-// Using Node.js runtime for Pool support
+export const dynamic = "force-dynamic";
 
+/**
+ * GET /api/risk
+ *
+ * Delegates to the same canonical risk model source as /api/risk/model.
+ * Single source of truth: data/curated/risk_model_results.json
+ *
+ * No hardcoded metrics. No separate data source.
+ */
 export async function GET() {
+  const result = await loadRiskModelFile();
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: { code: "RISK_MODEL_UNAVAILABLE", message: "Analytical risk model result is unavailable." } },
+      { status: 503 }
+    );
+  }
+
+  const data = result.data;
+
   return NextResponse.json({
-    modelType: "logistic_regression",
-    metrics: { precision: 0.72, recall: 0.65, f1Score: 0.68, rocAuc: 0.80 },
-    featureImportance: [
-      { feature: "causa_cancela_servihogar", importance: 0.342 },
-      { feature: "canal_atencion_telefono", importance: 0.198 },
-      { feature: "empresa_vanti_sa", importance: 0.156 },
-      { feature: "tipo_pqr_queja", importance: 0.112 },
-      { feature: "marcacion_urgente", importance: 0.089 },
-    ],
-    disclaimer: "Analytical demonstration — not a production-grade model",
+    modelType: data.model_type ?? "unknown",
+    metrics: {
+      precision: data.metrics?.precision ?? null,
+      recall: data.metrics?.recall ?? null,
+      f1Score: data.metrics?.f1_score ?? null,
+      rocAuc: data.metrics?.roc_auc ?? null,
+    },
+    featureImportance: (data.feature_importance ?? []).slice(0, 10),
+    p90Threshold: data.p90_threshold ?? null,
+    trainingSize: data.training_size ?? null,
+    testSize: data.test_size ?? null,
+    classBalance: data.class_balance ?? null,
+    disclaimer: "Analytical demonstration derived from assessment dataset. Not a production-grade model.",
+    dataProvenance: "DERIVED_DATA",
   });
 }
