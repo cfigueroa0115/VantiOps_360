@@ -38,6 +38,18 @@ export async function GET(
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Not found" } }, { status: 404 });
     }
 
+    // BUSINESS_OWNER: verify ownership
+    if (identity.role === "BUSINESS_OWNER" && identity.email) {
+      const ownerCheck = await query<{ count: string }>(
+        `SELECT COUNT(*) as count FROM cancellation_requests
+         WHERE id = $1 AND requested_by IN (SELECT id FROM app_users WHERE email = $2)`,
+        [id, identity.email]
+      );
+      if (parseInt(ownerCheck[0]?.count || "0") === 0) {
+        return NextResponse.json({ error: { code: "FORBIDDEN", message: "Access denied to this request" } }, { status: 403 });
+      }
+    }
+
     // Get state history
     const historyRows = await query<{
       id: string; from_state: string; to_state: string;
