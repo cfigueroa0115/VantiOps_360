@@ -181,23 +181,23 @@ describe("POST /api/annulations/[id]/transition", () => {
     expect(auditCall[0]).toContain("audit_events");
   });
 
-  // --- 422 Invalid Transition Errors ---
+  // --- 409 Invalid Transition Errors ---
 
-  it("returns 422 for invalid target state name", async () => {
+  it("returns 409 for invalid target state name", async () => {
     const [req, ctx] = createTransitionRequest("uuid-1", {
       headers: { "x-user-role": "OPERATIONS_LEAD", "x-user-id": "user@vanti.com.co" },
       body: { targetState: "NonExistentState", justification: "Valid justification text here" },
     });
 
     const res = await POST(req, ctx);
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(409);
 
     const json = await res.json();
-    expect(json.error.code).toBe("INVALID_TRANSITION");
+    expect(json.error.code).toBe("INVALID_STATE_TRANSITION");
     expect(json.error.validStates).toBeDefined();
   });
 
-  it("returns 422 for transition from terminal state (Cerrada)", async () => {
+  it("returns 409 for transition from terminal state (Cerrada)", async () => {
     mockedQuery.mockResolvedValueOnce([
       { id: "uuid-1", current_state: "Cerrada" },
     ] as never);
@@ -208,15 +208,15 @@ describe("POST /api/annulations/[id]/transition", () => {
     });
 
     const res = await POST(req, ctx);
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(409);
 
     const json = await res.json();
-    expect(json.error.code).toBe("INVALID_TRANSITION");
+    expect(json.error.code).toBe("INVALID_STATE_TRANSITION");
     expect(json.error.message).toContain("terminal state");
     expect(json.error.validTargets).toEqual([]);
   });
 
-  it("returns 422 for transition from terminal state (Rechazada)", async () => {
+  it("returns 409 for transition from terminal state (Rechazada)", async () => {
     mockedQuery.mockResolvedValueOnce([
       { id: "uuid-1", current_state: "Rechazada" },
     ] as never);
@@ -227,14 +227,14 @@ describe("POST /api/annulations/[id]/transition", () => {
     });
 
     const res = await POST(req, ctx);
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(409);
 
     const json = await res.json();
-    expect(json.error.code).toBe("INVALID_TRANSITION");
+    expect(json.error.code).toBe("INVALID_STATE_TRANSITION");
     expect(json.error.message).toContain("terminal state");
   });
 
-  it("returns 422 for structurally invalid transition (Solicitada → Cerrada)", async () => {
+  it("returns 409 for structurally invalid transition (Solicitada → Cerrada)", async () => {
     mockedQuery.mockResolvedValueOnce([
       { id: "uuid-1", current_state: "Solicitada" },
     ] as never);
@@ -245,10 +245,10 @@ describe("POST /api/annulations/[id]/transition", () => {
     });
 
     const res = await POST(req, ctx);
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(409);
 
     const json = await res.json();
-    expect(json.error.code).toBe("INVALID_TRANSITION");
+    expect(json.error.code).toBe("INVALID_STATE_TRANSITION");
     expect(json.error.validTargets).toContain("En_Revision");
     expect(json.error.message).toContain("not valid");
   });

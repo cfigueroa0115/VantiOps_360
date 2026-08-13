@@ -72,10 +72,10 @@ const PERSONAS = [
     cannot: ["Crear solicitudes", "Aprobar", "Ejecutar", "Cerrar"],
   },
   {
-    id: "intern_coordinator", label: "Coordinador Demo", role: "SYSTEM_ADMIN",
+    id: "intern_coordinator", label: "Coordinador Demo", role: "ASSESSMENT_COORDINATOR",
     icon: "check", desc: "Gestiona todo el ciclo de vida",
     can: ["En Revisión → Aprobada/Rechazada", "Aprobada → En Ejecución", "En Ejecución → Cerrada"],
-    cannot: ["Acceso admin global (solo anulaciones)"],
+    cannot: ["Solicitada → En Revisión (es del Analista)", "Acceso admin global"],
   },
   {
     id: "intern_readonly", label: "Usuario Solo Lectura", role: "INTERN_READONLY",
@@ -105,13 +105,13 @@ function getNextStates(currentState: string): string[] {
 
 function canRoleTransition(role: string, from: string, to: string): boolean {
   const perms: Record<string, Record<string, string[]>> = {
-    Solicitada: { En_Revision: ["OPERATIONS_LEAD", "ANALYST", "SYSTEM_ADMIN"] },
+    Solicitada: { En_Revision: ["OPERATIONS_LEAD", "ANALYST"] },
     En_Revision: {
-      Aprobada: ["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN"],
-      Rechazada: ["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN"],
+      Aprobada: ["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"],
+      Rechazada: ["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"],
     },
-    Aprobada: { En_Ejecucion: ["OPERATIONS_LEAD", "SYSTEM_ADMIN"] },
-    En_Ejecucion: { Cerrada: ["OPERATIONS_LEAD", "SYSTEM_ADMIN"] },
+    Aprobada: { En_Ejecucion: ["OPERATIONS_LEAD", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"] },
+    En_Ejecucion: { Cerrada: ["OPERATIONS_LEAD", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"] },
   };
   return perms[from]?.[to]?.includes(role) || false;
 }
@@ -393,7 +393,7 @@ export default function AnulacionesPage() {
                   + Nueva solicitud
                 </button>
               )}
-              {session.role === "SYSTEM_ADMIN" && (
+              {(session.role === "SYSTEM_ADMIN" || session.role === "ASSESSMENT_COORDINATOR") && (
                 <button onClick={() => setResetDialogOpen(true)} className="flex items-center gap-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-lg transition-colors">
                   <RefreshCw size={12} /> Reset Demo
                 </button>

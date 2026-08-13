@@ -35,7 +35,7 @@ const DEMO_PERSONAS: Record<string, { email: string; role: string; displayName: 
   },
   intern_coordinator: {
     email: "coordinator.demo@vantiops-assessment.com",
-    role: "SYSTEM_ADMIN",
+    role: "ASSESSMENT_COORDINATOR",
     displayName: "Coordinador Demo",
   },
   intern_readonly: {

@@ -4,7 +4,7 @@
  * No eval(), no silent catches — explicit error handling.
  */
 
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { Pool, PoolClient, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 
 // Configure WebSocket for Node.js runtime (required by Neon Pool)
@@ -43,4 +43,26 @@ export async function query<T = Record<string, unknown>>(
   const p = getPool();
   const result = await p.query(text, values);
   return result.rows as T[];
+}
+
+/**
+ * Execute a function within a database transaction.
+ * Automatically handles BEGIN, COMMIT, and ROLLBACK.
+ */
+export async function withTransaction<T>(
+  fn: (client: PoolClient) => Promise<T>
+): Promise<T> {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
