@@ -11,6 +11,8 @@ export interface KPICardProps {
   format: KPIFormatType;
   icon?: React.ReactNode;
   className?: string;
+  /** Prominent mode — larger value for executive hierarchy */
+  prominent?: boolean;
 }
 
 function formatKPIValue(value: number, format: KPIFormatType): string {
@@ -64,7 +66,7 @@ function AnimatedValue({ value, format }: { value: number; format: KPIFormatType
   );
 }
 
-export function KPICard({ label, value, format, icon, className }: KPICardProps) {
+export function KPICard({ label, value, format, icon, className, prominent }: KPICardProps) {
   const isLoading = value === undefined;
 
   return (
@@ -107,7 +109,7 @@ export function KPICard({ label, value, format, icon, className }: KPICardProps)
         {isLoading ? (
           <div className="h-8 w-24 rounded-md bg-gray-100 animate-pulse" aria-label="Cargando..." />
         ) : (
-          <p className="text-2xl font-bold tracking-tight text-gray-900 transition-colors duration-300 group-hover:text-blue-900">
+          <p className={cn("font-bold tracking-tight text-gray-900 transition-colors duration-300 group-hover:text-blue-900", prominent ? "text-3xl" : "text-2xl")}>
             <AnimatedValue value={value} format={format} />
           </p>
         )}

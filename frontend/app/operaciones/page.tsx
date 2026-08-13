@@ -49,6 +49,31 @@ export default function OperacionesPage() {
         Datos simulados exclusivamente para demostración conceptual.
       </div>
 
+      {/* ANS Hero — Executive Focus */}
+      <div className="rounded-xl border-2 border-red-200 bg-gradient-to-r from-red-50 to-white p-5">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <p className="text-xs font-medium text-red-600 uppercase tracking-wide">ANS Cumplimiento Actual</p>
+            <p className="text-4xl font-bold text-red-700 mt-1">65%</p>
+            <p className="text-xs text-gray-500 mt-1">Dato del assessment — SIMULATED_DATA</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-px bg-gray-200" />
+            <div>
+              <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Meta 90 días</p>
+              <p className="text-3xl font-bold text-green-700">≥ 85%</p>
+              <p className="text-xs text-gray-500 mt-1">Meta propuesta — CONCEPTUAL_DESIGN</p>
+            </div>
+          </div>
+          <div className="w-full md:w-auto">
+            <div className="h-3 w-full md:w-48 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-red-500 rounded-full" style={{ width: "76%" }} />
+            </div>
+            <p className="text-[10px] text-gray-500 mt-1 text-center">65 / 85 — brecha: 20 pp</p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100">

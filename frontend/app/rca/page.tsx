@@ -68,6 +68,15 @@ export default function RCAPage() {
         </div>
       </div>
 
+      {/* Executive Finding */}
+      <div className="rounded-lg border border-blue-100 bg-blue-50/50 px-4 py-3">
+        <p className="text-xs font-semibold text-blue-800 mb-1">Hallazgo ejecutivo</p>
+        <p className="text-xs text-blue-900">
+          La concentración identificada mediante Pareto define el foco inicial de intervención.
+          SIPOC, 5 Whys, Ishikawa y FMEA permiten profundizar la causa, evaluar riesgo y priorizar controles operativos.
+        </p>
+      </div>
+
       {/* Main Cause — from live endpoint */}
       <div className="rounded-xl border-2 border-purple-200 bg-purple-50 p-6">
         <div className="flex items-center gap-2 mb-2">
