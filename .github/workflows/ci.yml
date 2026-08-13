@@ -172,7 +172,7 @@ jobs:
         id: demo_e2e
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-        run: npx playwright test tests/e2e/assessment-demo-annulations.spec.ts --reporter=list || true
+        run: npx playwright test tests/e2e/assessment-demo-annulations.spec.ts --reporter=list || echo "::warning::Assessment Demo E2E requires full demo infrastructure"
         working-directory: frontend
 
       - name: Visual Regression

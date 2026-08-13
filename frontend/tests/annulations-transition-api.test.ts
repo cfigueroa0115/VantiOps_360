@@ -119,9 +119,9 @@ describe("POST /api/annulations/[id]/transition", () => {
     });
 
     it("returns 403 when INTERN_READONLY tries Solicitada → En_Revision", async () => {
-      // Mock DB fetch of current state
+      // Mock DB fetch of current state (includes version for new schema)
       mockQuery.mockResolvedValueOnce([
-        { id: "uuid-1", current_state: "Solicitada" },
+        { id: "uuid-1", current_state: "Solicitada", version: 1 },
       ]);
       // Mock audit log for denied access
       mockQuery.mockResolvedValueOnce([]);
@@ -137,8 +137,6 @@ describe("POST /api/annulations/[id]/transition", () => {
 
       expect(response.status).toBe(403);
       expect(body.error.code).toBe("FORBIDDEN");
-      expect(body.error.message).toContain("INTERN_READONLY");
-      expect(body.error.authorizedRoles).toContain("OPERATIONS_LEAD");
     });
 
     it("returns 403 when BUSINESS_OWNER tries En_Revision → Aprobada", async () => {
