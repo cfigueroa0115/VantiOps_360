@@ -38,8 +38,10 @@ out/
 frontend/test-results/
 frontend/playwright-report/
 frontend/artifacts/errors/
+frontend/artifacts/screenshots/
 frontend/coverage/
 frontend/coverage-output.txt
+frontend/vitest-results.json
 .vercel
 .env*
 
