@@ -77,6 +77,7 @@ export const PROTECTED_ROUTES: Record<string, Role[]> = {
     "BUSINESS_OWNER",
     "AUDITOR",
     "PARTNER_OPERATOR",
+    "INTERN_READONLY",
   ],
 
   // Capacity routes
