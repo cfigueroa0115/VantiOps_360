@@ -89,20 +89,22 @@ export async function validatePartnerEmail(
 export async function logPartnerEmailDenied(
   partnerId: string,
   attemptedEmail: string,
-  reason: string
+  reason: string,
+  actorUserId?: string
 ): Promise<void> {
   try {
     await query(
       `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
-       VALUES ($1, 'PARTNER_EMAIL_VALIDATION', '/api/annulations', $2, 'denied', $3)`,
+       VALUES ($1, 'EMAIL_AUTHORIZATION_DENIED', '/api/annulations', $2, 'failure', $3)`,
       [
-        attemptedEmail,
+        actorUserId || "unknown",
         partnerId,
         JSON.stringify({
           attemptedEmail,
           partnerId,
           reason,
           timestamp: new Date().toISOString(),
+          dataClassification: "SIMULATED_DATA",
         }),
       ]
     );

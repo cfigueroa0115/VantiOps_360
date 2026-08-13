@@ -4,6 +4,11 @@ import { NextRequest } from "next/server";
 // Mock the database module
 vi.mock("@/lib/server/database", () => ({
   query: vi.fn(),
+  withTransaction: vi.fn(async (fn: any) => {
+    const { query } = await import("@/lib/server/database");
+    const fakeClient = { query: async (...args: any[]) => ({ rows: await (query as any)(...args) }) };
+    return fn(fakeClient);
+  }),
 }));
 
 // Mock partner email validator

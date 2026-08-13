@@ -10,6 +10,10 @@ const mockLogPartnerEmailDenied = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/server/database", () => ({
   query: mockQuery,
+  withTransaction: vi.fn(async (fn: any) => {
+    const fakeClient = { query: async (...args: any[]) => ({ rows: await mockQuery(...args) }) };
+    return fn(fakeClient);
+  }),
 }));
 
 vi.mock("@/lib/server/partner-email-validator", () => ({
