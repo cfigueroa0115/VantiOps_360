@@ -193,6 +193,18 @@ export async function POST(
       const currentState = rows.rows[0].current_state;
       const currentVersion = rows.rows[0].version;
 
+      // AUTHORIZATION FIRST: check if role can mutate at all
+      // This must happen BEFORE state/concurrency validation (403 > 409)
+      const NEVER_MUTATE_ROLES = new Set(["INTERN_READONLY", "AUDITOR", "PARTNER_ADMIN", "PARTNER_OPERATOR", "CONTRACTOR_OPERATOR"]);
+      if (NEVER_MUTATE_ROLES.has(userRole)) {
+        await client.query(
+          `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
+           VALUES ($1, 'ANNULATION_TRANSITION_DENIED', '/api/annulations/transition', $2, 'failure', $3)`,
+          [userId, id, JSON.stringify({ currentState, targetState, role: userRole, reason: "ROLE_NOT_AUTHORIZED" })]
+        );
+        return { error: "FORBIDDEN", status: 403, currentState, authorizedRoles: [] } as const;
+      }
+
       // Check optimistic concurrency
       if (expectedVersion !== undefined && expectedVersion !== currentVersion) {
         return { error: "CONCURRENT_MODIFICATION", status: 409, currentVersion } as const;
@@ -210,7 +222,7 @@ export async function POST(
         return { error: "INVALID_TRANSITION", status: 409, currentState, validTargets } as const;
       }
 
-      // Check role authorization
+      // Check specific role authorization for this transition
       const authorizedRoles = transitions[targetState];
       if (!authorizedRoles.has(userRole)) {
         // Log denied to audit

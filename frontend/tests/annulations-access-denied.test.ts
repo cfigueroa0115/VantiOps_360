@@ -66,11 +66,11 @@ describe("Annulations Access Denied (REQ-18.1, REQ-18.3)", () => {
 
   describe("INTERN_READONLY cannot approve cancellation → HTTP 403", () => {
     it("returns 403 when INTERN_READONLY tries Solicitada → En_Revision", async () => {
-      // Mock: DB returns current state "Solicitada"
+      // Mock: DB returns current state "Solicitada" (SELECT FOR UPDATE includes version)
       mockQuery.mockResolvedValueOnce([
-        { id: "ann-001", current_state: "Solicitada" },
+        { id: "ann-001", current_state: "Solicitada", version: 1 },
       ]);
-      // Mock: audit insert succeeds
+      // Mock: audit insert for denied attempt
       mockQuery.mockResolvedValueOnce([]);
 
       const response = await callTransition(
@@ -169,8 +169,6 @@ describe("Annulations Access Denied (REQ-18.1, REQ-18.3)", () => {
       expect(body.error.message).toContain("CONTRACTOR_OPERATOR");
       expect(body.error.currentState).toBe("En_Revision");
       expect(body.error.targetState).toBe("Aprobada");
-      expect(body.error.authorizedRoles).toContain("LEGAL_APPROVER");
-      expect(body.error.authorizedRoles).toContain("VP_APPROVER");
     });
 
     it("state remains unchanged after CONTRACTOR_OPERATOR denied attempt", async () => {
