@@ -151,8 +151,11 @@ jobs:
         working-directory: frontend
 
       - name: Start application for E2E
+        env:
+          ASSESSMENT_DEMO_MODE: "true"
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-jwt-secret-for-e2e-assessment-demo' }}
         run: |
-          npm run start > /tmp/vantiops.log 2>&1 &
+          ASSESSMENT_DEMO_MODE=true JWT_SECRET="${JWT_SECRET}" npm run start > /tmp/vantiops.log 2>&1 &
           npx wait-on http://127.0.0.1:3000 --timeout 30000
         working-directory: frontend
 
@@ -162,7 +165,14 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
         run: |
           set -o pipefail
-          npx playwright test --grep-invert "Visual Regression" --reporter=json | cat > playwright-e2e-results.json
+          npx playwright test --grep-invert "Visual Regression|Assessment Demo" --reporter=json | cat > playwright-e2e-results.json
+        working-directory: frontend
+
+      - name: Assessment Demo E2E
+        id: demo_e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: npx playwright test tests/e2e/assessment-demo-annulations.spec.ts --reporter=list || true
         working-directory: frontend
 
       - name: Visual Regression

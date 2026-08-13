@@ -138,13 +138,20 @@ export async function GET(request: NextRequest) {
   const params: unknown[] = [];
   let paramIdx = 1;
 
+  // BUSINESS_OWNER: server-side ownership — only own partner's requests
+  if (userRole === "BUSINESS_OWNER" && identity.email) {
+    conditions.push(`cr.requested_by IN (SELECT id FROM app_users WHERE email = $${paramIdx})`);
+    params.push(identity.email);
+    paramIdx++;
+  }
+
   if (status) {
     conditions.push(`cr.current_state = $${paramIdx}`);
     params.push(status);
     paramIdx++;
   }
 
-  if (requester) {
+  if (requester && userRole !== "BUSINESS_OWNER") {
     conditions.push(`cr.requested_by IN (SELECT id FROM app_users WHERE email = $${paramIdx})`);
     params.push(requester);
     paramIdx++;
