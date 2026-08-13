@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
   }
 
   const identity = await getRequestIdentity(request);
-  if (identity.role !== "SYSTEM_ADMIN") {
+  if (identity.role !== "SYSTEM_ADMIN" && identity.role !== "ASSESSMENT_COORDINATOR") {
     return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Only SYSTEM_ADMIN can reset demo data." } },
+      { error: { code: "FORBIDDEN", message: "Only coordinators can reset demo data." } },
       { status: 403 }
     );
   }

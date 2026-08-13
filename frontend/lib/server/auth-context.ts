@@ -34,6 +34,7 @@ const VALID_ROLES = new Set([
   "PARTNER_OPERATOR",
   "CONTRACTOR_OPERATOR",
   "INTERN_READONLY",
+  "ASSESSMENT_COORDINATOR",
 ]);
 
 function getJwtSecret(): Uint8Array {

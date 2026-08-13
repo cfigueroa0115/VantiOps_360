@@ -29,7 +29,8 @@ export type Role =
   | "PARTNER_ADMIN"
   | "PARTNER_OPERATOR"
   | "CONTRACTOR_OPERATOR"
-  | "INTERN_READONLY";
+  | "INTERN_READONLY"
+  | "ASSESSMENT_COORDINATOR";
 
 export const VALID_ROLES: readonly Role[] = [
   "SYSTEM_ADMIN",
@@ -43,6 +44,7 @@ export const VALID_ROLES: readonly Role[] = [
   "PARTNER_OPERATOR",
   "CONTRACTOR_OPERATOR",
   "INTERN_READONLY",
+  "ASSESSMENT_COORDINATOR",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -78,6 +80,7 @@ export const PROTECTED_ROUTES: Record<string, Role[]> = {
     "AUDITOR",
     "PARTNER_OPERATOR",
     "INTERN_READONLY",
+    "ASSESSMENT_COORDINATOR",
   ],
 
   // Capacity routes

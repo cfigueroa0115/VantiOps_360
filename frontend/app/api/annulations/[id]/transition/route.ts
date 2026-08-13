@@ -26,17 +26,17 @@ const TERMINAL_STATES = new Set(["Cerrada", "Rechazada"]);
  */
 const VALID_TRANSITIONS: Record<string, Record<string, Set<string>>> = {
   Solicitada: {
-    En_Revision: new Set(["OPERATIONS_LEAD", "ANALYST", "SYSTEM_ADMIN"]),
+    En_Revision: new Set(["OPERATIONS_LEAD", "ANALYST"]),
   },
   En_Revision: {
-    Aprobada: new Set(["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN"]),
-    Rechazada: new Set(["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN"]),
+    Aprobada: new Set(["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"]),
+    Rechazada: new Set(["LEGAL_APPROVER", "VP_APPROVER", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"]),
   },
   Aprobada: {
-    En_Ejecucion: new Set(["OPERATIONS_LEAD", "SYSTEM_ADMIN"]),
+    En_Ejecucion: new Set(["OPERATIONS_LEAD", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"]),
   },
   En_Ejecucion: {
-    Cerrada: new Set(["OPERATIONS_LEAD", "SYSTEM_ADMIN"]),
+    Cerrada: new Set(["OPERATIONS_LEAD", "SYSTEM_ADMIN", "ASSESSMENT_COORDINATOR"]),
   },
 };
 
@@ -60,6 +60,7 @@ const ALL_VALID_ROLES = new Set([
   "PARTNER_OPERATOR",
   "CONTRACTOR_OPERATOR",
   "INTERN_READONLY",
+  "ASSESSMENT_COORDINATOR",
 ]);
 
 /**
@@ -163,12 +164,12 @@ export async function POST(
     return NextResponse.json(
       {
         error: {
-          code: "INVALID_TRANSITION",
+          code: "INVALID_STATE_TRANSITION",
           message: `Invalid target state: '${targetState}'.`,
           validStates: Array.from(VALID_STATES),
         },
       },
-      { status: 422 }
+      { status: 409 }
     );
   }
 
@@ -206,37 +207,37 @@ export async function POST(
     );
   }
 
-  // --- Step 3a: Check terminal state (REQ-16.1) → 422 ---
+  // --- Step 3a: Check terminal state (REQ-16.1) → 409 ---
   if (TERMINAL_STATES.has(currentState)) {
     return NextResponse.json(
       {
         error: {
-          code: "INVALID_TRANSITION",
+          code: "INVALID_STATE_TRANSITION",
           message: `State '${currentState}' is a terminal state. No transitions are allowed.`,
           currentState,
           targetState,
           validTargets: [],
         },
       },
-      { status: 422 }
+      { status: 409 }
     );
   }
 
-  // --- Step 3b: Check transition structural validity (REQ-16.2, REQ-16.5) → 422 ---
+  // --- Step 3b: Check transition structural validity (REQ-16.2, REQ-16.5) → 409 ---
   const transitions = VALID_TRANSITIONS[currentState];
   if (!transitions || !transitions[targetState]) {
     const validTargets = getValidTargets(currentState);
     return NextResponse.json(
       {
         error: {
-          code: "INVALID_TRANSITION",
+          code: "INVALID_STATE_TRANSITION",
           message: `Transition from '${currentState}' to '${targetState}' is not valid. Valid transitions from '${currentState}': ${JSON.stringify(validTargets)}.`,
           currentState,
           targetState,
           validTargets,
         },
       },
-      { status: 422 }
+      { status: 409 }
     );
   }
 

@@ -157,8 +157,8 @@ describe("POST /api/annulations/[id]/transition", () => {
     });
   });
 
-  describe("invalid transitions (REQ-16.2, REQ-16.5) → 422", () => {
-    it("returns 422 when transition is not valid (Solicitada → Cerrada)", async () => {
+  describe("invalid transitions (REQ-16.2, REQ-16.5) → 409", () => {
+    it("returns 409 when transition is not valid (Solicitada → Cerrada)", async () => {
       mockQuery.mockResolvedValueOnce([
         { id: "uuid-1", current_state: "Solicitada" },
       ]);
@@ -172,14 +172,14 @@ describe("POST /api/annulations/[id]/transition", () => {
       );
       const body = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(body.error.code).toBe("INVALID_TRANSITION");
+      expect(response.status).toBe(409);
+      expect(body.error.code).toBe("INVALID_STATE_TRANSITION");
       expect(body.error.currentState).toBe("Solicitada");
       expect(body.error.targetState).toBe("Cerrada");
       expect(body.error.validTargets).toContain("En_Revision");
     });
 
-    it("returns 422 for terminal state Cerrada", async () => {
+    it("returns 409 for terminal state Cerrada", async () => {
       mockQuery.mockResolvedValueOnce([
         { id: "uuid-1", current_state: "Cerrada" },
       ]);
@@ -193,13 +193,13 @@ describe("POST /api/annulations/[id]/transition", () => {
       );
       const body = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(body.error.code).toBe("INVALID_TRANSITION");
+      expect(response.status).toBe(409);
+      expect(body.error.code).toBe("INVALID_STATE_TRANSITION");
       expect(body.error.message).toContain("terminal state");
       expect(body.error.validTargets).toEqual([]);
     });
 
-    it("returns 422 for terminal state Rechazada", async () => {
+    it("returns 409 for terminal state Rechazada", async () => {
       mockQuery.mockResolvedValueOnce([
         { id: "uuid-1", current_state: "Rechazada" },
       ]);
@@ -213,12 +213,12 @@ describe("POST /api/annulations/[id]/transition", () => {
       );
       const body = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(body.error.code).toBe("INVALID_TRANSITION");
+      expect(response.status).toBe(409);
+      expect(body.error.code).toBe("INVALID_STATE_TRANSITION");
       expect(body.error.message).toContain("terminal state");
     });
 
-    it("returns 422 for invalid target state name", async () => {
+    it("returns 409 for invalid target state name", async () => {
       const response = await callTransition(
         {
           targetState: "NonExistentState",
@@ -228,8 +228,8 @@ describe("POST /api/annulations/[id]/transition", () => {
       );
       const body = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(body.error.code).toBe("INVALID_TRANSITION");
+      expect(response.status).toBe(409);
+      expect(body.error.code).toBe("INVALID_STATE_TRANSITION");
     });
   });
 

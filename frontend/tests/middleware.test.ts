@@ -161,8 +161,8 @@ describe("RBAC Middleware", () => {
   // =========================================================================
 
   describe("VALID_ROLES", () => {
-    it("contains exactly 11 roles from the Lista Maestra", () => {
-      expect(VALID_ROLES).toHaveLength(11);
+    it("contains exactly 12 roles from the Lista Maestra", () => {
+      expect(VALID_ROLES).toHaveLength(12);
       expect(VALID_ROLES).toContain("SYSTEM_ADMIN");
       expect(VALID_ROLES).toContain("OPERATIONS_LEAD");
       expect(VALID_ROLES).toContain("ANALYST");
