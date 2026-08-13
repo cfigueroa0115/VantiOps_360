@@ -105,6 +105,9 @@ export async function POST(request: NextRequest) {
       if (!requesterId || !partnerId) {
         throw new Error("Required demo users/partner not found after upsert");
       }
+      if (!analystId || !coordId) {
+        throw new Error(`Required demo actors not found: analyst=${analystId}, coord=${coordId}`);
+      }
 
       // 6. Insert seed cancellations with proper classification
       const baseTime = new Date();

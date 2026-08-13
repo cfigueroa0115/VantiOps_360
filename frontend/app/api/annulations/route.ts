@@ -173,9 +173,10 @@ export async function GET(request: NextRequest) {
       justification: string;
       created_at: string;
       updated_at: string;
+      version: number;
     }>(
       `SELECT cr.id, cr.radicado, cr.pqr_id, cr.current_state,
-              cr.requested_by::text, cr.justification, cr.created_at, cr.updated_at
+              cr.requested_by::text, cr.justification, cr.created_at, cr.updated_at, cr.version
        FROM cancellation_requests cr
        WHERE ${whereClause}
        ORDER BY cr.created_at DESC
@@ -192,6 +193,7 @@ export async function GET(request: NextRequest) {
       justification: row.justification,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      version: row.version,
     }));
 
     return NextResponse.json({
@@ -326,7 +328,7 @@ export async function POST(request: NextRequest) {
     const radicado = `ANU-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     // Determine data classification from session context
-    const isDemoSession = process.env.ASSESSMENT_DEMO_MODE === "true" && !!(identity as any).demoPersona;
+    const isDemoSession = process.env.ASSESSMENT_DEMO_MODE === "true" && identity.isAssessmentDemo;
     const dataClassification = isDemoSession ? "SIMULATED_DATA" : "REAL_DATA";
     const demoBatchId = isDemoSession ? "assessment-demo" : null;
 

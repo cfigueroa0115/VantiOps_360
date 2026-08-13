@@ -18,6 +18,8 @@ export interface AuthIdentity {
   userId: string;
   email?: string;
   verified: boolean;
+  demoPersona?: string;
+  isAssessmentDemo?: boolean;
 }
 
 const TOKEN_COOKIE_NAMES = ["session-token", "next-auth.session-token"];
@@ -85,6 +87,8 @@ export async function getVerifiedIdentity(request: NextRequest): Promise<AuthIde
       userId,
       email,
       verified: true,
+      demoPersona: payload.demoPersona as string | undefined,
+      isAssessmentDemo: !!payload.demoPersona,
     };
   } catch {
     // Token invalid, expired, wrong signature
