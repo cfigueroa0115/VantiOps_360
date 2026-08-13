@@ -54,6 +54,16 @@ export async function POST(request: NextRequest) {
          WHERE data_classification = 'SIMULATED_DATA' AND demo_batch_id = 'assessment-demo'`
       );
 
+      // 2b. Also clean legacy demo seeds that predate data_classification migration
+      await client.query(
+        `DELETE FROM cancellation_state_history WHERE cancellation_id IN (
+          SELECT id FROM cancellation_requests WHERE radicado LIKE 'ANU-DEMO-%'
+        )`
+      );
+      await client.query(
+        `DELETE FROM cancellation_requests WHERE radicado LIKE 'ANU-DEMO-%'`
+      );
+
       // 3. Ensure demo users exist (use RETURNING to get IDs reliably)
       const partnerUserR = await client.query(
         `INSERT INTO app_users (email, display_name, is_active)
