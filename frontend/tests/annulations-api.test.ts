@@ -71,11 +71,15 @@ describe("GET /api/annulations", () => {
       expect(body.error.code).toBe("FORBIDDEN");
     });
 
-    it("returns 403 for INTERN_READONLY role", async () => {
+    it("returns 200 for INTERN_READONLY role (read-only access)", async () => {
+      mockQuery
+        .mockResolvedValueOnce([{ count: "0" }])
+        .mockResolvedValueOnce([]);
+
       const request = createGetRequest({}, "INTERN_READONLY");
       const response = await GET(request);
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(200);
     });
 
     it("returns 403 for CONTRACTOR_OPERATOR role", async () => {

@@ -40,16 +40,17 @@ describe("GET /api/annulations", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 403 for unauthorized role", async () => {
+  it("returns 200 for INTERN_READONLY (read-only access to list)", async () => {
+    mockedQuery
+      .mockResolvedValueOnce([{ count: "0" }] as any)
+      .mockResolvedValueOnce([] as any);
+
     const req = createRequest("/api/annulations", {
       headers: { "x-user-role": "INTERN_READONLY" },
     });
 
     const res = await GET(req);
-    expect(res.status).toBe(403);
-
-    const json = await res.json();
-    expect(json.error.code).toBe("FORBIDDEN");
+    expect(res.status).toBe(200);
   });
 
   it("returns 403 when no role header is provided", async () => {
