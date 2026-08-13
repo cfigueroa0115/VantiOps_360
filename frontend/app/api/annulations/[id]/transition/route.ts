@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/server/database";
+import { query, withTransaction } from "@/lib/server/database";
 import { getRequestIdentity } from "@/lib/server/auth-context";
 
 export const dynamic = "force-dynamic";
@@ -174,165 +174,105 @@ export async function POST(
   }
 
   // --- Fetch current state from database ---
-  let currentState: string;
+  // Optimistic concurrency: accept optional expectedVersion
+  const expectedVersion = body.expectedVersion as number | undefined;
+
+  // --- Execute transition atomically ---
   try {
-    const rows = await query<{ id: string; current_state: string }>(
-      `SELECT id, current_state FROM cancellation_requests WHERE id = $1`,
-      [id]
-    );
-
-    if (!rows.length) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "NOT_FOUND",
-            message: `Cancellation request '${id}' not found.`,
-          },
-        },
-        { status: 404 }
+    const result = await withTransaction(async (client) => {
+      // SELECT FOR UPDATE to prevent concurrent modifications
+      const rows = await client.query(
+        `SELECT id, current_state, version FROM cancellation_requests WHERE id = $1 FOR UPDATE`,
+        [id]
       );
-    }
 
-    currentState = rows[0].current_state;
-  } catch (error) {
-    console.error("Error fetching cancellation request:", error);
-    return NextResponse.json(
-      {
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Failed to fetch cancellation request",
-        },
-      },
-      { status: 500 }
-    );
-  }
+      if (!rows.rows.length) {
+        return { error: "NOT_FOUND", status: 404 } as const;
+      }
 
-  // --- Step 3a: Check terminal state (REQ-16.1) → 409 ---
-  if (TERMINAL_STATES.has(currentState)) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "INVALID_STATE_TRANSITION",
-          message: `State '${currentState}' is a terminal state. No transitions are allowed.`,
-          currentState,
-          targetState,
-          validTargets: [],
-        },
-      },
-      { status: 409 }
-    );
-  }
+      const currentState = rows.rows[0].current_state;
+      const currentVersion = rows.rows[0].version;
 
-  // --- Step 3b: Check transition structural validity (REQ-16.2, REQ-16.5) → 409 ---
-  const transitions = VALID_TRANSITIONS[currentState];
-  if (!transitions || !transitions[targetState]) {
-    const validTargets = getValidTargets(currentState);
-    return NextResponse.json(
-      {
-        error: {
-          code: "INVALID_STATE_TRANSITION",
-          message: `Transition from '${currentState}' to '${targetState}' is not valid. Valid transitions from '${currentState}': ${JSON.stringify(validTargets)}.`,
-          currentState,
-          targetState,
-          validTargets,
-        },
-      },
-      { status: 409 }
-    );
-  }
+      // Check optimistic concurrency
+      if (expectedVersion !== undefined && expectedVersion !== currentVersion) {
+        return { error: "CONCURRENT_MODIFICATION", status: 409, currentVersion } as const;
+      }
 
-  // --- Step 2: Validate role authorization → 403 ---
-  const authorizedRoles = transitions[targetState];
-  if (!authorizedRoles.has(userRole)) {
-    // Log denied access to audit (REQ-14.1)
-    try {
-      await query(
+      // Check terminal state
+      if (TERMINAL_STATES.has(currentState)) {
+        return { error: "TERMINAL_STATE", status: 409, currentState } as const;
+      }
+
+      // Check structural validity
+      const transitions = VALID_TRANSITIONS[currentState];
+      if (!transitions || !transitions[targetState]) {
+        const validTargets = getValidTargets(currentState);
+        return { error: "INVALID_TRANSITION", status: 409, currentState, validTargets } as const;
+      }
+
+      // Check role authorization
+      const authorizedRoles = transitions[targetState];
+      if (!authorizedRoles.has(userRole)) {
+        // Log denied to audit
+        await client.query(
+          `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
+           VALUES ($1, 'TRANSITION_DENIED', '/api/annulations/transition', $2, 'failure', $3)`,
+          [userId, id, JSON.stringify({ currentState, targetState, role: userRole })]
+        );
+        return { error: "FORBIDDEN", status: 403, currentState, authorizedRoles: Array.from(authorizedRoles).sort() } as const;
+      }
+
+      // All validations passed — execute atomic transition
+      await client.query(
+        `UPDATE cancellation_requests SET current_state = $1, version = version + 1, updated_at = NOW() WHERE id = $2`,
+        [targetState, id]
+      );
+
+      await client.query(
+        `INSERT INTO cancellation_state_history
+          (cancellation_id, from_state, to_state, transitioned_by, transitioned_by_role, justification)
+         VALUES ($1, $2, $3, (SELECT id FROM app_users WHERE email = $4 LIMIT 1), $5, $6)`,
+        [id, currentState, targetState, userId, userRole, justification.trim()]
+      );
+
+      await client.query(
         `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
-         VALUES ($1, 'TRANSITION_DENIED', '/api/annulations/transition', $2, 'failure', $3)`,
-        [
-          userId,
-          id,
-          JSON.stringify({
-            currentState,
-            targetState,
-            role: userRole,
-            reason: "Unauthorized role for this transition",
-          }),
-        ]
+         VALUES ($1, 'ANNULATION_TRANSITION', '/api/annulations/transition', $2, 'success', $3)`,
+        [userId, id, JSON.stringify({ fromState: currentState, toState: targetState, role: userRole, justification: justification.trim() })]
       );
-    } catch {
-      // Non-critical: audit write failure shouldn't block the 403 response
-      console.warn("Failed to log denied transition to audit");
+
+      return { success: true, previousState: currentState, newVersion: currentVersion + 1 } as const;
+    });
+
+    // Handle result
+    if ("error" in result) {
+      if (result.error === "NOT_FOUND") {
+        return NextResponse.json({ error: { code: "NOT_FOUND", message: `Cancellation request '${id}' not found.` } }, { status: 404 });
+      }
+      if (result.error === "CONCURRENT_MODIFICATION") {
+        return NextResponse.json({ error: { code: "CONCURRENT_MODIFICATION", message: "La solicitud fue modificada por otro usuario. Actualiza la información e intenta nuevamente." } }, { status: 409 });
+      }
+      if (result.error === "TERMINAL_STATE") {
+        return NextResponse.json({ error: { code: "INVALID_STATE_TRANSITION", message: `State '${result.currentState}' is a terminal state. No transitions are allowed.`, currentState: result.currentState, targetState, validTargets: [] } }, { status: 409 });
+      }
+      if (result.error === "INVALID_TRANSITION") {
+        return NextResponse.json({ error: { code: "INVALID_STATE_TRANSITION", message: `Transition from '${result.currentState}' to '${targetState}' is not valid.`, currentState: result.currentState, targetState, validTargets: result.validTargets } }, { status: 409 });
+      }
+      if (result.error === "FORBIDDEN") {
+        return NextResponse.json({ error: { code: "FORBIDDEN", message: `Role '${userRole}' is not authorized for this transition.`, currentState: result.currentState, targetState, authorizedRoles: result.authorizedRoles } }, { status: 403 });
+      }
     }
 
-    return NextResponse.json(
-      {
-        error: {
-          code: "FORBIDDEN",
-          message: `Role '${userRole}' is not authorized to transition from '${currentState}' to '${targetState}'. Authorized roles: ${JSON.stringify(Array.from(authorizedRoles).sort())}.`,
-          currentState,
-          targetState,
-          authorizedRoles: Array.from(authorizedRoles).sort(),
-        },
-      },
-      { status: 403 }
-    );
-  }
+    if ("success" in result) {
+      return NextResponse.json({
+        data: { id, previousState: result.previousState, currentState: targetState, transitionedBy: userId, role: userRole, justification: justification.trim(), version: result.newVersion, transitionedAt: new Date().toISOString() },
+        message: `Transition from '${result.previousState}' to '${targetState}' executed successfully.`,
+      });
+    }
 
-  // --- Execute transition ---
-  try {
-    // Update current state
-    await query(
-      `UPDATE cancellation_requests SET current_state = $1, updated_at = NOW() WHERE id = $2`,
-      [targetState, id]
-    );
-
-    // Write to state history (REQ-16.3, REQ-16.4)
-    await query(
-      `INSERT INTO cancellation_state_history
-        (cancellation_id, from_state, to_state, transitioned_by, transitioned_by_role, justification)
-       VALUES ($1, $2, $3, (SELECT id FROM app_users WHERE email = $4 LIMIT 1), $5, $6)`,
-      [id, currentState, targetState, userId, userRole, justification.trim()]
-    );
-
-    // Log audit event (REQ-16.3, REQ-14.3 — synchronous)
-    await query(
-      `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
-       VALUES ($1, 'ANNULATION_TRANSITION', '/api/annulations/transition', $2, 'success', $3)`,
-      [
-        userId,
-        id,
-        JSON.stringify({
-          fromState: currentState,
-          toState: targetState,
-          role: userRole,
-          justification: justification.trim(),
-        }),
-      ]
-    );
-
-    return NextResponse.json({
-      data: {
-        id,
-        previousState: currentState,
-        currentState: targetState,
-        transitionedBy: userId,
-        role: userRole,
-        justification: justification.trim(),
-        transitionedAt: new Date().toISOString(),
-      },
-      message: `Transition from '${currentState}' to '${targetState}' executed successfully.`,
-    });
+    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Unexpected state" } }, { status: 500 });
   } catch (error) {
     console.error("Error executing transition:", error);
-    return NextResponse.json(
-      {
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Failed to execute state transition",
-        },
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Failed to execute state transition" } }, { status: 500 });
   }
 }

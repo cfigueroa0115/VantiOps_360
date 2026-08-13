@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/server/database";
+import { query, withTransaction } from "@/lib/server/database";
 import { validatePartnerEmail, logPartnerEmailDenied } from "@/lib/server/partner-email-validator";
 import { getRequestIdentity } from "@/lib/server/auth-context";
 
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
 
   const validation = await validatePartnerEmail(partnerId, senderEmail);
   if (!validation.authorized) {
-    await logPartnerEmailDenied(partnerId, senderEmail, validation.reason || "unknown");
+    await logPartnerEmailDenied(partnerId, senderEmail, validation.reason || "unknown", userId);
     return NextResponse.json(
       {
         error: {
@@ -325,59 +325,52 @@ export async function POST(request: NextRequest) {
     // Generate a unique radicado
     const radicado = `ANU-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    // Create the cancellation request (initial state: Solicitada)
-    const result = await query<{
-      id: string;
-      radicado: string;
-      pqr_id: string;
-      current_state: string;
-      created_at: string;
-    }>(
-      `INSERT INTO cancellation_requests (radicado, pqr_id, current_state, requested_by, justification)
-       VALUES ($1, $2, 'Solicitada', (SELECT id FROM app_users WHERE email = $3 LIMIT 1), $4)
-       RETURNING id, radicado, pqr_id, current_state, created_at`,
-      [radicado, pqrId, userId, justification.trim()]
-    );
+    // Determine data classification from session context
+    const isDemoSession = process.env.ASSESSMENT_DEMO_MODE === "true" && !!(identity as any).demoPersona;
+    const dataClassification = isDemoSession ? "SIMULATED_DATA" : "REAL_DATA";
+    const demoBatchId = isDemoSession ? "assessment-demo" : null;
 
-    if (!result.length) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "INTERNAL_ERROR",
-            message: "Failed to create cancellation request",
-          },
-        },
-        { status: 500 }
+    // Create cancellation + audit atomically
+    const result = await withTransaction(async (client) => {
+      const insertResult = await client.query(
+        `INSERT INTO cancellation_requests
+         (radicado, pqr_id, current_state, requested_by, justification,
+          data_classification, demo_batch_id, partner_id, sender_email)
+         VALUES ($1, $2, 'Solicitada', (SELECT id FROM app_users WHERE email = $3 LIMIT 1), $4,
+                 $5, $6, $7, $8)
+         RETURNING id, radicado, pqr_id, current_state, created_at`,
+        [radicado, pqrId, userId, justification.trim(),
+         dataClassification, demoBatchId, partnerId, senderEmail?.toLowerCase()]
       );
-    }
 
-    const created = result[0];
+      if (!insertResult.rows.length) {
+        throw new Error("INSERT returned no rows");
+      }
 
-    // Log audit event (REQ-16.3, REQ-14.3 — synchronous)
-    await query(
-      `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
-       VALUES ($1, 'CREATE_ANNULATION', '/api/annulations', $2, 'success', $3)`,
-      [
-        userId,
-        created.id,
-        JSON.stringify({
-          pqrId,
-          radicado: created.radicado,
-          initialState: "Solicitada",
-          justification: justification.trim(),
-        }),
-      ]
-    );
+      const created = insertResult.rows[0];
+
+      // Audit event in same transaction
+      await client.query(
+        `INSERT INTO audit_events (user_id, action, resource, resource_id, result, details)
+         VALUES ($1, 'CREATE_ANNULATION', '/api/annulations', $2, 'success', $3)`,
+        [userId, created.id, JSON.stringify({
+          pqrId, radicado: created.radicado, initialState: "Solicitada",
+          justification: justification.trim(), dataClassification, partnerId,
+        })]
+      );
+
+      return created;
+    });
 
     return NextResponse.json(
       {
         data: {
-          id: created.id,
-          radicado: created.radicado,
-          pqrId: created.pqr_id,
-          currentState: created.current_state,
+          id: result.id,
+          radicado: result.radicado,
+          pqrId: result.pqr_id,
+          currentState: result.current_state,
           justification: justification.trim(),
-          createdAt: created.created_at,
+          createdAt: result.created_at,
         },
         message: "Cancellation request created successfully",
       },
