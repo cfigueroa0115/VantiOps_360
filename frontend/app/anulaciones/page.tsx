@@ -34,6 +34,7 @@ interface Cancellation {
   justification: string;
   createdAt: string;
   updatedAt: string;
+  version: number;
 }
 
 interface HistoryEntry {
@@ -141,7 +142,7 @@ export default function AnulacionesPage() {
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
-  const [transitionTarget, setTransitionTarget] = useState<{ id: string; radicado: string; currentState: string; targetState: string } | null>(null);
+  const [transitionTarget, setTransitionTarget] = useState<{ id: string; radicado: string; currentState: string; targetState: string; expectedVersion: number } | null>(null);
   const [transitionJustification, setTransitionJustification] = useState("");
   const [transitionLoading, setTransitionLoading] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
@@ -269,7 +270,7 @@ export default function AnulacionesPage() {
 
   // ─── Transition ──────────────────────────────────────────────────────────
   const openTransition = (c: Cancellation, targetState: string) => {
-    setTransitionTarget({ id: c.id, radicado: c.radicado, currentState: c.currentState, targetState });
+    setTransitionTarget({ id: c.id, radicado: c.radicado, currentState: c.currentState, targetState, expectedVersion: c.version });
     setTransitionJustification("");
     setTransitionError(null);
     setTransitionDialogOpen(true);
@@ -283,7 +284,7 @@ export default function AnulacionesPage() {
       const res = await fetch(`/api/annulations/${transitionTarget.id}/transition`, {
         method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetState: transitionTarget.targetState, justification: transitionJustification }),
+        body: JSON.stringify({ targetState: transitionTarget.targetState, justification: transitionJustification, expectedVersion: transitionTarget.expectedVersion }),
       });
       const data = await res.json();
       if (res.ok) {

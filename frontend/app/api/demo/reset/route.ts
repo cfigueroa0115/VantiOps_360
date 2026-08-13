@@ -54,22 +54,29 @@ export async function POST(request: NextRequest) {
          WHERE data_classification = 'SIMULATED_DATA' AND demo_batch_id = 'assessment-demo'`
       );
 
-      // 3. Ensure demo user exists
-      await client.query(
+      // 3. Ensure demo users exist (use RETURNING to get IDs reliably)
+      const partnerUserR = await client.query(
         `INSERT INTO app_users (email, display_name, is_active)
          VALUES ('partner.demo01@example.com', 'Partner Demo Autorizado', true)
-         ON CONFLICT (email) DO UPDATE SET is_active = true`
+         ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, is_active = true
+         RETURNING id`
       );
-      await client.query(
+      const analystUserR = await client.query(
         `INSERT INTO app_users (email, display_name, is_active)
          VALUES ('analyst.demo@vantiops-assessment.com', 'Analista Demo', true)
-         ON CONFLICT (email) DO UPDATE SET is_active = true`
+         ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, is_active = true
+         RETURNING id`
       );
-      await client.query(
+      const coordUserR = await client.query(
         `INSERT INTO app_users (email, display_name, is_active)
          VALUES ('coordinator.demo@vantiops-assessment.com', 'Coordinador Demo', true)
-         ON CONFLICT (email) DO UPDATE SET is_active = true`
+         ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, is_active = true
+         RETURNING id`
       );
+
+      const requesterId = partnerUserR.rows[0]?.id;
+      const analystId = analystUserR.rows[0]?.id;
+      const coordId = coordUserR.rows[0]?.id;
 
       // 4. Ensure demo partner
       await client.query(
@@ -94,16 +101,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 5. Get requester user ID
-      const userRows = await client.query(`SELECT id FROM app_users WHERE email = 'partner.demo01@example.com'`);
-      const requesterId = userRows.rows[0]?.id;
-      const analystRows = await client.query(`SELECT id FROM app_users WHERE email = 'analyst.demo@vantiops-assessment.com'`);
-      const analystId = analystRows.rows[0]?.id;
-      const coordRows = await client.query(`SELECT id FROM app_users WHERE email = 'coordinator.demo@vantiops-assessment.com'`);
-      const coordId = coordRows.rows[0]?.id;
-
+      // 5. Validate all IDs are available
       if (!requesterId || !partnerId) {
         throw new Error("Required demo users/partner not found after upsert");
+      }
+      if (!analystId || !coordId) {
+        throw new Error(`Required demo actors not found: analyst=${analystId}, coord=${coordId}`);
       }
 
       // 6. Insert seed cancellations with proper classification
