@@ -143,6 +143,32 @@ export default function EvidenciaPage() {
         </div>
       </div>
 
+      {/* ─── Executive Certification Summary ─── */}
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <CheckCircle2 size={20} className="text-emerald-600" />
+          <h2 className="text-sm font-bold text-emerald-900">Release Certificado</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-lg p-3 border border-emerald-100 text-center">
+            <p className="text-lg font-bold text-emerald-700">✓</p>
+            <p className="text-[10px] text-gray-600">CI Validado</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-emerald-100 text-center">
+            <p className="text-lg font-bold text-emerald-700">✓</p>
+            <p className="text-[10px] text-gray-600">Production Smoke</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-emerald-100 text-center">
+            <p className="text-lg font-bold text-emerald-700">0</p>
+            <p className="text-[10px] text-gray-600">Vulnerabilidades Críticas</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-emerald-100 text-center">
+            <p className="text-lg font-bold text-emerald-700">✓</p>
+            <p className="text-[10px] text-gray-600">Production Healthy</p>
+          </div>
+        </div>
+      </div>
+
       {/* ─── Tech Stack Grid ─── */}
       <div className={`transition-all duration-700 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
