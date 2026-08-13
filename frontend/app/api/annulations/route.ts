@@ -29,6 +29,7 @@ const LIST_ALLOWED_ROLES = new Set([
   "BUSINESS_OWNER",
   "AUDITOR",
   "PARTNER_OPERATOR",
+  "INTERN_READONLY",
 ]);
 
 /**
